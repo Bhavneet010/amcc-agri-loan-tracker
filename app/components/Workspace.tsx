@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Building2, CheckCheck, ChevronDown, CircleHelp, Download, FilePlus2, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, Settings2, ShieldCheck, WifiOff } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Building2, CheckCheck, ChevronDown, CircleHelp, Download, FilePlus2, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request, rupees } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -81,10 +81,10 @@ export default function Workspace() {
   const awaiting = tabLoans.filter(l => l.compliance === 'awaiting'); const sum = (rows: Loan[]) => rows.reduce((total, row) => total + row.amountPaise, 0);
 
   return <div className="app-shell">
-    <aside className="sidebar">
+    <header className="appbar">
       <a className="brand" href="/" aria-label="AMCC loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">AGRI LOAN CELL</span></span></a>
-      <div className="mobile-bar"><button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
-        {menu ? <><div className="menu-backdrop" onClick={() => setMenu(false)}/><div className="mobile-menu" role="menu" onClick={() => setMenu(false)}>
+      <div className="appbar-actions">{activeAdmin ? <span className="admin-label"><ShieldCheck size={14}/> Admin</span> : null}<button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
+        {menu ? <><div className="menu-backdrop" onClick={() => setMenu(false)}/><div className="app-menu" role="menu" onClick={() => setMenu(false)}>
           {activeAdmin ? <div className="menu-label"><ShieldCheck size={13}/> Admin view</div> : null}
           <button role="menuitem" className={!activeAdmin ? 'current' : ''} onClick={() => setViewAdmin(false)}><Layers2 size={17}/> Branch loans</button>
           {admin ? <button role="menuitem" className={activeAdmin ? 'current' : ''} onClick={() => setViewAdmin(true)}><ShieldCheck size={17}/> Admin overview</button> : null}
@@ -96,12 +96,7 @@ export default function Workspace() {
           <div className="menu-status"><span className={`connection-dot ${!online ? 'offline' : ''}`}/>{online ? 'Shared workspace' : 'Offline'}</div>
         </div></> : null}
       </div>
-      <div className="sidebar-section-label">WORKSPACE</div>
-      <nav aria-label="Workspace navigation"><button className={`nav-item ${!activeAdmin ? 'active' : ''}`} onClick={() => { setViewAdmin(false); }}><Layers2 size={18}/> Branch loans</button>{admin ? <button className={`nav-item ${activeAdmin ? 'active' : ''}`} onClick={() => setViewAdmin(true)}><ShieldCheck size={18}/> Admin overview</button> : null}<button className="nav-item" onClick={() => setSettings(true)}><Settings2 size={18}/> Settings</button></nav>
-      <div className="sidebar-bottom"><div className="network-note"><span className={`connection-dot ${!online ? 'offline' : ''}`}/>{online ? 'Shared workspace' : 'Offline'}</div><button className="nav-item" onClick={() => setHelp(true)}><CircleHelp size={18}/> Help & install</button>{admin ? <button className="nav-item" onClick={logout}><LogOut size={18}/> Sign out of admin</button> : <button className="nav-item" onClick={() => setLogin(true)}><ShieldCheck size={18}/> Admin access</button>}<div className="sidebar-footer">13 branches. One workspace.</div></div>
-    </aside>
-    <div className="main-shell">
-      <header className="topbar"><div className="breadcrumb">Workspace <span>/</span> <strong>{activeAdmin ? 'Admin overview' : 'Branch loans'}</strong></div><div className="topbar-actions"><button className="install-button" onClick={install}><Download size={15}/><span>Install app</span></button>{activeAdmin ? <span className="admin-label"><ShieldCheck size={14}/> Admin</span> : null}<button className="branch-switch" onClick={() => setSettings(true)}><Building2 size={16}/><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button></div></header>
+    </header>
       <main>
         {!online ? <div className="message warning" role="status"><WifiOff size={17}/> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.</div> : null}
         {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
@@ -112,7 +107,6 @@ export default function Workspace() {
           <div className="table-footer"><span>{visibleLoans.length} {visibleLoans.length === 1 ? 'application' : 'applications'}{tabLoans.length !== visibleLoans.length ? ` of ${tabLoans.length}` : ''}</span><span><span className="connection-dot"/> {updated ? `Updated ${updated}` : 'Updates shared across devices'}</span></div>
         </section><div className="page-footer"><Leaf size={14}/><span>A clearer view of agricultural lending.</span><span className="footer-right">AMCC · Loan sourcing & renewals</span></div>
       </main>
-    </div>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}
     {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
