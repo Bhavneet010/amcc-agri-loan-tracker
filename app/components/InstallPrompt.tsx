@@ -8,7 +8,7 @@ const installedKey = 'amcc.installed.v1';
 export const showInstallEvent = 'amcc:show-install';
 
 function standalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return ['standalone', 'fullscreen', 'minimal-ui'].some(mode => window.matchMedia(`(display-mode: ${mode})`).matches) || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 function detectPlatform(): Platform {
   const ua = navigator.userAgent;
@@ -30,8 +30,8 @@ export default function InstallPrompt() {
     const ua = navigator.userAgent; const current = detectPlatform();
     setPlatform(current); setInApp(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|; wv\)/i.test(ua)); setIosSafari(!/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua));
     if (standalone()) { remember(true); return; }
-    // iOS gives no install signal, so always offer there; Android is offered unless an install was recorded.
-    if (current === 'ios' || (current === 'android' && !remembered())) setOpen(true);
+    // iOS gives no install signal, so iPhone users confirm it themselves with "I've installed it".
+    if ((current === 'ios' || current === 'android') && !remembered()) setOpen(true);
     const available = (event: Event) => {
       event.preventDefault(); setInstallEvent(event as InstallEvent);
       // The browser only offers this when the app is not installed, so any earlier record is stale.
@@ -64,7 +64,11 @@ export default function InstallPrompt() {
       <li>Tap the <strong>Share</strong> button <Share size={15} aria-label="Share icon"/> in the browser toolbar.</li>
       <li>Scroll down and tap <strong>Add to Home Screen</strong> <PlusSquare size={15} aria-label="Add icon"/>.</li>
       <li>Tap <strong>Add</strong> in the top-right corner.</li>
-    </ol> : <>
+    </ol> : null}
+    {ios ? <div className="install-actions">
+      <button type="button" className="button secondary" onClick={() => setOpen(false)}>Not now</button>
+      <button type="button" className="button primary" onClick={() => { remember(true); setOpen(false); }}>I've installed it</button>
+    </div> : <>
       {steps && !installEvent ? <ol className="install-steps">
         <li>Open the browser menu <strong>⋮</strong> at the top-right.</li>
         <li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>

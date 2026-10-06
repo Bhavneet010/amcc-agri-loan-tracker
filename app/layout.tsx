@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "A shared workspace for agricultural loan sourcing and renewals across thirteen branches.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "AMCC Loans", statusBarStyle: "default" },
+  // Next only emits the unprefixed tag; older iOS needs this one to open the home-screen app full screen.
+  other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: "/favicon.svg",
     apple: "/icon-192.png",
