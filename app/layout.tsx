@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "AMCC | Agri Loan Tracker",
+  description: "A shared workspace for agricultural loan sourcing and renewals across thirteen branches.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "AMCC Loans", statusBarStyle: "default" },
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/icon-192.png",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className="antialiased">{children}</body>
+    </html>
+  );
+}

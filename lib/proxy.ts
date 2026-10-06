@@ -1,0 +1,40 @@
+const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
+
+export async function proxyRequest(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
+  const url = new URL(request.url);
+  if (!/^\/api\/(branches|loans(?:\/[^/]+)?|admin\/session)$/.test(url.pathname)) {
+    return Response.json({ error: 'Not found.' }, { status: 404 });
+  }
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) {
+    return Response.json({ error: 'Method not allowed.' }, { status: 405 });
+  }
+  if (request.method !== 'GET' && request.headers.get('origin') !== url.origin) {
+    return Response.json({ error: 'Request origin is not allowed.' }, { status: 403 });
+  }
+
+  const headers = new Headers();
+  const cookie = request.headers.get('cookie');
+  const contentType = request.headers.get('content-type');
+  if (cookie) headers.set('cookie', cookie);
+  if (contentType) headers.set('content-type', contentType);
+  if (request.method !== 'GET') headers.set('origin', DATA_ORIGIN);
+
+  try {
+    const upstream = await fetcher(DATA_ORIGIN + url.pathname + url.search, {
+      method: request.method,
+      headers,
+      body: request.method === 'GET' ? undefined : await request.text(),
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15000),
+    });
+    const responseHeaders = new Headers({ 'cache-control': 'no-store' });
+    for (const name of ['content-type', 'set-cookie']) {
+      const value = upstream.headers.get(name);
+      if (value) responseHeaders.set(name, value);
+    }
+    return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
+  } catch {
+    return Response.json({ error: 'Shared loan service is temporarily unavailable. Please try again.' }, { status: 503, headers: { 'cache-control': 'no-store' } });
+  }
+}
