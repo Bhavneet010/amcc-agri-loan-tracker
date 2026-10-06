@@ -10,3 +10,6 @@
 @keyframes install-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(max-width:680px){.install-sheet{left:50%;bottom:max(16px,env(safe-area-inset-bottom))}.install-actions .button{flex:1}}
 @media(max-width:680px){.summary-grid{gap:8px;margin-bottom:18px}.summary-card{min-height:0;padding:10px 12px 11px;display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:8px;row-gap:2px}.summary-label{grid-column:1/-1}.summary-label svg{width:13px;height:13px}.summary-card>strong{font-size:20px;letter-spacing:-.5px;margin:2px 0 0}.summary-card>span{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.panel-header .tabs{min-width:0;overflow-x:auto;scrollbar-width:none}.panel-header .tabs::-webkit-scrollbar{display:none}
+@media(max-width:680px){.panel-header .tabs{gap:16px}.add-loan-noun{display:none}.add-loan{padding:7px 12px}}
+@media(max-width:360px){.panel-header .tabs{gap:12px}.tabs button svg{display:none}}
