@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Building2, CheckCheck, ChevronDown, CircleHelp, Download, FilePlus2, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings, Settings2, ShieldCheck, WifiOff } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Building2, CheckCheck, ChevronDown, CircleHelp, Download, FilePlus2, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, Settings2, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request, rupees } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -83,7 +83,7 @@ export default function Workspace() {
   return <div className="app-shell">
     <aside className="sidebar">
       <a className="brand" href="/" aria-label="AMCC loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">AGRI LOAN CELL</span></span></a>
-      <div className="mobile-bar"><button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Settings size={20}/></button>
+      <div className="mobile-bar"><button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
         {menu ? <><div className="menu-backdrop" onClick={() => setMenu(false)}/><div className="mobile-menu" role="menu" onClick={() => setMenu(false)}>
           {activeAdmin ? <div className="menu-label"><ShieldCheck size={13}/> Admin view</div> : null}
           <button role="menuitem" className={!activeAdmin ? 'current' : ''} onClick={() => setViewAdmin(false)}><Layers2 size={17}/> Branch loans</button>
