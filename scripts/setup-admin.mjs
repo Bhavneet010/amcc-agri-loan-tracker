@@ -1,0 +1,11 @@
+import { randomBytes, pbkdf2Sync } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+const password = randomBytes(18).toString('base64url');
+const salt = randomBytes(16).toString('hex');
+const hash = pbkdf2Sync(password, salt, 100000, 32, 'sha256').toString('hex');
+const secret = randomBytes(48).toString('hex');
+const values = { ADMIN_PASSWORD_SALT: salt, ADMIN_PASSWORD_HASH: hash, ADMIN_SESSION_SECRET: secret };
+mkdirSync('outputs', { recursive: true });
+writeFileSync('outputs/admin-access.txt', 'AMCC admin access\n\nPassword: ' + password + '\n\nOpen the app and choose Admin access. Keep this file private.\nThis unique password was generated for this app.\n');
+writeFileSync('.dev.vars', Object.entries(values).map(([key, value]) => key + '=' + value).join('\n') + '\n');
+console.log(JSON.stringify(values));
