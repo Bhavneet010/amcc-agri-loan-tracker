@@ -8,8 +8,8 @@ import LoanForm from './LoanForm';
 import Settings from './Settings';
 import AdminLogin from './AdminLogin';
 import Modal from './Modal';
+import { showInstallEvent } from './InstallPrompt';
 
-type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 const preferenceKey = 'amcc.branch.v1';
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
@@ -19,7 +19,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false);
-  const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null); const [updated, setUpdated] = useState(''); const [refreshKey, setRefreshKey] = useState(0);
+  const [updated, setUpdated] = useState(''); const [refreshKey, setRefreshKey] = useState(0);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -57,12 +57,9 @@ export default function Workspace() {
 
   useEffect(() => {
     const check = () => { setOnline(navigator.onLine); if (navigator.onLine) refresh(); };
-    const install = (event: Event) => { event.preventDefault(); setInstallEvent(event as InstallEvent); };
-    const installed = () => setInstallEvent(null);
     setOnline(navigator.onLine); window.addEventListener('online', check); window.addEventListener('offline', check);
-    window.addEventListener('beforeinstallprompt', install); window.addEventListener('appinstalled', installed);
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') navigator.serviceWorker.register('/sw.js').catch(() => {});
-    return () => { window.removeEventListener('online', check); window.removeEventListener('offline', check); window.removeEventListener('beforeinstallprompt', install); window.removeEventListener('appinstalled', installed); };
+    return () => { window.removeEventListener('online', check); window.removeEventListener('offline', check); };
   }, [refresh]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4500); return () => clearTimeout(timer); }, [notice]);
 
@@ -76,11 +73,7 @@ export default function Workspace() {
     try { await request('/api/admin/session', { method: 'DELETE' }); setAdmin(false); setViewAdmin(false); setNotice('Signed out of admin.'); }
     catch(e) { setError((e as Error).message); }
   }
-  async function install() {
-    if (!installEvent) { setHelp(true); return; }
-    await installEvent.prompt(); const result = await installEvent.userChoice;
-    if (result.outcome === 'accepted') setInstallEvent(null);
-  }
+  function install() { setHelp(false); window.dispatchEvent(new Event(showInstallEvent)); }
   const tabLoans = loans.filter(loan => loan.category === category);
   const visibleLoans = useMemo(() => tabLoans.filter(loan => loan.atsId.toLowerCase().includes(search.toLowerCase()) && (!status || loan.status === status) && (!compliance || loan.compliance === compliance)), [loans, category, search, status, compliance]);
   const pendingLoans = tabLoans.filter(l => l.status === 'pending'); const sanctionedLoans = tabLoans.filter(l => l.status === 'sanctioned');
@@ -111,6 +104,6 @@ export default function Workspace() {
     {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={() => { setForm(null); setNotice('Loan saved to the shared workspace.'); refresh(); }}/>: null}
-    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Install on your device</h3><p>In Chrome or Edge, use the browser’s Install app option. On iPhone or iPad, open in Safari, tap Share, then Add to Home Screen.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
+    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Install on your device</h3><p>In Chrome or Edge, use the browser’s Install app option. On iPhone or iPad, open in Safari, tap Share, then Add to Home Screen.</p><button type="button" className="button primary" onClick={install}><Download size={15}/> Show install steps</button><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
   </div>;
 }

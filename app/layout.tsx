@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import InstallPrompt from "./components/InstallPrompt";
 
 export const metadata: Metadata = {
   title: "AMCC | Agri Loan Tracker",
@@ -19,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">{children}<InstallPrompt /></body>
     </html>
   );
 }
