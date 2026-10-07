@@ -12,7 +12,7 @@ import { showInstallEvent } from './InstallPrompt';
 
 const preferenceKey = 'amcc.branch.v1';
 const recentCount = 5;
-const NewLoanIcon = () => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v5"/><path d="M14 3v5h5"/><path d="M8 11h4M8 14h6M8 17h3"/><path d="M18 16v6M15 19h6"/></svg>;
+const NewLoanIcon = () => <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v5"/><path d="M14 3v5h5"/><path d="M8 11h4M8 14h6M8 17h3"/><path d="M18 16v6M15 19h6"/></svg>;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
@@ -116,8 +116,8 @@ export default function Workspace() {
         <section className="create-band" aria-labelledby="create-heading"><div className="create-inner">
           <h2 id="create-heading" className="create-heading">Create application</h2>
           <div className="create-actions">
-            <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Submit a new loan</span></span><ArrowRight size={21} strokeWidth={1.5}/></button>
-            <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={24} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Submit a renewal</span></span><ArrowRight size={21} strokeWidth={1.5}/></button>
+            <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Submit a new loan</span></span><ArrowRight size={17} strokeWidth={1.5}/></button>
+            <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={19} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Submit a renewal</span></span><ArrowRight size={17} strokeWidth={1.5}/></button>
           </div>
         </div></section>
         <section className="recent" aria-labelledby="recent-heading">
