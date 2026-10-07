@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Building2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request, rupees } from '../../lib/types';
 import Modal from './Modal';
@@ -25,7 +26,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   return <Modal title={reviewing ? 'Review loan' : loan ? 'Edit loan' : `Add ${category === 'new' ? 'new' : 'renewal'} loan`} subtitle={reviewing ? `${loan.atsId} · ${loan.branchName}` : 'Enter the application details below.'} onClose={saving ? undefined : onClose}>
     <form onSubmit={save} className="form-stack">
       {reviewing ? <div className="review-summary"><span>Loan amount</span><strong>{rupees(loan.amountPaise)}</strong><span>{loan.category === 'new' ? 'New loan' : 'Renewal'}</span></div> : <>
-        <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} disabled={!!loan} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+        {admin && !loan ? <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <div className="form-field"><span className="form-field-label">Branch</span><div className="field-static"><Building2 size={15}/>{branches.find(b => b.id === branch)?.name || loan?.branchName || 'No branch selected'}</div></div>}
         <label>ATS / application number<input value={atsId} onChange={e => setAts(e.target.value)} placeholder="e.g. ATS-2026-001" maxLength={80} required autoFocus/></label>
         <label>Loan amount (₹)<input value={amount} onChange={e => setAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" placeholder="e.g. 250000" required/><small>Amount in rupees, with up to two decimal places.</small></label>
       </>}
