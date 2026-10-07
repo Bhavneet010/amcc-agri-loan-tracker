@@ -89,3 +89,22 @@ main>.message{margin:18px 24px 0}
 
 .field-static{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:#f6f8f6;color:var(--ink);font-size:13px;font-weight:500}
 .field-static svg{color:var(--green)}.form-field{display:grid;gap:8px}.form-field-label{font-size:12px;font-weight:550;color:#5a6a60}
+
+/* Add-application buttons: solid cards so they read as tappable */
+.create-inner{padding:18px 16px 20px}
+.create-actions{gap:10px;margin-top:13px}
+.create-actions:before{display:none}
+.create-action,.create-action:first-of-type,.create-action:last-of-type{grid-row:auto;grid-column:auto;padding:12px 10px 12px 12px;gap:10px;background:#fff;color:var(--green);border-radius:12px;box-shadow:0 3px 10px #0b2d1f40;transition:transform .12s,box-shadow .12s}
+.create-action:not(:disabled):hover{box-shadow:0 5px 16px #0b2d1f55}
+.create-action:not(:disabled):active{transform:scale(.97)}
+.create-action:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.create-icon{width:40px;height:40px;background:var(--green-light);color:var(--green)}
+.create-text strong{color:var(--green)}
+.create-text span{color:var(--muted)}
+.create-plus{width:28px;height:28px;border-radius:50%;background:var(--clay);color:#fff;display:grid;place-items:center;flex:none}
+@media(max-width:400px){.create-action,.create-action:first-of-type,.create-action:last-of-type{flex-direction:column;align-items:flex-start;position:relative;padding:12px}.create-plus{position:absolute;top:10px;right:10px}.create-text strong{font-size:15.5px}}
+
+/* Recent applications view filter */
+.view-select{position:relative;display:flex;flex:none}
+.view-select select{appearance:none;-webkit-appearance:none;height:34px;padding:0 30px 0 12px;border:1px solid #d7dbd5;border-radius:6px;background:var(--surface);font:500 13px var(--serif);color:var(--green)}
+.view-select svg{position:absolute;right:9px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--green)}

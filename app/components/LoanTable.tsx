@@ -17,8 +17,8 @@ const EmptyArt = () => <svg className="empty-art" width="140" height="108" viewB
   <path d="M0 88c22-9 45-10 70-3s46 6 68-2v25H0z" fill="var(--bg)"/>
   <path d="M2 88c22-9 45-10 68-3s46 6 66-2M18 96c18-7 38-7 58-1s38 6 58 3M40 104c20-5 40-5 60 0s24 3 34 1" stroke="var(--field)" strokeWidth="1.2"/>
 </svg>;
-export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, filtered }: { loans: Loan[]; admin: boolean; onEdit: (loan: Loan) => void; onCompliance: (loan: Loan) => void; busy: string; filtered: boolean }) {
-  if (!loans.length) return <div className="empty-state">{filtered ? <div className="empty-icon"><FileText size={27} strokeWidth={1.5}/></div> : <EmptyArt/>}<h3>{filtered ? 'No matching loans' : 'No applications yet'}</h3><p>{filtered ? 'Try another ATS number or clear the filters.' : 'Add your first application to start tracking its progress.'}</p></div>;
+export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, filtered, emptyTitle, emptyText }: { loans: Loan[]; admin: boolean; onEdit: (loan: Loan) => void; onCompliance: (loan: Loan) => void; busy: string; filtered: boolean; emptyTitle: string; emptyText: string }) {
+  if (!loans.length) return <div className="empty-state">{filtered ? <div className="empty-icon"><FileText size={27} strokeWidth={1.5}/></div> : <EmptyArt/>}<h3>{emptyTitle}</h3><p>{emptyText}</p></div>;
   return <div className="table-wrap"><table><thead><tr><th>Application / ATS ID</th>{admin ? <th>Branch</th> : null}<th>Amount</th><th>Status</th><th>Admin remarks</th><th>Compliance</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}>
     <td data-label="Application"><strong className="ats">{loan.atsId}</strong><span className="row-date">Added {dateLabel(loan.createdAt)}</span></td>
     {admin ? <td data-label="Branch">{loan.branchName}</td> : null}

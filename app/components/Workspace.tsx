@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Building2, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Download, Layers2, Leaf, LogOut, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
+import { Building2, CheckCheck, ChevronDown, CircleHelp, Download, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -12,12 +12,15 @@ import { showInstallEvent } from './InstallPrompt';
 
 const preferenceKey = 'amcc.branch.v1';
 const recentCount = 5;
+type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
+const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
+const inView = (loan: Loan, view: View) => view === 'all' || (view === 'alerts' ? loan.compliance === 'awaiting' : loan.status === view);
 const NewLoanIcon = () => <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v5"/><path d="M14 3v5h5"/><path d="M8 11h4M8 14h6M8 17h3"/><path d="M18 16v6M15 19h6"/></svg>;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
   const [category, setCategory] = useState<'new' | 'renewal'>('new'); const [loans, setLoans] = useState<Loan[]>([]);
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState(''); const [compliance, setCompliance] = useState('');
+  const [search, setSearch] = useState(''); const [view, setView] = useState<View>('pending'); const [compliance, setCompliance] = useState('');
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
@@ -66,7 +69,7 @@ export default function Workspace() {
   useEffect(() => { if (!menu) return; const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); }; window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, [menu]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4500); return () => clearTimeout(timer); }, [notice]);
 
-  function chooseBranch(id: string) { setBranch(id); setSettings(false); if (activeAdmin) setAdminFilter(id); try { localStorage.setItem(preferenceKey, id); } catch {} setSearch(''); setStatus(''); }
+  function chooseBranch(id: string) { setBranch(id); setSettings(false); if (activeAdmin) setAdminFilter(id); try { localStorage.setItem(preferenceKey, id); } catch {} setSearch(''); }
   async function complianceUpdate(loan: Loan) {
     setBusy(loan.id); setError('');
     try { await request(`/api/loans/${loan.id}`, { method: 'PATCH', body: JSON.stringify({ version: loan.version, compliance: loan.compliance === 'complied' ? 'awaiting' : 'complied' }) }); setNotice(loan.compliance === 'complied' ? 'Compliance reopened.' : 'Marked as complied.'); refresh(); }
@@ -80,14 +83,18 @@ export default function Workspace() {
   const canAdd = ready && (activeAdmin || !!branchId);
   function create(kind: 'new' | 'renewal') { setCategory(kind); setForm('new'); }
   const tabLoans = loans.filter(loan => loan.category === category);
-  const filtered = !!(search || status || compliance);
-  const visibleLoans = useMemo(() => tabLoans.filter(loan => loan.atsId.toLowerCase().includes(search.toLowerCase()) && (!status || loan.status === status) && (!compliance || loan.compliance === compliance)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [loans, category, search, status, compliance]);
-  const shownLoans = showAll || filtered ? visibleLoans : visibleLoans.slice(0, recentCount);
+  const filtered = !!(search || compliance);
+  const visibleLoans = useMemo(() => tabLoans.filter(loan => inView(loan, view) && loan.atsId.toLowerCase().includes(search.toLowerCase()) && (!compliance || loan.compliance === compliance)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [loans, category, view, search, compliance]);
+  const limited = view === 'all' || view === 'sanctioned';
+  const shownLoans = showAll || filtered || !limited ? visibleLoans : visibleLoans.slice(0, recentCount);
+  const viewLabel = views.find(v => v.id === view)!.label.toLowerCase();
+  const emptyTitle = filtered ? 'No matching loans' : !loans.length ? 'No applications yet' : view === 'pending' ? 'Nothing pending' : view === 'alerts' ? 'No alerts' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
+  const emptyText = filtered ? 'Try another ATS number or clear the filters.' : !loans.length || view === 'all' ? 'Add your first application to start tracking its progress.' : view === 'alerts' ? 'No admin remarks are awaiting compliance.' : 'Choose All to see every application.';
   const pendingLoans = loans.filter(l => l.status === 'pending'); const sanctionedLoans = loans.filter(l => l.status === 'sanctioned');
   const awaiting = loans.filter(l => l.compliance === 'awaiting');
   return <div className="app-shell">
     <header className="appbar">
-      <a className="brand" href="/" aria-label="AMCC loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">AGRI LOAN CELL</span></span></a>
+      <a className="brand" href="/" aria-label="AMCC Paonta Sahib loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">PAONTA SAHIB</span></span></a>
       <div className="appbar-actions">{activeAdmin ? <span className="admin-label"><ShieldCheck size={14}/> Admin</span> : null}<button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
         {menu ? <><div className="menu-backdrop" onClick={() => setMenu(false)}/><div className="app-menu" role="menu" onClick={() => setMenu(false)}>
           {activeAdmin ? <div className="menu-label"><ShieldCheck size={13}/> Admin view</div> : null}
@@ -114,18 +121,18 @@ export default function Workspace() {
           </dl>
         </section>
         <section className="create-band" aria-labelledby="create-heading"><div className="create-inner">
-          <h2 id="create-heading" className="create-heading">Create application</h2>
+          <h2 id="create-heading" className="create-heading">Add an application</h2>
           <div className="create-actions">
-            <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Submit a new loan</span></span><ArrowRight size={19} strokeWidth={1.5}/></button>
-            <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={21} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Submit a renewal</span></span><ArrowRight size={19} strokeWidth={1.5}/></button>
+            <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Add a fresh application</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
+            <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={21} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Add a renewal</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
           </div>
         </div></section>
         <section className="recent" aria-labelledby="recent-heading">
-          <div className="recent-head"><h2 id="recent-heading">Recent applications</h2><button className="view-all" onClick={() => setShowAll(!showAll)} aria-expanded={showAll}>{showAll ? 'Show recent' : 'View all'}<ChevronRight size={17} className={showAll ? 'flip' : ''}/></button></div>
-          <div className="tabs" role="tablist" aria-label="Loan category"><button role="tab" aria-selected={category === 'new'} aria-controls="loans-panel" id="new-tab" className={category === 'new' ? 'selected' : ''} onClick={() => setCategory('new')}>New loans <span>{loading ? 0 : loans.filter(l => l.category === 'new').length}</span></button><span className="tab-divider" aria-hidden="true"/><button role="tab" aria-selected={category === 'renewal'} aria-controls="loans-panel" id="renewal-tab" className={category === 'renewal' ? 'selected' : ''} onClick={() => setCategory('renewal')}>Renewals <span>{loading ? 0 : loans.filter(l => l.category === 'renewal').length}</span></button></div>
-          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS number…" value={search} onChange={e => setSearch(e.target.value)}/></label>{activeAdmin ? <select aria-label="Filter branch" value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select> : null}<span className="select-field"><select aria-label="Filter status" value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option></select><ChevronDown size={18}/></span>{activeAdmin ? <select aria-label="Filter compliance" value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select> : null}</div>
-          <div id="loans-panel" role="tabpanel" aria-labelledby={category === 'new' ? 'new-tab' : 'renewal-tab'}>{loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div> : <LoanTable loans={shownLoans} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered}/>}</div>
-          {!loading && visibleLoans.length > shownLoans.length ? <button className="show-more" onClick={() => setShowAll(true)}>View all {visibleLoans.length} {category === 'new' ? 'new loans' : 'renewals'}</button> : null}
+          <div className="recent-head"><h2 id="recent-heading">Recent applications</h2><span className="view-select"><select aria-label="Show applications" value={view} onChange={e => { setView(e.target.value as View); setShowAll(false); }}>{views.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</select><ChevronDown size={16}/></span></div>
+          <div className="tabs" role="tablist" aria-label="Loan category"><button role="tab" aria-selected={category === 'new'} aria-controls="loans-panel" id="new-tab" className={category === 'new' ? 'selected' : ''} onClick={() => setCategory('new')}>New loans <span>{loading ? 0 : loans.filter(l => l.category === 'new' && inView(l, view)).length}</span></button><span className="tab-divider" aria-hidden="true"/><button role="tab" aria-selected={category === 'renewal'} aria-controls="loans-panel" id="renewal-tab" className={category === 'renewal' ? 'selected' : ''} onClick={() => setCategory('renewal')}>Renewals <span>{loading ? 0 : loans.filter(l => l.category === 'renewal' && inView(l, view)).length}</span></button></div>
+          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS number…" value={search} onChange={e => setSearch(e.target.value)}/></label>{activeAdmin ? <select aria-label="Filter branch" value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select> : null}{activeAdmin ? <select aria-label="Filter compliance" value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select> : null}</div>
+          <div id="loans-panel" role="tabpanel" aria-labelledby={category === 'new' ? 'new-tab' : 'renewal-tab'}>{loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div> : <LoanTable loans={shownLoans} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/>}</div>
+          {!loading && visibleLoans.length > shownLoans.length ? <button className="show-more" onClick={() => setShowAll(true)}>Show all {visibleLoans.length} {view === 'all' ? '' : viewLabel + ' '}{category === 'new' ? 'new loans' : 'renewals'}</button> : null}
         </section>
       </main>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}
