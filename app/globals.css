@@ -215,3 +215,16 @@ main>.message{margin:18px 24px 0}
 .quick-add-btn{gap:10px;padding:10px 8px 10px 13px}
 @media(max-width:360px){.quick-add-btn{gap:8px;padding:10px 6px 10px 9px}}
 .quick-add{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)}
+
+/* Compact top bar: small app name, minimal padding */
+.appbar{padding:8px 18px 0;gap:10px}
+.brand,.appbar .brand{gap:8px;font:800 20px/1 var(--serif);letter-spacing:-.3px}
+.brand-icon{width:28px;height:30px;border-radius:7px}
+.brand-icon svg{width:16px;height:16px}
+.brand-sub{font:500 6.5px var(--sans);letter-spacing:1.8px;margin-top:3px}
+.menu-button{width:32px;height:32px;padding:4px}
+.menu-button svg{width:21px;height:21px}
+.appbar-actions .branch-switch{height:28px;font-size:10px}
+.summary{margin-top:10px}
+@media(max-width:680px){.appbar{padding:8px 18px 0}.brand,.appbar .brand{font-size:20px;gap:8px}.brand-icon{width:28px;height:30px;border-radius:7px}.brand-icon svg{width:16px;height:16px}.brand-sub{font-size:6.5px;letter-spacing:1.8px}.menu-button svg{width:21px;height:21px}}
+@media(min-width:681px){.appbar{padding:10px 24px 0}}
