@@ -16,6 +16,6 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, cache: 'no-store', signal: options.signal ?? AbortSignal.timeout(15000) });
   } catch { throw new Error('Cannot connect. Check your connection and try again.'); }
   const data: any = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'Unable to complete the request. Please try again.');
+  if (!response.ok) throw new Error(data.error || `Unable to complete the request (error ${response.status}). Please try again.`);
   return data as T;
 }

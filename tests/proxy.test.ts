@@ -47,3 +47,12 @@ test('forwards loan deletes to the shared data service', async () => {
   const foreign = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc123', { method: 'DELETE', headers: { origin: 'https://evil.example' } }), fetcher as typeof fetch);
   assert.equal(foreign.status, 403);
 });
+
+test('turns a non-JSON error from the data service into a readable message', async () => {
+  const fetcher = async () => new Response('Method Not Allowed', { status: 405, headers: { 'content-type': 'text/plain' } });
+  const response = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc', { method: 'DELETE', headers: { origin: 'https://app.vercel.app' } }), fetcher as unknown as typeof fetch);
+  assert.equal(response.status, 405);
+  assert.match((await response.json()).error, /support deleting/);
+  const other = await proxyRequest(new Request('https://app.vercel.app/api/loans'), (async () => new Response('<html>oops</html>', { status: 500 })) as unknown as typeof fetch);
+  assert.match((await other.json()).error, /\(500\)/);
+});
