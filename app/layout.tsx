@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { DM_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "./components/InstallPrompt";
+
+// Self-hosted at build time; a CSS @import of Google Fonts is dropped from the production bundle.
+const sans = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const serif = Source_Serif_4({ subsets: ["latin"], axes: ["opsz"], variable: "--font-serif", display: "swap" });
 
 export const metadata: Metadata = {
   title: "AMCC | Agri Loan Tracker",
@@ -21,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body className="antialiased">{children}<InstallPrompt /></body>
     </html>
   );
