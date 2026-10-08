@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCheck, ChevronDown, CircleHelp, Download, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
+import { Building2, CheckCheck, ChevronDown, CircleHelp, Download, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -26,7 +26,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); const [showAll, setShowAll] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState(false);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -70,6 +70,7 @@ export default function Workspace() {
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') navigator.serviceWorker.register('/sw.js').catch(() => {});
     return () => { window.removeEventListener('online', check); window.removeEventListener('offline', check); };
   }, [refresh]);
+  useEffect(() => { if (!filters) return; const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setFilters(false); }; window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, [filters]);
   useEffect(() => { if (!menu) return; const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); }; window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, [menu]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4500); return () => clearTimeout(timer); }, [notice]);
 
@@ -98,6 +99,8 @@ export default function Workspace() {
   const awaiting = loans.filter(l => l.compliance === 'awaiting');
   const statFilters: { id: View; label: string; dot: string; count: number }[] = [{ id: 'pending', label: 'Pending', dot: 'pending', count: pendingLoans.length }, { id: 'sanctioned', label: 'Sanctioned', dot: 'sanctioned', count: sanctionedLoans.length }, { id: 'alerts', label: 'Alerts', dot: 'action', count: awaiting.length }];
   function chooseView(next: View) { setView(next); setShowAll(false); }
+  const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
+  function clearFilters() { chooseView('all'); setAdminFilter(''); setCompliance(''); }
   return <div className="app-shell">
     <header className="appbar">
       <a className="brand" href="/" aria-label="AMCC Paonta Sahib loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">PAONTA SAHIB</span></span></a>
@@ -131,7 +134,13 @@ export default function Workspace() {
         <section className="recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="sr-only">Applications</h2>
           <div className="tabs" role="tablist" aria-label="Loan category"><button role="tab" aria-selected={category === 'new'} aria-controls="loans-panel" id="new-tab" className={category === 'new' ? 'selected' : ''} onClick={() => setCategory('new')}>New loans <span>{loading ? 0 : loans.filter(l => l.category === 'new' && inView(l, view)).length}</span></button><span className="tab-divider" aria-hidden="true"/><button role="tab" aria-selected={category === 'renewal'} aria-controls="loans-panel" id="renewal-tab" className={category === 'renewal' ? 'selected' : ''} onClick={() => setCategory('renewal')}>Renewals <span>{loading ? 0 : loans.filter(l => l.category === 'renewal' && inView(l, view)).length}</span></button></div>
-          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS…" value={search} onChange={e => setSearch(e.target.value)}/></label><span className="view-select"><select aria-label="Show applications" value={view} onChange={e => chooseView(e.target.value as View)}>{views.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</select><ChevronDown size={16}/></span>{activeAdmin ? <div className="toolbar-filters"><span className="filter-select"><select aria-label="Filter branch" value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select><ChevronDown size={18}/></span><span className="filter-select"><select aria-label="Filter compliance" value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select><ChevronDown size={18}/></span></div> : null}</div>
+          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS…" value={search} onChange={e => setSearch(e.target.value)}/></label><div className="filter-anchor"><button type="button" className={`filter-button ${activeFilters ? 'has-filters' : ''}`} onClick={() => setFilters(!filters)} aria-label={`Filters${activeFilters ? `, ${activeFilters} active` : ''}`} aria-expanded={filters} aria-haspopup="dialog"><ListFilter size={21} strokeWidth={1.9}/>{activeFilters ? <span className="filter-count" aria-hidden="true">{activeFilters}</span> : null}</button>
+            {filters ? <><div className="menu-backdrop" onClick={() => setFilters(false)}/><div className="filter-panel" role="dialog" aria-label="Filters">
+              <label>Show<span className="filter-select"><select value={view} onChange={e => chooseView(e.target.value as View)}>{views.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</select><ChevronDown size={18}/></span></label>
+              {activeAdmin ? <label>Branch<span className="filter-select"><select value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select><ChevronDown size={18}/></span></label> : null}
+              {activeAdmin ? <label>Compliance<span className="filter-select"><select value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select><ChevronDown size={18}/></span></label> : null}
+              <div className="filter-panel-actions"><button type="button" className="text-button" onClick={clearFilters} disabled={!activeFilters}>Clear all</button><button type="button" className="button primary" onClick={() => setFilters(false)}>Done</button></div>
+            </div></> : null}</div></div>
           <div id="loans-panel" role="tabpanel" aria-labelledby={category === 'new' ? 'new-tab' : 'renewal-tab'}>{loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div> : <LoanTable loans={shownLoans} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/>}</div>
           {!loading && visibleLoans.length > shownLoans.length ? <button className="show-more" onClick={() => setShowAll(true)}>Show all {visibleLoans.length} {view === 'all' ? '' : viewLabel + ' '}{category === 'new' ? 'new loans' : 'renewals'}</button> : null}
         </section>

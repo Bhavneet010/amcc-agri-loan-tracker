@@ -255,3 +255,17 @@ main>.message{margin:18px 24px 0}
 .table-toolbar .view-select select{height:44px;min-width:118px;font-size:clamp(14px,4.2vw,16px)}
 @media(min-width:681px){.table-toolbar .search-field{flex:1 1 0}.toolbar-filters{flex:1 1 100%}}
 @media(max-width:380px){.table-toolbar .view-select select{min-width:104px;padding:0 32px 0 11px}.stat-filter{padding:10px 2px}}
+
+/* Single filter button beside search, opening a panel with every filter */
+.table-toolbar{flex-wrap:nowrap}
+.filter-anchor{position:relative;flex:none}
+.filter-button{position:relative;display:grid;place-items:center;width:44px;height:44px;border:1px solid #d7dbd5;border-radius:6px;background:var(--surface);color:var(--green)}
+.filter-button:hover,.filter-button[aria-expanded=true]{background:var(--green-light)}
+.filter-button.has-filters{border-color:#95b59f}
+.filter-count{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--clay);color:#fff;font:600 11px/19px var(--sans);text-align:center}
+.filter-panel{position:absolute;top:calc(100% + 8px);right:0;z-index:12;width:min(300px,calc(100vw - 32px));display:grid;gap:14px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 34px #163c252e}
+.filter-panel label{gap:6px;font:500 12px var(--sans);color:var(--muted)}
+.filter-panel .filter-select select{font-size:15px}
+.filter-panel-actions{display:flex;align-items:center;justify-content:space-between;padding-top:2px}
+.filter-panel-actions .text-button{font-size:13px}
+.filter-panel-actions .text-button:disabled{cursor:default;opacity:.4;text-decoration:none}
