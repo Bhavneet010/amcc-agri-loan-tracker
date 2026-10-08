@@ -1,15 +1,21 @@
 'use client';
 import { useState } from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, Trash2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { atsDigits, request, rupees } from '../../lib/types';
 import Modal from './Modal';
-export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void }) {
+export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void; onDeleted: () => void }) {
   const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
   const [branch, setBranch] = useState(loan?.branchId ?? branchId); const [remarks, setRemarks] = useState(loan?.remarks ?? ''); const [status, setStatus] = useState(loan?.status ?? 'pending');
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const [baseVersion, setBaseVersion] = useState(loan?.version ?? 0); const [conflict, setConflict] = useState(false); const [latest, setLatest] = useState<Loan | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const reviewing = admin && !!loan;
+  async function remove() {
+    setError(''); setSaving(true);
+    try { await request(`/api/loans/${loan!.id}`, { method: 'DELETE', body: JSON.stringify({ version: baseVersion }) }); onDeleted(); }
+    catch(e) { const message = (e as Error).message; setError(/method not allowed/i.test(message) ? 'The shared loan service doesn’t allow deleting applications yet, so nothing was removed.' : message); setConfirmDelete(false); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
+  }
   async function reloadVersion() {
     setSaving(true);
     try { const current = await request<Loan>(`/api/loans/${loan!.id}`); setLatest(current); setBaseVersion(current.version); setConflict(false); setError(''); }
@@ -34,7 +40,8 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {conflict ? <button type="button" className="button secondary" onClick={reloadVersion} disabled={saving}>Load latest version, keep my draft</button> : null}
       {latest ? <div className="review-summary"><span>Latest saved version · {latest.atsId} · {rupees(latest.amountPaise)} · {latest.status}</span><span>Current remarks: {latest.remarks || 'None'}</span><small>Your draft is preserved above. Review it before saving over the latest version.</small></div> : null}
-      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}</button></div>
+      {loan && confirmDelete ? <div className="delete-confirm" role="alert"><p>Delete <strong>{loan.atsId}</strong>? This removes the application for everyone and can’t be undone.</p><div><button type="button" className="button secondary" onClick={() => setConfirmDelete(false)} disabled={saving}>Keep it</button><button type="button" className="button danger" onClick={remove} disabled={saving}>{saving ? 'Deleting…' : 'Yes, delete'}</button></div></div> : null}
+      <div className="modal-actions">{loan && !confirmDelete ? <button type="button" className="button delete-button" onClick={() => setConfirmDelete(true)} disabled={saving}><Trash2 size={15}/> Delete</button> : null}<button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}</button></div>
     </form>
   </Modal>;
 }

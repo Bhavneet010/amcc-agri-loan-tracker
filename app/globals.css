@@ -246,3 +246,11 @@ main>.message{margin:18px 24px 0}
 .status>span:first-child{width:4px;height:4px;border-radius:100%;background:currentColor;flex:none}
 @media(max-width:440px){.loan-line{gap:7px}.loan-line .amount{min-width:0}.loan-line .status{padding:4px 7px;gap:5px}.loan-card{padding-right:2px}}
 @media(max-width:360px){.loan-line .status{padding:0;width:22px;height:22px;justify-content:center;border-radius:50%}.loan-line .status>span:first-child{width:8px;height:8px}.loan-line .status-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}}
+
+/* Delete application */
+.modal-actions .delete-button{margin-right:auto;border-color:#f0d3cc;background:#fff;color:#a04e43}
+.modal-actions .delete-button:hover{background:#fff1ee}
+.button.danger{background:#b4473a;color:#fff}
+.button.danger:hover{background:#9a3a2f}
+.delete-confirm{display:grid;gap:12px;padding:14px;border-radius:9px;background:#fff1ee;color:#7d3a31;font-size:13px;line-height:1.5}
+.delete-confirm>div{display:flex;justify-content:flex-end;gap:8px}

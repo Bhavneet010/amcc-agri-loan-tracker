@@ -35,3 +35,15 @@ test('keeps the admin cookie on the device after login but leaves sign-out cooki
   const logout = await proxyRequest(new Request('https://app.vercel.app/api/admin/session', { method: 'DELETE', headers: { origin: 'https://app.vercel.app' } }), (async () => new Response('{}', { headers: { 'set-cookie': 'amcc_admin=; Path=/; Max-Age=0' } })) as unknown as typeof fetch);
   assert.equal(logout.headers.get('set-cookie'), 'amcc_admin=; Path=/; Max-Age=0');
 });
+
+test('forwards loan deletes to the shared data service', async () => {
+  const received: Record<string, any> = {};
+  const fetcher = async (url: string, init: RequestInit) => { received.url = url; received.init = init; return Response.json({ ok: true }); };
+  const response = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc123', { method: 'DELETE', headers: { origin: 'https://app.vercel.app', 'content-type': 'application/json' }, body: '{"version":3}' }), fetcher as typeof fetch);
+  assert.equal(response.status, 200);
+  assert.equal(received.url, 'https://amcc-agri-loans.bhavneet.chatgpt.site/api/loans/abc123');
+  assert.equal(received.init.method, 'DELETE');
+  assert.equal(received.init.body, '{"version":3}');
+  const foreign = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc123', { method: 'DELETE', headers: { origin: 'https://evil.example' } }), fetcher as typeof fetch);
+  assert.equal(foreign.status, 403);
+});
