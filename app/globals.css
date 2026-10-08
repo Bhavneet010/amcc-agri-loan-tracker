@@ -128,3 +128,60 @@ main>.message{margin:18px 24px 0}
 .loan-alert.complied{opacity:.8}
 .loan-card.has-alert:has(.loan-alert.complied){border-left-color:#8fc19b}
 @media(max-width:680px){.loan-date{display:none}.loan-line .review-button{font-size:0;gap:0;min-width:30px;min-height:30px;justify-content:center}.loan-line .review-button svg{width:16px;height:16px}.loan-line .ats{margin-right:auto}.loan-branch{flex:1 1 0;margin-right:0}.loan-line{gap:8px}.loan-alert{flex-direction:column;gap:4px}}
+
+/* Home summary: one green card with stats and the add buttons */
+.summary-card{background:var(--green);color:#fff;border-radius:20px;margin:16px 0 0;padding:22px 12px 18px;box-shadow:0 6px 18px #0b2d1f26}
+.summary-card .hero{display:grid;grid-template-columns:auto 1fr;align-items:center;padding:0 2px 0 8px}
+.summary-card .hero-total{align-items:center;border-right:1px solid #ffffff40;margin:0;padding:0 18px 2px 0}
+.summary-card .hero-total strong{font:800 58px/.9 var(--serif);color:#fff;margin:0 0 6px;letter-spacing:-1px}
+.summary-card .hero-rule{width:44px;height:2px;background:var(--clay);margin:0}
+.summary-card .hero-label{font:400 19px/1 var(--serif);color:#f2f6f3;margin-top:9px}
+.summary-card .hero-stats{margin:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:start}
+.summary-card .hero-stats>div{height:auto;border:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;text-align:center}
+.summary-card .hero-stats>div+div{border-left:1px solid #ffffff40}
+.summary-card .hero-stats dt{display:contents}
+.summary-card .hero-stats .dot{width:11px;height:11px;margin-bottom:11px}
+.summary-card .hero-stats dd{order:1;font:700 25px/1 var(--serif);color:#fff;margin:0 0 7px}
+.summary-card .hero-stat-label{order:2;font:400 13.5px/1.25 var(--serif);color:#e4ece6}
+.summary-card .create-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:20px}
+.summary-card .create-action,.summary-card .create-action:first-of-type,.summary-card .create-action:last-of-type{flex-direction:row;align-items:center;position:relative;padding:11px 8px 11px 8px;gap:9px;border-radius:9px;box-shadow:none}
+.summary-card .create-icon{width:44px;height:44px}
+.summary-card .create-text strong{font:600 17px/1.2 var(--serif)}
+.summary-card .create-text span{font:400 11.5px/1.3 var(--serif)}
+.summary-card .create-plus{position:absolute;top:10px;right:8px;width:30px;height:30px}
+.summary-card .create-text strong{padding-right:32px}
+@media(min-width:681px){.summary-card{margin:16px 24px 0;padding:26px 24px 22px}.summary-card .create-actions{gap:12px}}
+
+/* Recent list: larger controls to match the home mockup */
+.recent-head{padding-top:30px;align-items:flex-start}
+.recent-head h2{font:700 25px/1.2 var(--serif)}
+.view-select select{height:42px;padding:0 40px 0 13px;font:400 15px var(--serif);border-radius:7px;min-width:122px}
+.view-select svg{right:12px}
+.tabs{gap:22px}
+.tabs button{font-size:17px;gap:28px}
+.tabs button>span{min-width:32px;font-size:12px}
+.table-toolbar{gap:10px}
+.search-field{flex-basis:100%}
+.search-field input{height:44px;font-size:16px}
+.toolbar-filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.filter-select{position:relative;display:flex;min-width:0}
+.filter-select select{width:100%;height:44px;appearance:none;-webkit-appearance:none;padding:0 36px 0 13px;border:1px solid #d7dbd5;border-radius:6px;background:var(--surface);font:400 16px var(--serif);color:var(--ink)}
+.filter-select svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink)}
+.loan-line{min-height:44px;font-size:13.5px}
+.loan-line .ats{font:700 14.5px var(--serif)}
+.loan-branch,.loan-date{font-size:12px}
+.loan-line .amount{font:700 14px var(--serif)}
+.loan-line .status{font-size:11px;padding:5px 8px}
+.loan-line .review-button svg{width:17px;height:17px}
+@media(min-width:681px){.search-field{flex-basis:200px}.toolbar-filters{width:auto;flex:1 1 360px}}
+.brand,.appbar .brand{gap:12px;font:800 32px/1 var(--serif);letter-spacing:-.5px}
+.brand-icon{width:40px;height:44px;border-radius:9px}
+.brand-icon svg{width:22px;height:22px}
+.brand-sub{font:500 10px var(--sans);letter-spacing:2.6px;margin-top:5px;color:var(--ink)}
+.menu-button svg{width:26px;height:26px}
+.summary-card .hero-total strong{font-size:64px}
+.summary-card .hero-stats .dot{margin-bottom:14px}
+.summary-card .hero-stats dd{font-size:27px}
+.recent-head h2{font-size:28px;line-height:1.15}
+#loans-panel{border-bottom:0}
+@media(max-width:680px){.brand,.appbar .brand{font-size:30px}.brand-sub{font-size:9px;letter-spacing:2.4px}}

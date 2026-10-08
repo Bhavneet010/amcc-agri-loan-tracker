@@ -116,25 +116,25 @@ export default function Workspace() {
       <main>
         {!online ? <div className="message warning" role="status"><WifiOff size={17}/> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.</div> : null}
         {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
-        <section className="hero" aria-label="Loan summary">
-          <div className="hero-total"><strong>{loading ? '—' : loans.length}</strong><span className="hero-rule"/><span className="hero-label">Applications</span></div>
-          <dl className="hero-stats">
-            <div><dt><span className="dot pending"/>Pending</dt><dd>{loading ? '—' : pendingLoans.length}</dd></div>
-            <div><dt><span className="dot sanctioned"/>Sanctioned</dt><dd>{loading ? '—' : sanctionedLoans.length}</dd></div>
-            <div><dt><span className="dot action"/>Action required</dt><dd>{loading ? '—' : awaiting.length}</dd></div>
-          </dl>
-        </section>
-        <section className="create-band" aria-labelledby="create-heading"><div className="create-inner">
-          <h2 id="create-heading" className="create-heading">Add an application</h2>
+        <section className="summary-card" aria-label="Loan summary">
+          <div className="hero">
+            <div className="hero-total"><strong>{loading ? '—' : loans.length}</strong><span className="hero-rule"/><span className="hero-label">Applications</span></div>
+            <dl className="hero-stats">
+              <div><dt><span className="dot pending"/><span className="hero-stat-label">Pending</span></dt><dd>{loading ? '—' : pendingLoans.length}</dd></div>
+              <div><dt><span className="dot sanctioned"/><span className="hero-stat-label">Sanctioned</span></dt><dd>{loading ? '—' : sanctionedLoans.length}</dd></div>
+              <div><dt><span className="dot action"/><span className="hero-stat-label">Action required</span></dt><dd>{loading ? '—' : awaiting.length}</dd></div>
+            </dl>
+          </div>
+          <h2 className="sr-only">Add an application</h2>
           <div className="create-actions">
             <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Add a fresh application</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
             <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={21} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Add a renewal</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
           </div>
-        </div></section>
+        </section>
         <section className="recent" aria-labelledby="recent-heading">
           <div className="recent-head"><h2 id="recent-heading">Recent applications</h2><span className="view-select"><select aria-label="Show applications" value={view} onChange={e => { setView(e.target.value as View); setShowAll(false); }}>{views.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</select><ChevronDown size={16}/></span></div>
           <div className="tabs" role="tablist" aria-label="Loan category"><button role="tab" aria-selected={category === 'new'} aria-controls="loans-panel" id="new-tab" className={category === 'new' ? 'selected' : ''} onClick={() => setCategory('new')}>New loans <span>{loading ? 0 : loans.filter(l => l.category === 'new' && inView(l, view)).length}</span></button><span className="tab-divider" aria-hidden="true"/><button role="tab" aria-selected={category === 'renewal'} aria-controls="loans-panel" id="renewal-tab" className={category === 'renewal' ? 'selected' : ''} onClick={() => setCategory('renewal')}>Renewals <span>{loading ? 0 : loans.filter(l => l.category === 'renewal' && inView(l, view)).length}</span></button></div>
-          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS number…" value={search} onChange={e => setSearch(e.target.value)}/></label>{activeAdmin ? <select aria-label="Filter branch" value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select> : null}{activeAdmin ? <select aria-label="Filter compliance" value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select> : null}</div>
+          <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number" placeholder="Search ATS number…" value={search} onChange={e => setSearch(e.target.value)}/></label>{activeAdmin ? <div className="toolbar-filters"><span className="filter-select"><select aria-label="Filter branch" value={adminFilter} onChange={e => setAdminFilter(e.target.value)}><option value="">All branches</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select><ChevronDown size={18}/></span><span className="filter-select"><select aria-label="Filter compliance" value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select><ChevronDown size={18}/></span></div> : null}</div>
           <div id="loans-panel" role="tabpanel" aria-labelledby={category === 'new' ? 'new-tab' : 'renewal-tab'}>{loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div> : <LoanTable loans={shownLoans} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/>}</div>
           {!loading && visibleLoans.length > shownLoans.length ? <button className="show-more" onClick={() => setShowAll(true)}>Show all {visibleLoans.length} {view === 'all' ? '' : viewLabel + ' '}{category === 'new' ? 'new loans' : 'renewals'}</button> : null}
         </section>
