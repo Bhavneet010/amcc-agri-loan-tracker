@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCheck, ChevronDown, CircleHelp, Download, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
+import { Bell, Building2, CheckCheck, CircleCheck, Clock, ChevronDown, CircleHelp, Download, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -17,7 +17,6 @@ const recentCount = 5;
 type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
 const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
 const inView = (loan: Loan, view: View) => view === 'all' || (view === 'alerts' ? loan.compliance === 'awaiting' : loan.status === view);
-const NewLoanIcon = () => <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8l5 5v5"/><path d="M14 3v5h5"/><path d="M8 11h4M8 14h6M8 17h3"/><path d="M18 16v6M15 19h6"/></svg>;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
@@ -97,7 +96,7 @@ export default function Workspace() {
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : !loans.length || view === 'all' ? 'Add your first application to start tracking its progress.' : view === 'alerts' ? 'No admin remarks are awaiting compliance.' : 'Choose All to see every application.';
   const pendingLoans = loans.filter(l => l.status === 'pending'); const sanctionedLoans = loans.filter(l => l.status === 'sanctioned');
   const awaiting = loans.filter(l => l.compliance === 'awaiting');
-  const statFilters: { id: View; label: string; dot: string; count: number }[] = [{ id: 'pending', label: 'Pending', dot: 'pending', count: pendingLoans.length }, { id: 'sanctioned', label: 'Sanctioned', dot: 'sanctioned', count: sanctionedLoans.length }, { id: 'alerts', label: 'Alerts', dot: 'action', count: awaiting.length }];
+  const statFilters = [{ id: 'pending' as View, label: 'Pending', Icon: Clock, count: pendingLoans.length }, { id: 'sanctioned' as View, label: 'Sanctioned', Icon: CircleCheck, count: sanctionedLoans.length }, { id: 'alerts' as View, label: 'Alerts', Icon: Bell, count: awaiting.length }];
   function chooseView(next: View) { setView(next); setShowAll(false); }
   const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
   function clearFilters() { chooseView('all'); setAdminFilter(''); setCompliance(''); }
@@ -121,14 +120,14 @@ export default function Workspace() {
       <main>
         {!online ? <div className="message warning" role="status"><WifiOff size={17}/> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.</div> : null}
         {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
-        <section className="summary-card" aria-label="Loan summary">
-          <div className="stat-filters" role="group" aria-label="Filter applications by status">
-            {statFilters.map(f => <button key={f.id} type="button" className={`stat-filter ${view === f.id ? 'active' : ''}`} aria-pressed={view === f.id} onClick={() => chooseView(view === f.id ? 'all' : f.id)}><span className={`dot ${f.dot}`}/><strong>{loading ? '—' : f.count}</strong><span className="stat-label">{f.label}</span></button>)}
+        <section className="summary" aria-label="Loan summary">
+          <div className="status-band" role="group" aria-label="Filter applications by status">
+            {statFilters.map(f => <button key={f.id} type="button" className={`status-stat ${f.id} ${view === f.id ? 'active' : ''}`} aria-pressed={view === f.id} onClick={() => chooseView(view === f.id ? 'all' : f.id)}><span className="status-figure"><f.Icon size={26} strokeWidth={2}/><strong>{loading ? '—' : f.count}</strong></span><span className="status-label">{f.label}</span></button>)}
           </div>
           <h2 className="sr-only">Add an application</h2>
-          <div className="create-actions">
-            <button className="create-action" onClick={() => create('new')} disabled={!canAdd}><span className="create-icon"><NewLoanIcon/></span><span className="create-text"><strong>New loan</strong><span>Add a fresh application</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
-            <button className="create-action" onClick={() => create('renewal')} disabled={!canAdd}><span className="create-icon"><RefreshCw size={21} strokeWidth={1.75}/></span><span className="create-text"><strong>Renewal</strong><span>Add a renewal</span></span><span className="create-plus" aria-hidden="true"><Plus size={18} strokeWidth={2.4}/></span></button>
+          <div className="quick-add">
+            <button className="quick-add-btn" onClick={() => create('new')} disabled={!canAdd}><span className="quick-add-icon"><Plus size={22} strokeWidth={1.8}/></span><span className="quick-add-text"><strong>New loan</strong><span>Add a fresh application</span></span></button>
+            <button className="quick-add-btn" onClick={() => create('renewal')} disabled={!canAdd}><span className="quick-add-icon"><Plus size={22} strokeWidth={1.8}/></span><span className="quick-add-text"><strong>Renewal</strong><span>Add a renewal</span></span></button>
           </div>
         </section>
         <section className="recent" aria-labelledby="recent-heading">
