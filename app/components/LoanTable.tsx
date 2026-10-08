@@ -19,13 +19,18 @@ const EmptyArt = () => <svg className="empty-art" width="140" height="108" viewB
 </svg>;
 export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, filtered, emptyTitle, emptyText }: { loans: Loan[]; admin: boolean; onEdit: (loan: Loan) => void; onCompliance: (loan: Loan) => void; busy: string; filtered: boolean; emptyTitle: string; emptyText: string }) {
   if (!loans.length) return <div className="empty-state">{filtered ? <div className="empty-icon"><FileText size={27} strokeWidth={1.5}/></div> : <EmptyArt/>}<h3>{emptyTitle}</h3><p>{emptyText}</p></div>;
-  return <div className="table-wrap"><table><thead><tr><th>Application / ATS ID</th>{admin ? <th>Branch</th> : null}<th>Amount</th><th>Status</th><th>Admin remarks</th><th>Compliance</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}>
-    <td data-label="Application"><strong className="ats">{loan.atsId}</strong><span className="row-date">Added {dateLabel(loan.createdAt)}</span></td>
-    {admin ? <td data-label="Branch">{loan.branchName}</td> : null}
-    <td data-label="Amount" className="amount">{rupees(loan.amountPaise)}</td>
-    <td data-label="Status"><span className={`status ${loan.status}`}><span/>{loan.status === 'pending' ? 'Pending' : 'Sanctioned'}</span></td>
-    <td data-label="Admin remarks" className="remarks">{loan.remarks || <span className="muted">No remarks</span>}</td>
-    <td data-label="Compliance">{loan.remarks ? <div className="compliance"><span className={loan.compliance === 'complied' ? 'complied-text' : 'awaiting-text'}>{loan.compliance === 'complied' ? <Check size={14}/> : <CircleDashed size={14}/>} {loan.compliance === 'complied' ? 'Complied' : 'Awaiting'}</span>{!admin ? <button className="text-button" disabled={busy === loan.id} onClick={() => onCompliance(loan)}>{busy === loan.id ? 'Saving…' : loan.compliance === 'complied' ? 'Reopen' : 'Mark complied'}</button> : null}</div> : <span className="muted">—</span>}</td>
-    <td className="row-action">{admin || loan.status === 'pending' ? <button className={admin ? 'text-button review-button' : 'icon-button'} onClick={() => onEdit(loan)} aria-label={admin ? `Review ${loan.atsId}` : `Edit ${loan.atsId}`}>{admin ? <>Review <ArrowUpRight size={14}/></> : <Pencil size={16}/>}</button> : null}</td>
-  </tr>)}</tbody></table></div>;
+  return <ul className="loan-list">{loans.map(loan => <li key={loan.id} className={`loan-card ${loan.remarks ? 'has-alert' : ''}`}>
+    <div className="loan-line">
+      <strong className="ats" title={`Added ${dateLabel(loan.createdAt)}`}>{loan.atsId}</strong>
+      {admin ? <span className="loan-branch">{loan.branchName}</span> : null}
+      <span className="loan-date">{dateLabel(loan.createdAt)}</span>
+      <span className="amount">{rupees(loan.amountPaise)}</span>
+      <span className={`status ${loan.status}`}><span/>{loan.status === 'pending' ? 'Pending' : 'Sanctioned'}</span>
+      <span className="row-action">{admin || loan.status === 'pending' ? <button className={admin ? 'text-button review-button' : 'icon-button'} onClick={() => onEdit(loan)} aria-label={admin ? `Review ${loan.atsId}` : `Edit ${loan.atsId}`}>{admin ? <>Review <ArrowUpRight size={14}/></> : <Pencil size={15}/>}</button> : null}</span>
+    </div>
+    {loan.remarks ? <div className={`loan-alert ${loan.compliance === 'complied' ? 'complied' : 'awaiting'}`}>
+      <span className="remarks"><span className="sr-only">Admin remarks: </span>{loan.remarks}</span>
+      <span className="compliance"><span className={loan.compliance === 'complied' ? 'complied-text' : 'awaiting-text'}>{loan.compliance === 'complied' ? <Check size={13}/> : <CircleDashed size={13}/>} {loan.compliance === 'complied' ? 'Complied' : 'Awaiting'}</span>{!admin ? <button className="text-button" disabled={busy === loan.id} onClick={() => onCompliance(loan)}>{busy === loan.id ? 'Saving…' : loan.compliance === 'complied' ? 'Reopen' : 'Mark complied'}</button> : null}</span>
+    </div> : null}
+  </li>)}</ul>;
 }

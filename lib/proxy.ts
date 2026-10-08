@@ -1,4 +1,11 @@
 const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
+const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+// Upstream issues the admin cookie as a browser-session cookie, which phones drop when the app is closed.
+// Give it a lifetime so this device stays signed in as admin until sign-out.
+function persistAdminCookie(cookie: string) {
+  return /;\s*(max-age|expires)=/i.test(cookie) ? cookie : `${cookie}; Max-Age=${ADMIN_COOKIE_MAX_AGE}`;
+}
 
 export async function proxyRequest(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
   const url = new URL(request.url);
@@ -29,10 +36,10 @@ export async function proxyRequest(request: Request, fetcher: typeof fetch = fet
       signal: AbortSignal.timeout(15000),
     });
     const responseHeaders = new Headers({ 'cache-control': 'no-store' });
-    for (const name of ['content-type', 'set-cookie']) {
-      const value = upstream.headers.get(name);
-      if (value) responseHeaders.set(name, value);
-    }
+    const responseType = upstream.headers.get('content-type');
+    if (responseType) responseHeaders.set('content-type', responseType);
+    const login = url.pathname === '/api/admin/session' && request.method === 'POST' && upstream.ok;
+    for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append('set-cookie', login ? persistAdminCookie(cookie) : cookie);
     return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
   } catch {
     return Response.json({ error: 'Shared loan service is temporarily unavailable. Please try again.' }, { status: 503, headers: { 'cache-control': 'no-store' } });

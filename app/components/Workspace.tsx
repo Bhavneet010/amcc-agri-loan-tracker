@@ -11,6 +11,8 @@ import Modal from './Modal';
 import { showInstallEvent } from './InstallPrompt';
 
 const preferenceKey = 'amcc.branch.v1';
+const adminModeKey = 'amcc.adminMode.v1';
+const rememberAdminMode = (on: boolean) => { try { if (on) localStorage.setItem(adminModeKey, '1'); else localStorage.removeItem(adminModeKey); } catch {} };
 const recentCount = 5;
 type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
 const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
@@ -37,6 +39,8 @@ export default function Workspace() {
       setBranches(list); setAdmin(session.admin);
       let stored = ''; try { stored = localStorage.getItem(preferenceKey) || ''; } catch {}
       if (list.some(b => b.id === stored)) setBranch(stored);
+      let adminMode = false; try { adminMode = localStorage.getItem(adminModeKey) === '1'; } catch {}
+      if (session.admin && adminMode) setViewAdmin(true);
       setReady(true); setLoading(false);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
@@ -76,7 +80,7 @@ export default function Workspace() {
     catch(e) { setError((e as Error).message); } finally { setBusy(''); }
   }
   async function logout() {
-    try { await request('/api/admin/session', { method: 'DELETE' }); setAdmin(false); setViewAdmin(false); setNotice('Signed out of admin.'); }
+    try { await request('/api/admin/session', { method: 'DELETE' }); setAdmin(false); setViewAdmin(false); rememberAdminMode(false); setNotice('Signed out of admin.'); }
     catch(e) { setError((e as Error).message); }
   }
   function install() { setHelp(false); window.dispatchEvent(new Event(showInstallEvent)); }
@@ -95,12 +99,12 @@ export default function Workspace() {
   return <div className="app-shell">
     <header className="appbar">
       <a className="brand" href="/" aria-label="AMCC Paonta Sahib loan tracker home"><span className="brand-icon"><Leaf size={23}/></span><span>AMCC<span className="brand-sub">PAONTA SAHIB</span></span></a>
-      <div className="appbar-actions">{activeAdmin ? <span className="admin-label"><ShieldCheck size={14}/> Admin</span> : null}<button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button><button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
+      <div className="appbar-actions">{activeAdmin ? <span className="admin-label"><ShieldCheck size={14}/> Admin</span> : null}{!activeAdmin ? <button className="branch-switch" onClick={() => setSettings(true)}><span>{selected?.name || 'Select branch'}</span><ChevronDown size={14}/></button> : null}<button className={`icon-button menu-button ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-label="Settings" aria-expanded={menu} aria-haspopup="menu"><Gear size={20}/></button>
         {menu ? <><div className="menu-backdrop" onClick={() => setMenu(false)}/><div className="app-menu" role="menu" onClick={() => setMenu(false)}>
           {activeAdmin ? <div className="menu-label"><ShieldCheck size={13}/> Admin view</div> : null}
-          <button role="menuitem" className={!activeAdmin ? 'current' : ''} onClick={() => setViewAdmin(false)}><Layers2 size={17}/> Branch loans</button>
-          {admin ? <button role="menuitem" className={activeAdmin ? 'current' : ''} onClick={() => setViewAdmin(true)}><ShieldCheck size={17}/> Admin overview</button> : null}
-          <button role="menuitem" onClick={() => setSettings(true)}><Building2 size={17}/> Change branch</button>
+          <button role="menuitem" className={!activeAdmin ? 'current' : ''} onClick={() => { setViewAdmin(false); rememberAdminMode(false); }}><Layers2 size={17}/> Branch loans</button>
+          {admin ? <button role="menuitem" className={activeAdmin ? 'current' : ''} onClick={() => { setViewAdmin(true); rememberAdminMode(true); }}><ShieldCheck size={17}/> Admin overview</button> : null}
+          <button role="menuitem" onClick={() => setSettings(true)}><Building2 size={17}/> {activeAdmin ? 'Branch settings' : 'Change branch'}</button>
           <div className="menu-divider"/>
           <button role="menuitem" onClick={install}><Download size={17}/> Install app</button>
           <button role="menuitem" onClick={() => setHelp(true)}><CircleHelp size={17}/> Help</button>
@@ -136,8 +140,8 @@ export default function Workspace() {
         </section>
       </main>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}
-    {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
-    {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
+    {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
+    {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={() => { setForm(null); setNotice('Loan saved to the shared workspace.'); refresh(); }}/>: null}
     {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Install on your device</h3><p>In Chrome or Edge, use the browser’s Install app option. On iPhone or iPad, open in Safari, tap Share, then Add to Home Screen.</p><button type="button" className="button primary" onClick={install}><Download size={15}/> Show install steps</button><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
   </div>;
