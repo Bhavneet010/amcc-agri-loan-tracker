@@ -1,7 +1,7 @@
 'use client';
 import { ArrowUpRight, Check, CircleDashed, FileText, Pencil } from 'lucide-react';
 import type { Loan } from '../../lib/types';
-import { dateLabel, rupees } from '../../lib/types';
+import { branchCode, dateLabel, lakhs, rupees } from '../../lib/types';
 const EmptyArt = () => <svg className="empty-art" width="140" height="108" viewBox="0 0 140 108" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
   <circle cx="61" cy="46" r="45" fill="var(--empty-disc)"/>
   <path d="M41 20h27l12 12v56H41z" fill="var(--bg)" stroke="var(--green)" strokeWidth="1.8"/>
@@ -21,11 +21,10 @@ export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, fi
   if (!loans.length) return <div className="empty-state">{filtered ? <div className="empty-icon"><FileText size={27} strokeWidth={1.5}/></div> : <EmptyArt/>}<h3>{emptyTitle}</h3><p>{emptyText}</p></div>;
   return <ul className="loan-list">{loans.map(loan => <li key={loan.id} className={`loan-card ${loan.remarks ? 'has-alert' : ''}`}>
     <div className="loan-line">
-      <strong className="ats" title={`Added ${dateLabel(loan.createdAt)}`}>{loan.atsId}</strong>
-      {admin ? <span className="loan-branch">{loan.branchName}</span> : null}
-      <span className="loan-date">{dateLabel(loan.createdAt)}</span>
-      <span className="amount">{rupees(loan.amountPaise)}</span>
-      <span className={`status ${loan.status}`}><span/>{loan.status === 'pending' ? 'Pending' : 'Sanctioned'}</span>
+      {admin ? <span className="loan-branch" title={loan.branchName}>{branchCode(loan.branchName)}</span> : null}
+      <strong className="ats" title={`${loan.atsId} · added ${dateLabel(loan.createdAt)}`}>{/^ats\b/i.test(loan.atsId) ? <><span className="ats-tag">ATS</span>{loan.atsId.replace(/^ats[\s-]*/i, '')}</> : loan.atsId}</strong>
+      <span className="amount" title={rupees(loan.amountPaise)}>{lakhs(loan.amountPaise)}</span>
+      <span className={`status ${loan.status}`} title={loan.status === 'pending' ? 'Pending' : 'Sanctioned'}><span/><span className="status-text">{loan.status === 'pending' ? 'Pending' : 'Sanctioned'}</span></span>
       <span className="row-action">{admin || loan.status === 'pending' ? <button className={admin ? 'text-button review-button' : 'icon-button'} onClick={() => onEdit(loan)} aria-label={admin ? `Review ${loan.atsId}` : `Edit ${loan.atsId}`}>{admin ? <>Review <ArrowUpRight size={14}/></> : <Pencil size={15}/>}</button> : null}</span>
     </div>
     {loan.remarks ? <div className={`loan-alert ${loan.compliance === 'complied' ? 'complied' : 'awaiting'}`}>

@@ -2,10 +2,10 @@
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
-import { request, rupees } from '../../lib/types';
+import { atsDigits, request, rupees } from '../../lib/types';
 import Modal from './Modal';
 export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void }) {
-  const [atsId, setAts] = useState(loan?.atsId ?? ''); const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
+  const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
   const [branch, setBranch] = useState(loan?.branchId ?? branchId); const [remarks, setRemarks] = useState(loan?.remarks ?? ''); const [status, setStatus] = useState(loan?.status ?? 'pending');
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const [baseVersion, setBaseVersion] = useState(loan?.version ?? 0); const [conflict, setConflict] = useState(false); const [latest, setLatest] = useState<Loan | null>(null);
@@ -27,7 +27,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
     <form onSubmit={save} className="form-stack">
       {reviewing ? <div className="review-summary"><span>Loan amount</span><strong>{rupees(loan.amountPaise)}</strong><span>{loan.category === 'new' ? 'New loan' : 'Renewal'}</span></div> : <>
         {admin && !loan ? <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <div className="form-field"><span className="form-field-label">Branch</span><div className="field-static"><Building2 size={15}/>{branches.find(b => b.id === branch)?.name || loan?.branchName || 'No branch selected'}</div></div>}
-        <label>ATS / application number<input value={atsId} onChange={e => setAts(e.target.value)} placeholder="e.g. ATS-2026-001" maxLength={80} required autoFocus/></label>
+        <label>ATS number<span className="ats-input"><span className="ats-prefix" aria-hidden="true">ATS</span><input value={ats} onChange={e => setAts(atsDigits(e.target.value).slice(0, 9))} inputMode="numeric" pattern="[0-9]{8,9}" placeholder="8 or 9 digits" title="Enter the 8 or 9 digit ATS number" aria-label="ATS number, 8 or 9 digits" required autoFocus/></span><small>Type only the 8 or 9 digit number; “ATS” is added for you.</small></label>
         <label>Loan amount (₹)<input value={amount} onChange={e => setAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" placeholder="e.g. 250000" required/><small>Amount in rupees, with up to two decimal places.</small></label>
       </>}
       {reviewing ? <><label>Admin remarks<textarea rows={4} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label><small>Changing remarks resets the branch’s compliance response.</small><label>Status<select value={status} onChange={e => setStatus(e.target.value as 'pending' | 'sanctioned')}><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option></select></label></> : null}
