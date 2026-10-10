@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, Building2, CheckCheck, CircleCheck, Clock, ChevronDown, CircleHelp, Download, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
@@ -12,7 +12,10 @@ import { showInstallEvent } from './InstallPrompt';
 
 const preferenceKey = 'amcc.branch.v1';
 const adminModeKey = 'amcc.adminMode.v1';
+const branchesKey = 'amcc.branches.v1';
 const rememberAdminMode = (on: boolean) => { try { if (on) localStorage.setItem(adminModeKey, '1'); else localStorage.removeItem(adminModeKey); } catch {} };
+// Branch names (not loan records) are kept on the device so the app can render before the network answers.
+const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branchesKey, JSON.stringify(list)); } catch {} };
 const recentCount = 5;
 type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
 const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
@@ -30,17 +33,27 @@ export default function Workspace() {
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
   const refresh = useCallback(() => setRefreshKey(key => key + 1), []);
+  const loadedKey = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    let stored = ''; try { stored = localStorage.getItem(preferenceKey) || ''; } catch {}
+    let adminMode = false; try { adminMode = localStorage.getItem(adminModeKey) === '1'; } catch {}
+    let cached: Branch[] = []; try { const parsed = JSON.parse(localStorage.getItem(branchesKey) || '[]'); if (Array.isArray(parsed)) cached = parsed; } catch {}
+    // Start loading loans right away from the remembered branch or admin view; branches and session are checked alongside.
+    if (cached.length) setBranches(cached);
+    if (adminMode) { setAdmin(true); setViewAdmin(true); }
+    if (stored) setBranch(stored);
+    if (adminMode || stored) setReady(true);
     Promise.all([request<Branch[]>('/api/branches'), request<{ admin: boolean }>('/api/admin/session')]).then(([list, session]) => {
       if (!alive) return;
-      setBranches(list); setAdmin(session.admin);
-      let stored = ''; try { stored = localStorage.getItem(preferenceKey) || ''; } catch {}
-      if (list.some(b => b.id === stored)) setBranch(stored);
-      let adminMode = false; try { adminMode = localStorage.getItem(adminModeKey) === '1'; } catch {}
-      if (session.admin && adminMode) setViewAdmin(true);
-      setReady(true); setLoading(false);
+      setBranches(list); rememberBranches(list); setAdmin(session.admin);
+      const validBranch = list.some(b => b.id === stored);
+      if (!validBranch) setBranch('');
+      if (!session.admin) { setViewAdmin(false); if (adminMode) rememberAdminMode(false); }
+      // Nothing to load until a branch is picked.
+      if (!validBranch && !(session.admin && adminMode)) { loadedKey.current = null; setLoans([]); setLoading(false); }
+      setReady(true);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
   }, []);
@@ -48,7 +61,10 @@ export default function Workspace() {
   useEffect(() => {
     if (!ready || (!activeAdmin && !branchId)) return;
     let alive = true;
-    setLoading(true); setLoans([]); setError('');
+    // Only blank the list when switching to a different set of loans; a refresh of the same view keeps rows on screen.
+    const key = activeAdmin ? `admin:${filterBranch}` : branchId;
+    if (loadedKey.current !== key) { loadedKey.current = key; setLoading(true); setLoans([]); }
+    setError('');
     async function load() {
       try {
         const rows = await request<Loan[]>('/api/loans' + (filterBranch ? `?branchId=${encodeURIComponent(filterBranch)}` : ''));
@@ -119,7 +135,7 @@ export default function Workspace() {
     </header>
       <main>
         {!online ? <div className="message warning" role="status"><WifiOff size={17}/> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.</div> : null}
-        {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
+        {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready || !branches.length) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
         <section className="summary" aria-label="Loan summary">
           <div className="status-band" role="group" aria-label="Filter applications by status">
             {statFilters.map(f => <button key={f.id} type="button" className={`status-stat ${f.id} ${view === f.id ? 'active' : ''}`} aria-pressed={view === f.id} onClick={() => chooseView(view === f.id ? 'all' : f.id)}><span className="status-figure"><f.Icon size={26} strokeWidth={2}/><strong>{loading ? '—' : f.count}</strong></span><span className="status-label">{f.label}</span></button>)}
@@ -145,7 +161,7 @@ export default function Workspace() {
         </section>
       </main>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}
-    {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
+    {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); rememberBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={() => { setForm(null); setNotice('Loan saved to the shared workspace.'); refresh(); }} onDeleted={() => { setForm(null); setNotice('Application deleted.'); refresh(); }}/>: null}
     {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Install on your device</h3><p>In Chrome or Edge, use the browser’s Install app option. On iPhone or iPad, open in Safari, tap Share, then Add to Home Screen.</p><button type="button" className="button primary" onClick={install}><Download size={15}/> Show install steps</button><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
