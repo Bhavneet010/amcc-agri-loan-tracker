@@ -74,7 +74,7 @@
 .landscape-home .empty-state p{margin-top:6px;font:400 15px/1.5 'Times New Roman',Georgia,serif;max-width:none;color:#818187}
 /* Add Loan chooser: centred card on every screen size. */
 .modal.chooser{width:440px;padding:24px 22px 22px;border:0;border-radius:22px;box-shadow:0 24px 70px #0d2a1c38;animation:chooser-pop .38s cubic-bezier(.32,.72,0,1)}
-.modal.chooser:focus{outline:none}
+.modal.chooser:focus,.modal.chooser .modal-close:focus-visible{outline:none}
 .modal.chooser::backdrop{background:#0f2a1d59;backdrop-filter:blur(6px);animation:chooser-fade .3s ease}
 .modal.chooser .modal-head{align-items:center;gap:14px;margin-bottom:20px}
 .modal.chooser .modal-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--green-light,#e9f2ec);color:var(--green);flex-shrink:0}
