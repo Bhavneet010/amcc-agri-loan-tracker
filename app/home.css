@@ -28,6 +28,7 @@
 .summary-number svg{width:29px;height:29px;stroke-width:2.1}
 .pending-count svg{color:#ffc74f}.sanctioned-count svg{color:#6ce1a5}
 .compact .summary-card-heading button{font-size:10px;gap:8px;white-space:normal}
+.position-2.compact .summary-card-heading button span{width:min-content;white-space:normal}
 .compact .summary-card-heading svg{width:14px;height:16px;stroke-width:2.4}
 .compact .summary-counts{display:flex;flex-direction:column;margin-top:13px;gap:10px}
 .compact .summary-count{font-size:10px;gap:4px}
@@ -37,11 +38,11 @@
 .summary-pagination{display:flex;justify-content:center;align-items:center;gap:11px;height:28px}
 .summary-pagination button{border:0;padding:0;width:8px;height:8px;border-radius:50%;background:#bdd3c6}
 .summary-pagination button[aria-pressed=true]{background:var(--green)}
-.home-add-loan{display:flex;align-items:center;gap:20px;width:calc(100% - 40px);height:71px;margin:0 20px;padding:12px 14px;border:1px solid #29744e;border-radius:14px;background:#006142 url('/home-botanical.png') center/cover;color:#fff;box-shadow:0 5px 9px #215b2330;text-align:left}
+.home-add-loan{display:flex;align-items:center;gap:20px;width:calc(100% - 40px);height:64px;margin:0 20px;padding:8px 14px;border:1px solid #29744e;border-radius:14px;background:#006142 url('/home-botanical.png') center/cover;color:#fff;box-shadow:0 5px 9px #215b2330;text-align:left}
 .home-add-loan:hover{filter:brightness(1.06)}.home-add-loan:active{transform:scale(.99)}
 .home-add-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:50%;background:#bcf2d5;color:var(--green);flex:none;box-shadow:inset 0 0 0 1px #e4fff1}
 .home-add-icon svg{width:26px;height:26px;stroke-width:2}
-.home-add-text{display:grid;gap:3px}.home-add-text strong{font:700 19px/1.2 'Times New Roman',Georgia,serif}.home-add-text>span{font:400 15px/1.2 'Times New Roman',Georgia,serif;color:#e4f1e7}
+.home-add-text{display:grid;gap:3px}.home-add-text strong{font:700 19px/1.2 'Times New Roman',Georgia,serif}.home-add-text>span{font:400 13px/1.2 'Times New Roman',Georgia,serif;color:#e4f1e7}
 .home-add-arrow{margin-left:auto;width:22px;height:22px;stroke-width:2}
 .landscape-home .recent{padding:0 20px}
 .landscape-home .recent .tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:18px;height:45px;border-bottom:1px solid #dedfdb}
@@ -105,12 +106,12 @@
   .compact .sanctioned-count{padding-top:calc(9 * var(--home-unit))}
   .summary-pagination{height:calc(28 * var(--home-unit));gap:calc(11 * var(--home-unit))}
   .summary-pagination button{width:calc(8 * var(--home-unit));height:calc(8 * var(--home-unit))}
-  .home-add-loan{gap:calc(20 * var(--home-unit));width:calc(100% - 40 * var(--home-unit));height:calc(71 * var(--home-unit));margin:0 calc(20 * var(--home-unit));padding:calc(12 * var(--home-unit)) calc(14 * var(--home-unit));border-radius:calc(14 * var(--home-unit))}
+  .home-add-loan{gap:calc(20 * var(--home-unit));width:calc(100% - 40 * var(--home-unit));height:calc(64 * var(--home-unit));margin:0 calc(20 * var(--home-unit));padding:calc(8 * var(--home-unit)) calc(14 * var(--home-unit));border-radius:calc(14 * var(--home-unit))}
   .home-add-icon{width:calc(43 * var(--home-unit));height:calc(43 * var(--home-unit))}
   .home-add-icon svg{width:calc(26 * var(--home-unit));height:calc(26 * var(--home-unit))}
   .home-add-text{gap:calc(3 * var(--home-unit))}
   .home-add-text strong{font-size:calc(19 * var(--home-unit))}
-  .home-add-text>span{font-size:calc(15 * var(--home-unit))}
+  .home-add-text>span{font-size:calc(13 * var(--home-unit))}
   .home-add-arrow{width:calc(22 * var(--home-unit));height:calc(22 * var(--home-unit))}
   .landscape-home .recent{padding:0 calc(20 * var(--home-unit))}
   .landscape-home .recent .tabs{margin-top:calc(18 * var(--home-unit));height:calc(45 * var(--home-unit))}
