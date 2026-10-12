@@ -154,7 +154,7 @@ export default function Workspace() {
         </section>
       </main>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}
-    {addChoice ? <Modal sheet title="Add Loan" subtitle="What would you like to add?" icon={<Leaf size={22}/>} onClose={() => setAddChoice(false)}><div className="loan-type-choices">
+    {addChoice ? <Modal chooser title="Add Loan" subtitle="What would you like to add?" icon={<Leaf size={22}/>} onClose={() => setAddChoice(false)}><div className="loan-type-choices">
       <button type="button" className="loan-type-choice new" onClick={() => create('new')}><span className="choice-icon" aria-hidden="true"><Plus size={24}/></span><span className="choice-text"><strong>New loan</strong><span>Start a fresh application</span></span><ChevronRight className="choice-arrow" size={20} aria-hidden="true"/></button>
       <button type="button" className="loan-type-choice renewal" onClick={() => create('renewal')}><span className="choice-icon" aria-hidden="true"><RefreshCw size={22}/></span><span className="choice-text"><strong>Renewal</strong><span>Renew an existing loan</span></span><ChevronRight className="choice-arrow" size={20} aria-hidden="true"/></button>
     </div></Modal> : null}
