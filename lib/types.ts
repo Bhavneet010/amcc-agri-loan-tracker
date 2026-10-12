@@ -1,6 +1,6 @@
 export type Branch = { id: string; name: string; version: number };
 export type Loan = {
-  id: string; branchId: string; branchName: string; category: 'new' | 'renewal'; atsId: string;
+  id: string; branchId: string; branchName: string; category: 'new' | 'renewal'; atsId: string; borrowerName?: string;
   amountPaise: number; status: 'pending' | 'sanctioned'; remarks: string;
   compliance: 'none' | 'awaiting' | 'complied'; version: number; createdAt: string; updatedAt: string;
 };

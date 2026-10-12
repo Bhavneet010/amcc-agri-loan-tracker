@@ -80,6 +80,7 @@ main>.message{margin:18px 24px 0}
 .loan-branch,.loan-date{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)}
 .loan-date{margin-right:auto}
 .loan-branch+.loan-date{margin-right:0}.loan-branch{margin-right:auto}
+.loan-line .borrower{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--muted)}
 .loan-line .amount{flex:none}
 .loan-line .status{flex:none}
 .loan-line .row-action{position:static;flex:none;width:auto;min-width:32px;display:flex;justify-content:flex-end}

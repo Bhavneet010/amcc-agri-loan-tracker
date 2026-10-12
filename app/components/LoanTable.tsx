@@ -24,6 +24,7 @@ export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, fi
     <div className="loan-line">
       {admin ? <span className="loan-branch" title={loan.branchName}>{branchCode(loan.branchName)}</span> : null}
       <strong className="ats" title={`${loan.atsId} · added ${dateLabel(loan.createdAt)}`}>{/^ats\b/i.test(loan.atsId) ? <><span className="ats-tag">ATS</span>{loan.atsId.replace(/^ats[\s-]*/i, '')}</> : loan.atsId}</strong>
+      {loan.borrowerName ? <span className="borrower" title={loan.borrowerName}>{loan.borrowerName}</span> : null}
       <span className="amount" title={rupees(loan.amountPaise)}>{lakhs(loan.amountPaise)}</span>
       <span className={`status ${loan.status}`} title={loan.status === 'pending' ? 'Pending' : 'Sanctioned'}><span/><span className="status-text">{loan.status === 'pending' ? 'Pending' : 'Sanctioned'}</span></span>
       <span className="row-action"><button type="button" className={admin ? 'text-button review-button' : 'icon-button'} onClick={() => onEdit(loan)} aria-label={admin ? `Review ${loan.atsId}` : loan.status === 'sanctioned' ? `View ${loan.atsId}` : `Edit ${loan.atsId}`}>{admin ? <>Review <ArrowUpRight size={14}/></> : loan.status === 'sanctioned' ? <Eye size={15}/> : <Pencil size={15}/>}</button></span>
