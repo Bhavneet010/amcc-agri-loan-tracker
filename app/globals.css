@@ -173,20 +173,22 @@ main>.message{margin:18px 24px 0}
 .filter-panel-actions .button{min-height:32px;padding:6px 14px;font-size:12px}
 @keyframes filter-pop{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
 
-/* Home summary: green status band with three filter stats; add buttons overlap its lower edge */
+/* Home summary: green status band with two filter stats; add buttons overlap its lower edge */
 .summary{margin-top:18px;position:relative}
-.status-band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--green);border-radius:20px;padding:22px 6px 58px;color:#fff}
+.status-band{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--green);border-radius:20px;padding:22px 6px 58px;color:#fff}
 .status-stat{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0;border:0;background:none;color:#e4ece6;padding:6px 4px 14px;text-align:center}
 .status-stat+.status-stat:before{content:'';position:absolute;left:0;top:4px;height:56px;width:1px;background:#ffffff3d}
 .status-stat:focus-visible{outline:2px solid #fff;outline-offset:-2px;border-radius:10px}
 .status-figure{display:flex;align-items:center;justify-content:center;gap:14px}
 .status-figure strong{font:700 clamp(32px,9.6vw,40px)/1 var(--serif);color:#fff;font-variant-numeric:lining-nums}
 .status-figure svg{width:clamp(22px,6.6vw,26px);height:clamp(22px,6.6vw,26px)}
-.status-stat.pending svg{color:#f2c35a}.status-stat.sanctioned svg{color:#7fd9a2}.status-stat.alerts svg{color:#e57a4e}
+.status-stat.pending .status-figure svg{color:#f2c35a}.status-stat.sanctioned .status-figure svg{color:#7fd9a2}
+.pending-alert-badge{position:absolute;top:-8px;right:max(8px,calc(50% - 74px));display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:24px;height:22px;padding:0 6px;border-radius:11px;background:#f9cf78;color:#482b15;font:700 12px/1 var(--sans);box-shadow:0 2px 7px #10352355}
+.pending-alert-badge svg{width:12px;height:12px;color:inherit}
 .status-label{position:relative;font:400 clamp(14px,4.2vw,16px)/1.2 var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .status-stat.active .status-label{color:#fff;font-weight:600}
 .status-stat.active:after{content:'';position:absolute;bottom:0;left:50%;width:min(72px,70%);height:3px;border-radius:2px;transform:translateX(-50%);background:#f2c230}
-.status-stat.sanctioned.active:after{background:#7fd9a2}.status-stat.alerts.active:after{background:#e57a4e}
+.status-stat.sanctioned.active:after{background:#7fd9a2}
 .quick-add{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:-38px 13px 0 14px;position:relative}
 .quick-add-btn{display:flex;align-items:center;gap:12px;min-width:0;min-height:62px;padding:10px 12px 10px 14px;border:0;border-radius:10px;background:var(--surface);box-shadow:0 6px 16px #0b2d1f26,0 1px 3px #0b2d1f14;text-align:left;color:var(--green);transition:transform .12s,box-shadow .12s}
 .quick-add-btn:not(:disabled):hover{box-shadow:0 8px 20px #0b2d1f33,0 1px 3px #0b2d1f14}

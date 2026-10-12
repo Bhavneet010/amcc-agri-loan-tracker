@@ -17,9 +17,9 @@ const rememberAdminMode = (on: boolean) => { try { if (on) localStorage.setItem(
 // Branch names (not loan records) are kept on the device so the app can render before the network answers.
 const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branchesKey, JSON.stringify(list)); } catch {} };
 const recentCount = 5;
-type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
-const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
-const inView = (loan: Loan, view: View) => view === 'all' || (view === 'alerts' ? loan.status === 'pending' && loan.compliance === 'awaiting' : loan.status === view);
+type View = 'all' | 'pending' | 'sanctioned';
+const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }];
+const inView = (loan: Loan, view: View) => view === 'all' || loan.status === view;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
@@ -108,11 +108,11 @@ export default function Workspace() {
   const limited = view === 'all' || view === 'sanctioned';
   const shownLoans = showAll || filtered || !limited ? visibleLoans : visibleLoans.slice(0, recentCount);
   const viewLabel = views.find(v => v.id === view)!.label.toLowerCase();
-  const emptyTitle = filtered ? 'No matching loans' : !loans.length ? 'No applications yet' : view === 'pending' ? 'Nothing pending' : view === 'alerts' ? 'No alerts' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
-  const emptyText = filtered ? 'Try another ATS number or clear the filters.' : !loans.length || view === 'all' ? 'Add your first application to start tracking its progress.' : view === 'alerts' ? 'No admin remarks are awaiting compliance.' : 'Choose All to see every application.';
+  const emptyTitle = filtered ? 'No matching loans' : !loans.length ? 'No applications yet' : view === 'pending' ? 'Nothing pending' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
+  const emptyText = filtered ? 'Try another ATS number or clear the filters.' : !loans.length || view === 'all' ? 'Add your first application to start tracking its progress.' : 'Choose All to see every application.';
   const pendingLoans = loans.filter(l => l.status === 'pending'); const sanctionedLoans = loans.filter(l => l.status === 'sanctioned');
   const awaiting = loans.filter(l => l.status === 'pending' && l.compliance === 'awaiting');
-  const statFilters = [{ id: 'pending' as View, label: 'Pending', Icon: Clock, count: pendingLoans.length }, { id: 'sanctioned' as View, label: 'Sanctioned', Icon: CircleCheck, count: sanctionedLoans.length }, { id: 'alerts' as View, label: 'Alerts', Icon: Bell, count: awaiting.length }];
+  const statFilters = [{ id: 'pending' as View, label: 'Pending', Icon: Clock, count: pendingLoans.length }, { id: 'sanctioned' as View, label: 'Sanctioned', Icon: CircleCheck, count: sanctionedLoans.length }];
   function chooseView(next: View) { setView(next); setShowAll(false); }
   const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
   function clearFilters() { chooseView('all'); setAdminFilter(''); setCompliance(''); }
@@ -137,7 +137,7 @@ export default function Workspace() {
         {error ? <div className="message error" role="alert"><span>{error}</span><button className="text-button" onClick={() => { if (!ready || !branches.length) window.location.reload(); else refresh(); }}>Try again</button></div> : null}
         <section className="summary" aria-label="Loan summary">
           <div className="status-band" role="group" aria-label="Filter applications by status">
-            {statFilters.map(f => <button key={f.id} type="button" className={`status-stat ${f.id} ${view === f.id ? 'active' : ''}`} aria-pressed={view === f.id} onClick={() => chooseView(view === f.id ? 'all' : f.id)}><span className="status-figure"><f.Icon size={26} strokeWidth={2}/><strong>{loading ? '—' : f.count}</strong></span><span className="status-label">{f.label}</span></button>)}
+            {statFilters.map(f => <button key={f.id} type="button" className={`status-stat ${f.id} ${view === f.id ? 'active' : ''}`} aria-pressed={view === f.id} onClick={() => chooseView(view === f.id ? 'all' : f.id)}>{f.id === 'pending' && !loading && awaiting.length > 0 ? <span className="pending-alert-badge" aria-label={`${awaiting.length} pending ${awaiting.length === 1 ? 'alert' : 'alerts'}`}><Bell size={12} aria-hidden="true"/>{awaiting.length}</span> : null}<span className="status-figure"><f.Icon size={26} strokeWidth={2}/><strong>{loading ? '—' : f.count}</strong></span><span className="status-label">{f.label}</span></button>)}
           </div>
           <h2 className="sr-only">Add an application</h2>
           <div className="quick-add">
