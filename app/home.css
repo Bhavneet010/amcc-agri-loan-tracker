@@ -62,6 +62,7 @@
 .landscape-home .tabs button>span{min-width:28px;border-radius:6px;padding:3px 8px;font:700 14px/1.1 'Times New Roman',Georgia,serif;background:#eef0ed;color:#818187}
 .landscape-home .tabs button.selected>span{background:#d5e8dd;color:var(--green)}
 .landscape-home .table-toolbar{gap:11px;padding-top:19px}
+.landscape-home .loan-list{margin-top:14px}
 .landscape-home .table-toolbar .search-field input{height:48px;border:1px solid #dfdfe3;border-radius:9px;padding:0 12px 0 50px;font:400 16px/1.2 'Times New Roman',Georgia,serif;background:#ffffffd9}
 .landscape-home .search-field input::placeholder{color:#8d8f95}.landscape-home .search-field svg{left:15px;width:23px;height:23px;color:#101619;stroke-width:1.65}
 .landscape-home .filter-button{width:50px;height:48px;border-radius:8px;background:#ffffffd9;border-color:#b6d1c5}
@@ -152,6 +153,7 @@
   .landscape-home .tabs button.selected:after{height:calc(4 * var(--home-unit))}
   .landscape-home .tabs button>span{min-width:calc(28 * var(--home-unit));padding:calc(3 * var(--home-unit)) calc(8 * var(--home-unit));font-size:calc(14 * var(--home-unit))}
   .landscape-home .table-toolbar{gap:calc(11 * var(--home-unit));padding-top:calc(19 * var(--home-unit))}
+  .landscape-home .loan-list{margin-top:calc(14 * var(--home-unit))}
   .landscape-home .table-toolbar .search-field input{height:calc(48 * var(--home-unit));border-radius:calc(9 * var(--home-unit));padding-left:calc(50 * var(--home-unit));font-size:calc(16 * var(--home-unit))}
   .landscape-home .search-field svg{left:calc(15 * var(--home-unit));width:calc(23 * var(--home-unit));height:calc(23 * var(--home-unit))}
   .landscape-home .filter-button{width:calc(50 * var(--home-unit));height:calc(48 * var(--home-unit));border-radius:calc(8 * var(--home-unit))}
