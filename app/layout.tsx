@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
+import "./home.css";
 
 // Self-hosted at build time; a CSS @import of Google Fonts is dropped from the production bundle.
 const sans = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
