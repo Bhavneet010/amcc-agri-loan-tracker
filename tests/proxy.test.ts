@@ -29,11 +29,14 @@ test('does not cache loan reads and refuses paths outside the API', async () => 
   assert.equal(invalid.status, 404);
 });
 
-test('keeps the admin cookie on the device after login but leaves sign-out cookies alone', async () => {
-  const login = await proxyRequest(new Request('https://app.vercel.app/api/admin/session', { method: 'POST', headers: { origin: 'https://app.vercel.app' }, body: '{}' }), (async () => new Response('{}', { headers: { 'set-cookie': 'amcc_admin=abc; Path=/; HttpOnly' } })) as unknown as typeof fetch);
-  assert.match(login.headers.get('set-cookie') || '', /amcc_admin=abc; Path=\/; HttpOnly; Max-Age=2592000/);
+test('preserves the service session lifetime and sign-out cookie', async () => {
+  const loginCookie = 'amcc_admin=abc; Path=/; HttpOnly; Max-Age=2592000';
+  const login = await proxyRequest(new Request('https://app.vercel.app/api/admin/session', { method: 'POST', headers: { origin: 'https://app.vercel.app' }, body: '{}' }), (async () => new Response('{}', { headers: { 'set-cookie': loginCookie } })) as unknown as typeof fetch);
+  assert.equal(login.headers.get('set-cookie'), loginCookie);
   const logout = await proxyRequest(new Request('https://app.vercel.app/api/admin/session', { method: 'DELETE', headers: { origin: 'https://app.vercel.app' } }), (async () => new Response('{}', { headers: { 'set-cookie': 'amcc_admin=; Path=/; Max-Age=0' } })) as unknown as typeof fetch);
   assert.equal(logout.headers.get('set-cookie'), 'amcc_admin=; Path=/; Max-Age=0');
+  const renewed = await proxyRequest(new Request('https://app.vercel.app/api/admin/session', { headers: { cookie: 'amcc_admin=abc' } }), (async () => new Response('{"admin":true}', { headers: { 'content-type': 'application/json', 'set-cookie': 'amcc_admin=renewed; Path=/; Max-Age=2592000' } })) as unknown as typeof fetch);
+  assert.equal(renewed.headers.get('set-cookie'), 'amcc_admin=renewed; Path=/; Max-Age=2592000');
 });
 
 test('forwards loan deletes to the shared data service', async () => {

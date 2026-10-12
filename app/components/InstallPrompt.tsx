@@ -5,7 +5,7 @@ import { Download, PlusSquare, Share, X } from 'lucide-react';
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 type Platform = 'ios' | 'android' | 'other';
 const installedKey = 'amcc.installed.v1';
-export const showInstallEvent = 'amcc:show-install';
+const seenKey = 'amcc.installPromptSeen.v1';
 
 function standalone() {
   return ['standalone', 'fullscreen', 'minimal-ui'].some(mode => window.matchMedia(`(display-mode: ${mode})`).matches) || (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -16,11 +16,12 @@ function detectPlatform(): Platform {
   if (/android/i.test(ua)) return 'android';
   return 'other';
 }
-function remember(value: boolean) { try { if (value) localStorage.setItem(installedKey, '1'); else localStorage.removeItem(installedKey); } catch {} }
-function remembered() { try { return localStorage.getItem(installedKey) === '1'; } catch { return false; } }
+function rememberInstalled() { try { localStorage.setItem(installedKey, '1'); } catch {} }
+function seenBefore() { try { return localStorage.getItem(seenKey) === '1' || localStorage.getItem(installedKey) === '1'; } catch { return false; } }
+function rememberShown() { try { localStorage.setItem(seenKey, '1'); } catch {} }
 
-// Shown on every visit from a browser until the app is installed. Dismissing only hides it for the current visit.
-export default function InstallPrompt() {
+// Offer installation on the first phone visit only, even when the user dismisses it.
+export default function InstallPrompt({ canShow }: { canShow: boolean }) {
   const [platform, setPlatform] = useState<Platform>('other');
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
   const [open, setOpen] = useState(false); const [steps, setSteps] = useState(false);
@@ -29,25 +30,28 @@ export default function InstallPrompt() {
   useEffect(() => {
     const ua = navigator.userAgent; const current = detectPlatform();
     setPlatform(current); setInApp(/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|; wv\)/i.test(ua)); setIosSafari(!/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua));
-    if (standalone()) { remember(true); return; }
+    if (standalone()) { rememberInstalled(); return; }
     // iOS gives no install signal, so iPhone users confirm it themselves with "I've installed it".
-    if ((current === 'ios' || current === 'android') && !remembered()) setOpen(true);
     const available = (event: Event) => {
       event.preventDefault(); setInstallEvent(event as InstallEvent);
-      // The browser only offers this when the app is not installed, so any earlier record is stale.
-      remember(false); setOpen(true);
     };
-    const installed = () => { remember(true); setInstallEvent(null); setOpen(false); };
-    const show = () => { setSteps(true); setOpen(true); };
-    window.addEventListener('beforeinstallprompt', available); window.addEventListener('appinstalled', installed); window.addEventListener(showInstallEvent, show);
-    return () => { window.removeEventListener('beforeinstallprompt', available); window.removeEventListener('appinstalled', installed); window.removeEventListener(showInstallEvent, show); };
+    const installed = () => { rememberInstalled(); setInstallEvent(null); setOpen(false); };
+    window.addEventListener('beforeinstallprompt', available); window.addEventListener('appinstalled', installed);
+    return () => { window.removeEventListener('beforeinstallprompt', available); window.removeEventListener('appinstalled', installed); };
   }, []);
+
+  useEffect(() => {
+    if (!canShow) { setOpen(false); return; }
+    if ((platform === 'ios' || platform === 'android') && !standalone() && !seenBefore()) {
+      rememberShown(); setOpen(true);
+    }
+  }, [canShow, platform]);
 
   async function install() {
     if (!installEvent) { setSteps(true); return; }
     await installEvent.prompt(); const result = await installEvent.userChoice;
     setInstallEvent(null);
-    if (result.outcome === 'accepted') { remember(true); setOpen(false); }
+    if (result.outcome === 'accepted') { rememberInstalled(); setOpen(false); }
   }
 
   if (!open) return null;
@@ -67,7 +71,7 @@ export default function InstallPrompt() {
     </ol> : null}
     {ios ? <div className="install-actions">
       <button type="button" className="button secondary" onClick={() => setOpen(false)}>Not now</button>
-      <button type="button" className="button primary" onClick={() => { remember(true); setOpen(false); }}>I've installed it</button>
+      <button type="button" className="button primary" onClick={() => { rememberInstalled(); setOpen(false); }}>I've installed it</button>
     </div> : <>
       {steps && !installEvent ? <ol className="install-steps">
         <li>Open the browser menu <strong>⋮</strong> at the top-right.</li>

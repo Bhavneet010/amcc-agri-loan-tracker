@@ -6,7 +6,7 @@ This installable PWA serves the thirteen AMCC branches from Vercel. Branch users
 
 Loan records, branch names, audit history, and admin login attempt counters live in **Cloudflare D1**, attached to the [AMCC shared data service](https://amcc-agri-loans.bhavneet.chatgpt.site). Vercel hosts the interface and forwards its `/api` requests to that service through server functions. GitHub stores source code only. The app depends on the shared data service staying available; do not delete or restrict it while this Vercel app is in use.
 
-The API functions run in Vercel's Mumbai region (`bom1`, set in `vercel.json`) to stay close to the branches. The selected branch and the branch names are remembered in browser local storage so the app opens without waiting on the network. Loan records are never stored in the browser cache. Admin sessions use an HttpOnly cookie and an eight-hour expiry. Keep the existing admin password private; it is not committed to this repository or stored in Vercel.
+The API functions run in Vercel's Mumbai region (`bom1`, set in `vercel.json`) to stay close to the branches. The selected branch and the branch names are remembered in browser local storage so the app opens without waiting on the network. Loan records are never stored in the browser cache. Admin sessions use an HttpOnly cookie, last 30 days, and renew when the app checks the session. Keep the existing admin password private; it is not committed to this repository or stored in Vercel.
 
 ## Development
 

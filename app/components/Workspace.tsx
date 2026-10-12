@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Building2, CheckCheck, CircleCheck, Clock, ChevronDown, CircleHelp, Download, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
+import { Bell, Building2, CheckCheck, CircleCheck, Clock, ChevronDown, CircleHelp, Layers2, Leaf, ListFilter, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import LoanTable from './LoanTable';
@@ -8,7 +8,7 @@ import LoanForm from './LoanForm';
 import Settings from './Settings';
 import AdminLogin from './AdminLogin';
 import Modal from './Modal';
-import { showInstallEvent } from './InstallPrompt';
+import InstallPrompt from './InstallPrompt';
 
 const preferenceKey = 'amcc.branch.v1';
 const adminModeKey = 'amcc.adminMode.v1';
@@ -19,13 +19,13 @@ const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branch
 const recentCount = 5;
 type View = 'all' | 'pending' | 'sanctioned' | 'alerts';
 const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }, { id: 'alerts', label: 'Alerts' }];
-const inView = (loan: Loan, view: View) => view === 'all' || (view === 'alerts' ? loan.compliance === 'awaiting' : loan.status === view);
+const inView = (loan: Loan, view: View) => view === 'all' || (view === 'alerts' ? loan.status === 'pending' && loan.compliance === 'awaiting' : loan.status === view);
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
   const [category, setCategory] = useState<'new' | 'renewal'>('new'); const [loans, setLoans] = useState<Loan[]>([]);
   const [search, setSearch] = useState(''); const [view, setView] = useState<View>('pending'); const [compliance, setCompliance] = useState('');
-  const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
+  const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [sessionChecked, setSessionChecked] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState(false);
@@ -50,9 +50,10 @@ export default function Workspace() {
       setBranches(list); rememberBranches(list); setAdmin(session.admin);
       const validBranch = list.some(b => b.id === stored);
       if (!validBranch) setBranch('');
-      if (!session.admin) { setViewAdmin(false); if (adminMode) rememberAdminMode(false); }
+      if (!session.admin) { setViewAdmin(false); if (adminMode) setLogin(true); }
       // Nothing to load until a branch is picked.
       if (!validBranch && !(session.admin && adminMode)) { loadedKey.current = null; setLoans([]); setLoading(false); }
+      setSessionChecked(true);
       setReady(true);
     }).catch(e => { if (alive) { setError(e.message); setLoading(false); } });
     return () => { alive = false; };
@@ -99,7 +100,6 @@ export default function Workspace() {
     try { await request('/api/admin/session', { method: 'DELETE' }); setAdmin(false); setViewAdmin(false); rememberAdminMode(false); setNotice('Signed out of admin.'); }
     catch(e) { setError((e as Error).message); }
   }
-  function install() { setHelp(false); window.dispatchEvent(new Event(showInstallEvent)); }
   const canAdd = ready && (activeAdmin || !!branchId);
   function create(kind: 'new' | 'renewal') { setCategory(kind); setForm('new'); }
   const tabLoans = loans.filter(loan => loan.category === category);
@@ -111,7 +111,7 @@ export default function Workspace() {
   const emptyTitle = filtered ? 'No matching loans' : !loans.length ? 'No applications yet' : view === 'pending' ? 'Nothing pending' : view === 'alerts' ? 'No alerts' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : !loans.length || view === 'all' ? 'Add your first application to start tracking its progress.' : view === 'alerts' ? 'No admin remarks are awaiting compliance.' : 'Choose All to see every application.';
   const pendingLoans = loans.filter(l => l.status === 'pending'); const sanctionedLoans = loans.filter(l => l.status === 'sanctioned');
-  const awaiting = loans.filter(l => l.compliance === 'awaiting');
+  const awaiting = loans.filter(l => l.status === 'pending' && l.compliance === 'awaiting');
   const statFilters = [{ id: 'pending' as View, label: 'Pending', Icon: Clock, count: pendingLoans.length }, { id: 'sanctioned' as View, label: 'Sanctioned', Icon: CircleCheck, count: sanctionedLoans.length }, { id: 'alerts' as View, label: 'Alerts', Icon: Bell, count: awaiting.length }];
   function chooseView(next: View) { setView(next); setShowAll(false); }
   const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
@@ -126,7 +126,6 @@ export default function Workspace() {
           {admin ? <button role="menuitem" className={activeAdmin ? 'current' : ''} onClick={() => { setViewAdmin(true); rememberAdminMode(true); }}><ShieldCheck size={17}/> Admin overview</button> : null}
           <button role="menuitem" onClick={() => setSettings(true)}><Building2 size={17}/> {activeAdmin ? 'Branch settings' : 'Change branch'}</button>
           <div className="menu-divider"/>
-          <button role="menuitem" onClick={install}><Download size={17}/> Install app</button>
           <button role="menuitem" onClick={() => setHelp(true)}><CircleHelp size={17}/> Help</button>
           {admin ? <button role="menuitem" onClick={logout}><LogOut size={17}/> Sign out of admin</button> : <button role="menuitem" onClick={() => setLogin(true)}><ShieldCheck size={17}/> Admin access</button>}
           <div className="menu-status"><span className={`connection-dot ${!online ? 'offline' : ''}`}/>{online ? 'Shared workspace' : 'Offline'}</div>
@@ -164,6 +163,7 @@ export default function Workspace() {
     {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); rememberBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={() => { setForm(null); setNotice('Loan saved to the shared workspace.'); refresh(); }} onDeleted={() => { setForm(null); setNotice('Application deleted.'); refresh(); }}/>: null}
-    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Install on your device</h3><p>In Chrome or Edge, use the browser’s Install app option. On iPhone or iPad, open in Safari, tap Share, then Add to Home Screen.</p><button type="button" className="button primary" onClick={install}><Download size={15}/> Show install steps</button><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
+    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
+    <InstallPrompt canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help}/>
   </div>;
 }
