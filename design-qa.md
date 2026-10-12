@@ -53,3 +53,15 @@ P3: generated mountain/leaf contours differ slightly from source art. Browser ca
 ## Asset provenance
 
 Built-in imagegen used for public/home-landscape.png, public/home-botanical.png and public/home-empty.png. Prompts requested the exact supplied image's landscape without UI, dark forest-green subtle leaf texture without UI, and transparent thin-line document/branch/field empty illustration without text, respectively. Source screenshot supplied to each generation/edit.
+
+## Narrow phone follow-up — 12 Oct 2026
+
+final result: passed
+
+- Source visual: `/tmp/codex-remote-attachments/01a13148-6056-7757-804d-da0a5a903045/edbee2e1-a51a-41e2-b006-3036676337c0/1-1000580716.jpg` (582 × 1280). The 51px device status bar was cropped, then the app content was normalized to 360 × 760 in `/tmp/amcc-reference-normalized.png`.
+- Implementation: `/tmp/amcc-target-360.png` (360 × 792, 1× density) at `http://localhost:3001/`; its first 760px were compared in `/tmp/amcc-comparison.png`. The enlarged top section is in `/tmp/amcc-comparison-top.png`.
+- State: Paonta Sahib, New loans, Pending, Today summary, empty list. Counts and date remain live and therefore differ from the reference examples.
+- Spacing: after normalization, the reference and implementation place the featured card at about y101, Add Loan at y257, tabs at y333, search at y387, and the empty caption at y606. The rendered illustration and controls have the intended narrower proportions.
+- Typography, colors, imagery, copy: the serif hierarchy and labels follow the reference. Existing generated landscape, botanical, and empty state art retain minor contour and texture differences (P3).
+- Interaction and responsive checks: Add Loan chooser, carousel selection, and filter panel worked at 360px. No JavaScript console errors or horizontal overflow at 320, 360, 390, 423, 600, or 1024px.
+- Comparison history: the earlier live narrow-phone layout kept the 423px card, button, controls, and artwork sizes, making them visually oversized. Scaling those dimensions with viewport width fixed the P2 density mismatch. The final full-view and focused comparisons show no remaining P0/P1/P2 issues.
