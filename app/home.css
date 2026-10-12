@@ -10,12 +10,20 @@
 .landscape-home .menu-button svg{width:28px;height:28px;stroke-width:1.9}
 .landscape-home main{max-width:760px;padding:0 0 50px}
 .landscape-home .summary{margin:68px 0 0}
-.summary-carousel{position:relative;height:155px;touch-action:pan-y;outline-offset:-3px}
-.summary-card{position:absolute;border:1px solid #f7fff6;border-radius:14px;box-shadow:0 5px 10px #1d55212b;color:var(--green);overflow:hidden}
-.summary-card.featured{left:20%;width:60%;height:155px;padding:15px 16px;background:#00543f url('/home-botanical.png') center/cover;color:#fff;box-shadow:0 5px 9px #124a2938}
-.summary-card.compact{top:11px;width:28%;height:133px;padding:11px 14px;background:#dcf1ddf2}
+.summary-carousel{--ease-card:cubic-bezier(.22,1,.36,1);position:relative;height:155px;touch-action:pan-y;outline-offset:-3px;transform:translateX(var(--drag,0px));transition:transform .5s var(--ease-card)}
+.summary-carousel.dragging{transition:none}
+.summary-card{position:absolute;top:0;border:1px solid #f7fff6;border-radius:14px;box-shadow:0 5px 10px #1d55212b;color:var(--green);overflow:hidden;isolation:isolate;transition:left .62s var(--ease-card),top .62s var(--ease-card),width .62s var(--ease-card),height .62s var(--ease-card),padding .62s var(--ease-card),transform .62s var(--ease-card),transform-origin .62s var(--ease-card),background-color .5s ease,color .5s ease,box-shadow .62s var(--ease-card),filter .62s var(--ease-card)}
+.summary-card::before{content:'';position:absolute;inset:0;z-index:-1;background:url('/home-botanical.png') center/cover;opacity:0;transform:scale(1.08);transition:opacity .55s ease,transform .8s var(--ease-card)}
+.summary-card.featured{z-index:2;left:20%;width:60%;height:155px;padding:15px 16px;background-color:#00543f;color:#fff;box-shadow:0 5px 9px #124a2938;transform:perspective(450px) rotateY(0deg)}
+.summary-card.featured::before{opacity:1;transform:scale(1)}
+.summary-card.compact{z-index:1;top:11px;width:28%;height:133px;padding:11px 14px;background-color:#dcf1ddf2}
 .summary-card.position-0{left:-9.6%;transform:perspective(450px) rotateY(12deg);transform-origin:right center}
-.summary-card.position-2{right:-9.6%;transform:perspective(450px) rotateY(-12deg);transform-origin:left center}
+.summary-card.position-2{left:81.6%;transform:perspective(450px) rotateY(-12deg);transform-origin:left center}
+.summary-card.wrapping{z-index:0;animation:summary-wrap .62s var(--ease-card)}
+.summary-card-body{height:100%;animation:summary-body-in .5s var(--ease-card) .12s both}
+@keyframes summary-body-in{from{opacity:0;transform:translateY(6px) scale(.97);filter:blur(3px)}}
+@keyframes summary-wrap{40%{opacity:.25;filter:blur(2px)}}
+@media(prefers-reduced-motion:reduce){.summary-carousel,.summary-card,.summary-card::before{transition:none}.summary-card.wrapping,.summary-card-body{animation:none}}
 .summary-card-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap}
 .summary-card-heading button{display:flex;align-items:center;gap:12px;padding:0;border:0;background:none;color:inherit;font:700 16px/1.2 'Times New Roman',Georgia,serif;text-align:left}
 .summary-card-heading svg{width:19px;height:21px;stroke-width:2.6}
@@ -67,7 +75,7 @@
 .loan-type-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}.loan-type-choices .button{padding:18px 12px;font-size:15px}
 .landscape-home .app-menu,.landscape-home .filter-panel{font-family:var(--sans)}
 @media(max-width:380px){.summary-card.featured{padding:15px 12px}.summary-card-heading button{gap:8px;font-size:15px}.summary-card-heading time{font-size:10px;padding:5px}.summary-number{gap:7px}.summary-number strong{font-size:30px}.summary-number svg{width:25px;height:25px}.summary-count{font-size:14px}.position-0.compact{padding-left:44px}.home-add-loan{gap:16px}.landscape-home .table-toolbar .search-field input{font-size:14px;padding-left:43px}.landscape-home .tabs button{gap:12px}}
-@media(min-width:681px){.home-landscape{height:360px;background-size:760px 360px}.landscape-home .appbar{padding:24px 28px 0;height:72px}.landscape-home .summary{margin-top:75px}.summary-carousel{height:190px}.summary-card.featured{height:190px;padding:20px 28px;left:22%;width:56%}.summary-card.compact{height:180px;width:24%;top:5px}.summary-card.position-0{left:-3%;padding-left:40px}.summary-card.position-2{right:-3%;padding-right:40px}.summary-card-heading button{font-size:20px}.summary-card-heading time{font-size:14px}.summary-counts{margin-top:33px}.summary-count{font-size:21px}.summary-number strong{font-size:43px}.summary-number svg{width:36px;height:36px}.compact .summary-card-heading button{font-size:14px}.compact .summary-count{font-size:13px}.compact .summary-number strong{font-size:24px}.compact .summary-counts{margin-top:18px}.summary-pagination{height:34px}.home-add-loan{width:calc(100% - 56px);margin:0 28px;height:84px;padding:15px 24px}.landscape-home .recent .tabs{margin-top:18px}.home-add-text strong{font-size:23px}.home-add-text>span{font-size:17px}.home-add-icon{width:50px;height:50px}.landscape-home .recent{padding:0 28px}.landscape-home .tabs button{font-size:18px}.landscape-home .empty-state{padding-top:52px}}
+@media(min-width:681px){.home-landscape{height:360px;background-size:760px 360px}.landscape-home .appbar{padding:24px 28px 0;height:72px}.landscape-home .summary{margin-top:75px}.summary-carousel{height:190px}.summary-card.featured{height:190px;padding:20px 28px;left:22%;width:56%}.summary-card.compact{height:180px;width:24%;top:5px}.summary-card.position-0{left:-3%;padding-left:40px}.summary-card.position-2{left:79%;padding-right:40px}.summary-card-heading button{font-size:20px}.summary-card-heading time{font-size:14px}.summary-counts{margin-top:33px}.summary-count{font-size:21px}.summary-number strong{font-size:43px}.summary-number svg{width:36px;height:36px}.compact .summary-card-heading button{font-size:14px}.compact .summary-count{font-size:13px}.compact .summary-number strong{font-size:24px}.compact .summary-counts{margin-top:18px}.summary-pagination{height:34px}.home-add-loan{width:calc(100% - 56px);margin:0 28px;height:84px;padding:15px 24px}.landscape-home .recent .tabs{margin-top:18px}.home-add-text strong{font-size:23px}.home-add-text>span{font-size:17px}.home-add-icon{width:50px;height:50px}.landscape-home .recent{padding:0 28px}.landscape-home .tabs button{font-size:18px}.landscape-home .empty-state{padding-top:52px}}
 @media(min-width:681px){.summary-card.compact{height:166px;top:12px}}
 /* The supplied reference is a 423px layout. Scale its dimensions together on narrower phones. */
 @media(max-width:422px){
