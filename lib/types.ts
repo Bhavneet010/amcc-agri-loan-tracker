@@ -10,10 +10,19 @@ export const lakhs = (paise: number) => `₹${new Intl.NumberFormat('en-IN', { m
 export const branchCode = (name: string) => name.match(/^\s*(\d+)/)?.[1] ?? name.trim().split(/[\s·-]+/)[0];
 export const atsDigits = (atsId: string) => atsId.replace(/\D/g, '');
 export const dateLabel = (date: string) => new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
+const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
+export function requestUrl(url: string, method: string, appOrigin: string) {
+  return method.toUpperCase() === 'GET' && appOrigin === APP_ORIGIN && /^\/api\/(?:branches|loans)(?:\?|$)/.test(url) ? DATA_ORIGIN + url : url;
+}
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   let response;
   try {
-    response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers }, cache: 'no-store', signal: options.signal ?? AbortSignal.timeout(15000) });
+    const method = (options.method || 'GET').toUpperCase();
+    const target = requestUrl(url, method, typeof window === 'undefined' ? '' : window.location.origin);
+    const headers = new Headers(options.headers);
+    if (method !== 'GET' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    response = await fetch(target, { ...options, headers, cache: 'no-store', signal: options.signal ?? AbortSignal.timeout(15000) });
   } catch { throw new Error('Cannot connect. Check your connection and try again.'); }
   const data: any = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `Unable to complete the request (error ${response.status}). Please try again.`);
