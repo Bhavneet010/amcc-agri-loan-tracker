@@ -18,18 +18,21 @@ const rememberAdminMode = (on: boolean) => { try { if (on) localStorage.setItem(
 // Branch names (not loan records) are kept on the device so the app can render before the network answers.
 const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branchesKey, JSON.stringify(list)); } catch {} };
 const recentCount = 5;
+const collapsedKey = 'amcc.collapsedGroups.v1';
+type Category = 'new' | 'renewal';
+const groups: { id: Category; label: string }[] = [{ id: 'new', label: 'New loans' }, { id: 'renewal', label: 'Renewals' }];
 type View = 'all' | 'pending' | 'sanctioned';
 const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }];
 const inView = (loan: Loan, view: View) => view === 'all' || loan.status === view;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
   const [admin, setAdmin] = useState(false); const [viewAdmin, setViewAdmin] = useState(false); const [adminFilter, setAdminFilter] = useState('');
-  const [category, setCategory] = useState<'new' | 'renewal'>('new'); const [loans, setLoans] = useState<Loan[]>([]);
+  const [category, setCategory] = useState<Category>('new'); const [loans, setLoans] = useState<Loan[]>([]);
   const [search, setSearch] = useState(''); const [view, setView] = useState<View>('pending'); const [compliance, setCompliance] = useState('');
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [sessionChecked, setSessionChecked] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null); const [addChoice, setAddChoice] = useState(false);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>([]);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -103,15 +106,21 @@ export default function Workspace() {
   }
   const canAdd = ready && (activeAdmin || !!branchId);
   function create(kind: 'new' | 'renewal') { setAddChoice(false); setCategory(kind); setForm('new'); }
-  const tabLoans = loans.filter(loan => loan.category === category);
   const filtered = !!(search || compliance);
-  const visibleLoans = useMemo(() => tabLoans.filter(loan => inView(loan, view) && `${loan.atsId} ${loan.borrowerName ?? ''} ${loan.branchName}`.toLowerCase().includes(search.toLowerCase()) && (!compliance || loan.compliance === compliance)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [loans, category, view, search, compliance]);
+  const visibleLoans = useMemo(() => loans.filter(loan => inView(loan, view) && `${loan.atsId} ${loan.borrowerName ?? ''} ${loan.branchName}`.toLowerCase().includes(search.toLowerCase()) && (!compliance || loan.compliance === compliance)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [loans, view, search, compliance]);
   const limited = view === 'all' || view === 'sanctioned';
-  const shownLoans = showAll || filtered || !limited ? visibleLoans : visibleLoans.slice(0, recentCount);
+  const grouped = groups.map(group => {
+    const all = visibleLoans.filter(loan => loan.category === group.id);
+    return { ...group, all, shown: showAll.includes(group.id) || filtered || !limited ? all : all.slice(0, recentCount) };
+  });
   const viewLabel = views.find(v => v.id === view)!.label.toLowerCase();
   const emptyTitle = filtered ? 'No matching loans' : view === 'pending' ? 'Nothing pending' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : view === 'all' ? 'Add your first application to start tracking its progress.' : 'Choose All to see every application.';
-  function chooseView(next: View) { setView(next); setShowAll(false); }
+  function chooseView(next: View) { setView(next); setShowAll([]); }
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem(collapsedKey) || '[]'); if (Array.isArray(saved)) setCollapsed(saved.filter((id): id is Category => id === 'new' || id === 'renewal')); } catch {} }, []);
+  function toggleGroup(id: Category) {
+    setCollapsed(current => { const next = current.includes(id) ? current.filter(c => c !== id) : [...current, id]; try { localStorage.setItem(collapsedKey, JSON.stringify(next)); } catch {} return next; });
+  }
   const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
   function clearFilters() { chooseView('all'); setAdminFilter(''); setCompliance(''); }
   return <div className="app-shell landscape-home">
@@ -141,7 +150,6 @@ export default function Workspace() {
         </section>
         <section className="recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="sr-only">Applications</h2>
-          <div className="tabs" role="tablist" aria-label="Loan category"><button role="tab" aria-selected={category === 'new'} aria-controls="loans-panel" id="new-tab" className={category === 'new' ? 'selected' : ''} onClick={() => setCategory('new')}>New loans <span>{loading ? 0 : loans.filter(l => l.category === 'new' && inView(l, view)).length}</span></button><span className="tab-divider" aria-hidden="true"/><button role="tab" aria-selected={category === 'renewal'} aria-controls="loans-panel" id="renewal-tab" className={category === 'renewal' ? 'selected' : ''} onClick={() => setCategory('renewal')}>Renewals <span>{loading ? 0 : loans.filter(l => l.category === 'renewal' && inView(l, view)).length}</span></button></div>
           <div className="table-toolbar"><label className="search-field"><Search size={21} strokeWidth={1.75}/><input aria-label="Search ATS number, borrower or branch" placeholder="Search ATS or name..." value={search} onChange={e => setSearch(e.target.value)}/></label><div className="filter-anchor"><button type="button" className={`filter-button ${activeFilters ? 'has-filters' : ''}`} onClick={() => setFilters(!filters)} aria-label={`Filters${activeFilters ? `, ${activeFilters} active` : ''}`} aria-expanded={filters} aria-haspopup="dialog"><SlidersHorizontal size={21} strokeWidth={1.9}/>{activeFilters ? <span className="filter-count" aria-hidden="true">{activeFilters}</span> : null}</button>
             {filters ? <><div className="menu-backdrop" onClick={() => setFilters(false)}/><div className="filter-panel" role="dialog" aria-label="Filters">
               <label>Show<span className="filter-select"><select value={view} onChange={e => chooseView(e.target.value as View)}>{views.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}</select><ChevronDown size={18}/></span></label>
@@ -149,8 +157,18 @@ export default function Workspace() {
               {activeAdmin ? <label>Compliance<span className="filter-select"><select value={compliance} onChange={e => setCompliance(e.target.value)}><option value="">All compliance</option><option value="awaiting">Awaiting</option><option value="complied">Complied</option><option value="none">No remarks</option></select><ChevronDown size={18}/></span></label> : null}
               <div className="filter-panel-actions"><button type="button" className="text-button" onClick={clearFilters} disabled={!activeFilters}>Clear all</button><button type="button" className="button primary" onClick={() => setFilters(false)}>Done</button></div>
             </div></> : null}</div></div>
-          <div id="loans-panel" role="tabpanel" aria-labelledby={category === 'new' ? 'new-tab' : 'renewal-tab'}>{loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div> : <LoanTable loans={shownLoans} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/>}</div>
-          {!loading && visibleLoans.length > shownLoans.length ? <button className="show-more" onClick={() => setShowAll(true)}>Show all {visibleLoans.length} {view === 'all' ? '' : viewLabel + ' '}{category === 'new' ? 'new loans' : 'renewals'}</button> : null}
+          {loading ? <div className="loading-state"><RefreshCw size={23} className="spin"/><p>Loading shared applications…</p></div>
+            : !visibleLoans.length ? <LoanTable loans={[]} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/>
+            : grouped.map(group => {
+              const open = !collapsed.includes(group.id);
+              return <div key={group.id} className={`loan-group ${open ? 'open' : ''}`}>
+                <h3 className="loan-group-head"><button type="button" onClick={() => toggleGroup(group.id)} aria-expanded={open} aria-controls={`loan-group-${group.id}`}><ChevronDown className="loan-group-chevron" aria-hidden="true"/><span>{group.label}</span><span className="loan-group-count">{group.all.length}</span></button></h3>
+                <div className="loan-group-body" id={`loan-group-${group.id}`} inert={!open}><div>
+                  {group.all.length ? <LoanTable loans={group.shown} admin={activeAdmin} onEdit={setForm} onCompliance={complianceUpdate} busy={busy} filtered={filtered} emptyTitle={emptyTitle} emptyText={emptyText}/> : <p className="loan-group-empty">No {group.label.toLowerCase()} {filtered ? 'match' : view === 'all' ? 'yet' : viewLabel}.</p>}
+                  {group.all.length > group.shown.length ? <button className="show-more" onClick={() => setShowAll(current => [...current, group.id])}>Show all {group.all.length} {view === 'all' ? '' : viewLabel + ' '}{group.label.toLowerCase()}</button> : null}
+                </div></div>
+              </div>;
+            })}
         </section>
       </main>
     {notice ? <div className="toast" role="status"><CheckCheck size={18}/>{notice}</div> : null}

@@ -68,6 +68,19 @@
 .landscape-home .tabs button>span{min-width:28px;border-radius:6px;padding:3px 8px;font:700 14px/1.1 'Times New Roman',Georgia,serif;background:#eef0ed;color:#818187}
 .landscape-home .tabs button.selected>span{background:#d5e8dd;color:var(--green)}
 .landscape-home .table-toolbar{gap:11px;padding-top:19px}
+.landscape-home .recent .table-toolbar{margin-top:18px}
+.loan-group{margin-top:18px}
+.loan-group-head{margin:0;font:inherit}
+.loan-group-head button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 2px 10px;border:0;border-bottom:1px solid #dedfdb;background:none;color:var(--green);font:700 17px/1.2 'Times New Roman',Georgia,serif;text-align:left}
+.loan-group-chevron{width:20px;height:20px;stroke-width:2.2;transform:rotate(-90deg);transition:transform .35s cubic-bezier(.32,.72,0,1)}
+.loan-group.open .loan-group-chevron{transform:none}
+.loan-group-count{min-width:28px;margin-left:auto;padding:3px 8px;border-radius:6px;background:#d5e8dd;color:var(--green);font:700 14px/1.1 'Times New Roman',Georgia,serif;text-align:center}
+.loan-group-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.32,.72,0,1),opacity .3s ease;opacity:0}
+.loan-group.open .loan-group-body{grid-template-rows:1fr;opacity:1}
+.loan-group-body>div{min-height:0;overflow:hidden}
+.landscape-home .loan-group .loan-list{margin:12px 0 4px}
+.loan-group-empty{margin:14px 2px 6px;color:#8b958e;font:400 14px/1.4 'Times New Roman',Georgia,serif}
+@media(prefers-reduced-motion:reduce){.loan-group-body,.loan-group-chevron{transition:none}}
 .landscape-home .loan-list{margin-top:14px}
 .landscape-home .table-toolbar .search-field input{height:48px;border:1px solid #dfdfe3;border-radius:9px;padding:0 12px 0 50px;font:400 16px/1.2 'Times New Roman',Georgia,serif;background:#ffffffd9}
 .landscape-home .search-field input::placeholder{color:#8d8f95}.landscape-home .search-field svg{left:15px;width:23px;height:23px;color:#101619;stroke-width:1.65}
@@ -162,6 +175,8 @@
   .landscape-home .tabs button.selected:after{height:calc(4 * var(--home-unit))}
   .landscape-home .tabs button>span{min-width:calc(28 * var(--home-unit));padding:calc(3 * var(--home-unit)) calc(8 * var(--home-unit));font-size:calc(14 * var(--home-unit))}
   .landscape-home .table-toolbar{gap:calc(11 * var(--home-unit));padding-top:calc(19 * var(--home-unit))}
+  .loan-group-head button{font-size:calc(17 * var(--home-unit))}
+  .loan-group-count{font-size:calc(14 * var(--home-unit))}
   .landscape-home .loan-list{margin-top:calc(14 * var(--home-unit))}
   .landscape-home .table-toolbar .search-field input{height:calc(48 * var(--home-unit));border-radius:calc(9 * var(--home-unit));padding-left:calc(50 * var(--home-unit));font-size:calc(16 * var(--home-unit))}
   .landscape-home .search-field svg{left:calc(15 * var(--home-unit));width:calc(23 * var(--home-unit));height:calc(23 * var(--home-unit))}
