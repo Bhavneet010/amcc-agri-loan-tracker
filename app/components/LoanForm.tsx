@@ -6,7 +6,6 @@ import { atsDigits, request, rupees } from '../../lib/types';
 import Modal from './Modal';
 export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void; onDeleted: () => void }) {
   const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
-  const [borrowerName, setBorrowerName] = useState(loan?.borrowerName ?? '');
   const [branch, setBranch] = useState(loan?.branchId ?? branchId); const [remarks, setRemarks] = useState(loan?.remarks ?? ''); const [status, setStatus] = useState(loan?.status ?? 'pending');
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const [baseVersion, setBaseVersion] = useState(loan?.version ?? 0); const [conflict, setConflict] = useState(false); const [latest, setLatest] = useState<Loan | null>(null);
@@ -28,7 +27,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   async function save(event: React.FormEvent) {
     event.preventDefault(); setError(''); setSaving(true);
     try {
-      const payload = loan ? (reviewing ? { version: baseVersion, remarks: status === 'sanctioned' ? '' : remarks, status } : { version: baseVersion, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
+      const payload = loan ? (reviewing ? { version: baseVersion, remarks: status === 'sanctioned' ? '' : remarks, status } : { version: baseVersion, atsId, amount }) : { branchId: branch, category, atsId, amount };
       await request(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
       onSaved();
     } catch(e) { setError((e as Error).message); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
@@ -45,7 +44,6 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
           <label>ATS number<span className="ats-input"><span className="ats-prefix" aria-hidden="true">ATS</span><input value={ats} onChange={e => setAts(atsDigits(e.target.value).slice(0, 9))} inputMode="numeric" pattern="[0-9]{8,9}" placeholder="8–9 digits" title="Enter the 8 or 9 digit ATS number" aria-label="ATS number, 8 or 9 digits" required autoFocus/></span></label>
           <label>Amount (₹)<input value={amount} onChange={e => setAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" title="Amount in rupees, with up to two decimal places" placeholder="e.g. 250000" required/></label>
         </div>
-        <label>Borrower name<input value={borrowerName} onChange={e => setBorrowerName(e.target.value)} type="text" autoComplete="off" autoCapitalize="words" maxLength={120} placeholder="Full name of the borrower" required/></label>
       </>}
       {reviewing ? <><label>Status<select value={status} onChange={e => setStatus(e.target.value as 'pending' | 'sanctioned')}><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option></select></label>{status === 'pending' ? <><label>Admin remarks<textarea rows={4} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label><small>Changing remarks resets the branch’s compliance response.</small></> : <small>Sanctioning a loan clears its admin remarks and compliance request.</small>}</> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
