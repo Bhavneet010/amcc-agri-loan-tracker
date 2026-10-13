@@ -18,7 +18,6 @@ const rememberAdminMode = (on: boolean) => { try { if (on) localStorage.setItem(
 // Branch names (not loan records) are kept on the device so the app can render before the network answers.
 const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branchesKey, JSON.stringify(list)); } catch {} };
 const recentCount = 5;
-const collapsedKey = 'amcc.collapsedGroups.v1';
 type Category = 'new' | 'renewal';
 const groups: { id: Category; label: string }[] = [{ id: 'new', label: 'New loans' }, { id: 'renewal', label: 'Renewals' }];
 type View = 'all' | 'pending' | 'sanctioned';
@@ -32,7 +31,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [sessionChecked, setSessionChecked] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null); const [addChoice, setAddChoice] = useState(false);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>(['new', 'renewal']);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -117,9 +116,8 @@ export default function Workspace() {
   const emptyTitle = filtered ? 'No matching loans' : view === 'pending' ? 'Nothing pending' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : view === 'all' ? 'Add your first application to start tracking its progress.' : 'Choose All to see every application.';
   function chooseView(next: View) { setView(next); setShowAll([]); }
-  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem(collapsedKey) || '[]'); if (Array.isArray(saved)) setCollapsed(saved.filter((id): id is Category => id === 'new' || id === 'renewal')); } catch {} }, []);
   function toggleGroup(id: Category) {
-    setCollapsed(current => { const next = current.includes(id) ? current.filter(c => c !== id) : [...current, id]; try { localStorage.setItem(collapsedKey, JSON.stringify(next)); } catch {} return next; });
+    setCollapsed(current => current.includes(id) ? current.filter(c => c !== id) : [...current, id]);
   }
   const activeFilters = (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
   function clearFilters() { chooseView('all'); setAdminFilter(''); setCompliance(''); }
