@@ -68,7 +68,6 @@
 .landscape-home .tabs button>span{min-width:28px;border-radius:6px;padding:3px 8px;font:700 14px/1.1 'Times New Roman',Georgia,serif;background:#eef0ed;color:#818187}
 .landscape-home .tabs button.selected>span{background:#d5e8dd;color:var(--green)}
 .landscape-home .table-toolbar{gap:11px;padding-top:19px}
-.landscape-home .recent .table-toolbar{margin-top:18px}
 .loan-group{margin-top:18px}
 .loan-group-head{margin:0;font:inherit}
 .loan-group-head button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 2px 10px;border:0;border-bottom:1px solid #dedfdb;background:none;color:var(--green);font:700 17px/1.2 'Times New Roman',Georgia,serif;text-align:left}

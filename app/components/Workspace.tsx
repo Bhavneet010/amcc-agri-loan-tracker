@@ -31,7 +31,7 @@ export default function Workspace() {
   const [loading, setLoading] = useState(true); const [ready, setReady] = useState(false); const [sessionChecked, setSessionChecked] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null); const [addChoice, setAddChoice] = useState(false);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>(['new', 'renewal']);
+  const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>([]);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -116,6 +116,8 @@ export default function Workspace() {
   const emptyTitle = filtered ? 'No matching loans' : view === 'pending' ? 'Nothing pending' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : view === 'all' ? 'Add your first application to start tracking its progress.' : 'Choose All to see every application.';
   function chooseView(next: View) { setView(next); setShowAll([]); }
+  // Admins see every branch, so sections start collapsed for them; branch users start with both open.
+  useEffect(() => { setCollapsed(activeAdmin ? ['new', 'renewal'] : []); }, [activeAdmin]);
   function toggleGroup(id: Category) {
     setCollapsed(current => current.includes(id) ? current.filter(c => c !== id) : [...current, id]);
   }
