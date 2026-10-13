@@ -137,7 +137,7 @@ export default function Workspace() {
         <section className="summary" aria-label="Loan summary">
           <SummaryCarousel loans={loans} loading={loading} onStatus={status => chooseView(view === status ? 'all' : status)}/>
           <h2 className="sr-only">Add an application</h2>
-          <button className="home-add-loan" onClick={() => setAddChoice(true)} disabled={!canAdd}><span className="home-add-icon"><Plus aria-hidden="true"/></span><span className="home-add-text"><strong>Add Loan</strong><span>New loan or renewal</span></span><ChevronRight className="home-add-arrow" aria-hidden="true"/></button>
+          <button className="home-add-loan" onClick={() => setAddChoice(true)} disabled={!canAdd}><span className="home-add-icon"><Plus aria-hidden="true"/></span><span className="home-add-text"><strong>Add Loan</strong><span>New loan or renewal</span></span><svg className="home-add-mark" viewBox="0 0 64 72" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 6h34l14 14v42a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z"/><path d="M42 6v14h14"/><path d="M14 30h12M20 24v12M34 30h12M14 48h12M34 46h12M34 52h12"/></svg><ChevronRight className="home-add-arrow" aria-hidden="true"/></button>
         </section>
         <section className="recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="sr-only">Applications</h2>
