@@ -9,10 +9,18 @@ const loan = (status: Loan['status'], createdAt: string, updatedAt = createdAt) 
 test('today uses India dates and counts sanctions on their update date', () => {
   const loans = [
     loan('pending', '2026-10-11T18:40:00Z'),
-    loan('pending', '2026-10-11T18:20:00Z'),
+    loan('sanctioned', '2026-10-11T18:20:00Z'),
     loan('sanctioned', '2026-09-01T10:00:00Z', '2026-10-12T10:00:00Z'),
   ];
   assert.deepEqual(summarizeLoans(loans, 'today', now), { pending: 1, sanctioned: 1 });
+});
+test('today carries forward loans still pending from earlier days', () => {
+  const loans = [
+    loan('pending', '2026-10-11T18:20:00Z'),
+    loan('pending', '2026-09-01T10:00:00Z'),
+    loan('sanctioned', '2026-10-11T10:00:00Z'),
+  ];
+  assert.deepEqual(summarizeLoans(loans, 'today', now), { pending: 2, sanctioned: 0 });
 });
 test('month excludes previous months and years, all time includes them', () => {
   const loans = [loan('pending', '2026-09-30T18:40:00Z'), loan('pending', '2025-10-12T00:00:00Z'), loan('sanctioned', '2026-09-30T10:00:00Z')];

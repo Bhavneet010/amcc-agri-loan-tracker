@@ -12,7 +12,9 @@ export function summarizeLoans(loans: Loan[], period: SummaryPeriod, now: Date) 
       const date = new Date(loan.status === 'sanctioned' ? loan.updatedAt : loan.createdAt);
       if (Number.isNaN(date.getTime())) continue;
       const key = dayKey(date);
-      if (period === 'today' ? key !== today : key.slice(0, 7) !== today.slice(0, 7)) continue;
+      // A loan still pending from an earlier day carries forward into today.
+      const carried = period === 'today' && loan.status === 'pending' && key < today;
+      if (!carried && (period === 'today' ? key !== today : key.slice(0, 7) !== today.slice(0, 7))) continue;
     }
     counts[loan.status]++;
   }
