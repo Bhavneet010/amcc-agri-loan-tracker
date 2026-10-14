@@ -290,6 +290,13 @@ main>.message{margin:18px 24px 0}
 .modal.toned .ats-input input:focus{box-shadow:none}
 .modal.toned .review-summary{background:var(--tone-soft)}
 .modal.toned .review-summary strong{color:var(--tone)}
+/* Admin review: amount and status share one row to keep the dialog short. */
+.review-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end}
+.modal.toned .review-top .review-summary{padding:8px 12px;gap:1px;border-radius:8px}
+.modal.toned .review-top .review-summary span{font-size:10px}
+.modal.toned .review-top .review-summary strong{font-size:19px;line-height:1.3}
+.review-borrower{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal.toned textarea{min-height:72px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-row>label{min-width:0}
 .modal.toned .modal-actions{padding-top:14px;margin-top:2px}
