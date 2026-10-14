@@ -22,10 +22,10 @@ test('today carries forward loans still pending from earlier days', () => {
   ];
   assert.deepEqual(summarizeLoans(loans, 'today', now), { pending: 2, sanctioned: 0 });
 });
-test('month excludes previous months and years, all time includes them', () => {
-  const loans = [loan('pending', '2026-09-30T18:40:00Z'), loan('pending', '2025-10-12T00:00:00Z'), loan('sanctioned', '2026-09-30T10:00:00Z')];
-  assert.deepEqual(summarizeLoans(loans, 'month', now), { pending: 1, sanctioned: 0 });
-  assert.deepEqual(summarizeLoans(loans, 'all', now), { pending: 2, sanctioned: 1 });
+test('month carries forward earlier pending loans but not earlier sanctions, all time includes them', () => {
+  const loans = [loan('pending', '2026-09-30T18:40:00Z'), loan('pending', '2025-10-12T00:00:00Z'), loan('sanctioned', '2026-09-30T10:00:00Z'), loan('sanctioned', '2026-09-01T10:00:00Z', '2026-10-05T10:00:00Z')];
+  assert.deepEqual(summarizeLoans(loans, 'month', now), { pending: 2, sanctioned: 1 });
+  assert.deepEqual(summarizeLoans(loans, 'all', now), { pending: 2, sanctioned: 2 });
 });
 test('empty summaries show zero counts', () => {
   assert.deepEqual(summarizeLoans([], 'today', now), { pending: 0, sanctioned: 0 });
