@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-export default function Modal({ title, subtitle, eyebrow, icon, tone, chooser, onClose, children }: { title: string; subtitle?: string; eyebrow?: string; icon?: React.ReactNode; tone?: 'new' | 'renewal'; chooser?: boolean; onClose?: () => void; children: React.ReactNode }) {
+export default function Modal({ title, subtitle, eyebrow, icon, tone, chooser, onClose, children }: { title: React.ReactNode; subtitle?: string; eyebrow?: string; icon?: React.ReactNode; tone?: 'new' | 'renewal'; chooser?: boolean; onClose?: () => void; children: React.ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
