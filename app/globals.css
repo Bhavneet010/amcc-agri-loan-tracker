@@ -295,6 +295,14 @@ main>.message{margin:18px 24px 0}
 .modal.toned .review-top .review-summary{padding:8px 12px;gap:1px;border-radius:8px}
 .modal.toned .review-top .review-summary span{font-size:10px}
 .modal.toned .review-top .review-summary strong{font-size:19px;line-height:1.3}
+/* Status reads as a pill matching the amount box; the whole pill opens the native picker. */
+.modal.toned .review-status{position:relative;align-self:stretch;align-content:center;gap:1px;padding:8px 12px;border-radius:8px;background:#fcf5e8;color:#ad8441;cursor:pointer}
+.modal.toned .review-status.sanctioned{background:#eaf4ee;color:#3f7a55}
+.modal.toned .review-status>span{font-size:10px;font-weight:400;color:#92a097;letter-spacing:0}
+.modal.toned .review-status select{appearance:none;-webkit-appearance:none;width:100%;padding:0 22px 0 0;border:0;background:transparent;font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.3;color:inherit;cursor:pointer}
+.modal.toned .review-status select:focus{box-shadow:none}
+.modal.toned .review-status:focus-within{box-shadow:0 0 0 3px var(--tone-ring)}
+.modal.toned .review-status svg{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
 .review-borrower{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .modal.toned textarea{min-height:72px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Building2, RefreshCcw, Sprout, Trash2 } from 'lucide-react';
+import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { atsDigits, request, rupees } from '../../lib/types';
 import Modal from './Modal';
@@ -40,7 +40,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   </Modal>;
   return <Modal {...head} eyebrow={reviewing ? 'Admin review' : loan ? 'Edit application' : 'Add application'} subtitle={loan ? `${loan.atsId} · ${loan.branchName}` : undefined} onClose={saving ? undefined : onClose}>
     <form onSubmit={save} className="form-stack">
-      {reviewing ? <div className="review-top"><div className="review-summary"><span>Loan amount</span><strong>{rupees(loan.amountPaise)}</strong>{loan.borrowerName ? <span className="review-borrower" title={loan.borrowerName}>{loan.borrowerName}</span> : null}</div><label>Status<select value={status} onChange={e => setStatus(e.target.value as 'pending' | 'sanctioned')}><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option></select></label></div> : <>
+      {reviewing ? <div className="review-top"><div className="review-summary"><span>Loan amount</span><strong>{rupees(loan.amountPaise)}</strong>{loan.borrowerName ? <span className="review-borrower" title={loan.borrowerName}>{loan.borrowerName}</span> : null}</div><label className={`review-status ${status}`}><span>Status</span><select value={status} onChange={e => setStatus(e.target.value as 'pending' | 'sanctioned')}><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option></select><ChevronDown size={18} aria-hidden="true"/></label></div> : <>
         {admin && !loan ? <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <div className="form-field"><span className="form-field-label">Branch</span><div className="field-static"><Building2 size={15}/>{branches.find(b => b.id === branch)?.name || loan?.branchName || 'No branch selected'}</div></div>}
         <div className="form-row">
           <label>ATS number<span className="ats-input"><span className="ats-prefix" aria-hidden="true">ATS</span><input value={ats} onChange={e => setAts(atsDigits(e.target.value).slice(0, 9))} inputMode="numeric" pattern="[0-9]{8,9}" placeholder="8–9 digits" title="Enter the 8 or 9 digit ATS number" aria-label="ATS number, 8 or 9 digits" required autoFocus/></span></label>
