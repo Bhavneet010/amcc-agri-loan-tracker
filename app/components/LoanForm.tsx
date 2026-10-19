@@ -28,22 +28,23 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
     try { const current = await request<Loan>(`/api/loans/${loan!.id}`); setLatest(current); setBaseVersion(current.version); setConflict(false); setError(''); }
     catch(e) { setError((e as Error).message); } finally { setSaving(false); }
   }
-  // Check the shared service stored the sanctioned amount; if it only applied the status, send the amount on its own.
-  async function confirmSanctionedAmount() {
+  // The shared service takes amount changes only as a branch-style edit, separate from the admin status update.
+  // Save the sanctioned amount first while the loan is still pending, then sanction it.
+  async function saveSanctionedAmount() {
     const paise = Math.round(Number(sanctionedAmount) * 100);
-    let current = await request<Loan>(`/api/loans/${loan!.id}`);
-    if (current.amountPaise === paise) return;
-    await request(`/api/loans/${loan!.id}`, { method: 'PATCH', body: JSON.stringify({ version: current.version, amount: sanctionedAmount }) });
-    current = await request<Loan>(`/api/loans/${loan!.id}`);
-    if (current.amountPaise !== paise) throw new Error(`The loan is sanctioned, but the shared loan service kept the amount at ${rupees(current.amountPaise)}.`);
+    await request(`/api/loans/${loan!.id}`, { method: 'PATCH', body: JSON.stringify({ version: baseVersion, atsId: loan!.atsId, ...(loan!.borrowerName ? { borrowerName: loan!.borrowerName } : {}), amount: sanctionedAmount }) });
+    const current = await request<Loan>(`/api/loans/${loan!.id}`);
+    setBaseVersion(current.version);
+    if (current.amountPaise !== paise) throw new Error(`The shared loan service kept the amount at ${rupees(current.amountPaise)}, so the loan was not sanctioned.`);
+    return current.version;
   }
   async function save(event: React.FormEvent) {
     event.preventDefault(); setError(''); setSaving(true);
     try {
       if (!reviewing && !borrowerName.trim()) throw new Error('Enter the borrower name.');
-      const payload = loan ? (reviewing ? { version: baseVersion, remarks: status === 'sanctioned' ? '' : remarks, status, ...(askSanctioned ? { amount: sanctionedAmount } : {}) } : { version: baseVersion, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
+      const version = askSanctioned ? await saveSanctionedAmount() : baseVersion;
+      const payload = loan ? (reviewing ? { version, remarks: status === 'sanctioned' ? '' : remarks, status } : { version, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
       await request(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      if (askSanctioned) await confirmSanctionedAmount();
       onSaved();
     } catch(e) { setError((e as Error).message); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
   }
