@@ -12,6 +12,9 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const [baseVersion, setBaseVersion] = useState(loan?.version ?? 0); const [conflict, setConflict] = useState(false); const [latest, setLatest] = useState<Loan | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const reviewing = admin && !!loan;
+  // Sanctioning a new loan asks for the sanctioned amount, which replaces the amount the branch entered.
+  const askSanctioned = reviewing && loan.category === 'new' && loan.status === 'pending' && status === 'sanctioned';
+  const [sanctionedAmount, setSanctionedAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
   const tone = loan?.category ?? category;
   const head = { tone, title: tone === 'new' ? 'New loan' : 'Renewal loan', icon: tone === 'new' ? <Sprout size={20}/> : <RefreshCcw size={19}/> };
   const readOnly = !!loan && !admin && loan.status === 'sanctioned';
@@ -25,12 +28,22 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
     try { const current = await request<Loan>(`/api/loans/${loan!.id}`); setLatest(current); setBaseVersion(current.version); setConflict(false); setError(''); }
     catch(e) { setError((e as Error).message); } finally { setSaving(false); }
   }
+  // Check the shared service stored the sanctioned amount; if it only applied the status, send the amount on its own.
+  async function confirmSanctionedAmount() {
+    const paise = Math.round(Number(sanctionedAmount) * 100);
+    let current = await request<Loan>(`/api/loans/${loan!.id}`);
+    if (current.amountPaise === paise) return;
+    await request(`/api/loans/${loan!.id}`, { method: 'PATCH', body: JSON.stringify({ version: current.version, amount: sanctionedAmount }) });
+    current = await request<Loan>(`/api/loans/${loan!.id}`);
+    if (current.amountPaise !== paise) throw new Error(`The loan is sanctioned, but the shared loan service kept the amount at ${rupees(current.amountPaise)}.`);
+  }
   async function save(event: React.FormEvent) {
     event.preventDefault(); setError(''); setSaving(true);
     try {
       if (!reviewing && !borrowerName.trim()) throw new Error('Enter the borrower name.');
-      const payload = loan ? (reviewing ? { version: baseVersion, remarks: status === 'sanctioned' ? '' : remarks, status } : { version: baseVersion, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
+      const payload = loan ? (reviewing ? { version: baseVersion, remarks: status === 'sanctioned' ? '' : remarks, status, ...(askSanctioned ? { amount: sanctionedAmount } : {}) } : { version: baseVersion, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
       await request(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      if (askSanctioned) await confirmSanctionedAmount();
       onSaved();
     } catch(e) { setError((e as Error).message); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
   }
@@ -48,7 +61,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
         </div>
         <label>Borrower name<input value={borrowerName} onChange={e => setBorrowerName(e.target.value)} type="text" autoComplete="off" autoCapitalize="words" maxLength={120} placeholder="Full name of the borrower" required/></label>
       </>}
-      {reviewing ? <>{status === 'pending' ? <><label>Admin remarks<textarea rows={3} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label><small>Changing remarks resets the branch’s compliance response.</small></> : <small>Sanctioning a loan clears its admin remarks and compliance request.</small>}</> : null}
+      {reviewing ? <>{status === 'pending' ? <><label>Admin remarks<textarea rows={3} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label><small>Changing remarks resets the branch’s compliance response.</small></> : <>{askSanctioned ? <label>Sanctioned amount (₹)<input value={sanctionedAmount} onChange={e => setSanctionedAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" title="Amount in rupees, with up to two decimal places" placeholder="e.g. 250000" required autoFocus/></label> : null}<small>{askSanctioned ? `Replaces the ${rupees(loan.amountPaise)} entered by the branch. ` : ''}Sanctioning a loan clears its admin remarks and compliance request.</small></>}</> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {conflict ? <button type="button" className="button secondary" onClick={reloadVersion} disabled={saving}>Load latest version, keep my draft</button> : null}
       {latest ? <div className="review-summary"><span>Latest saved version · {latest.atsId} · {rupees(latest.amountPaise)} · {latest.status}</span>{latest.borrowerName ? <span>Borrower: {latest.borrowerName}</span> : null}<span>Current remarks: {latest.remarks || 'None'}</span><small>Your draft is preserved above. Review it before saving over the latest version.</small></div> : null}
