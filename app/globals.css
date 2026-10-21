@@ -242,6 +242,9 @@ main>.message{margin:18px 24px 0}
 .loan-line .loan-branch,.loan-line .loan-branch+.loan-date{margin-right:0}
 .loan-line .loan-branch{display:inline-block;flex:none;max-width:none;padding:3px 7px;border-radius:5px;background:var(--green-light);color:var(--green);font:600 11.5px/1.2 var(--sans);font-variant-numeric:tabular-nums}
 .loan-line .ats{flex:1 1 auto;min-width:0;max-width:none;margin-right:auto;overflow:hidden;text-overflow:ellipsis}
+.loan-line .ats-number{display:block;overflow:hidden;text-overflow:ellipsis}
+.loan-line .loan-added-date{display:block;margin-top:2px;color:var(--muted);font:400 10px/1.2 var(--sans);white-space:nowrap}
+.loan-line .pending-days{color:#946c2c;font:600 11px/1.2 var(--sans);font-variant-numeric:tabular-nums;white-space:nowrap}
 .loan-line .amount{flex:none;min-width:58px;text-align:right}
 @media(max-width:380px){.loan-line .loan-branch{display:inline-block;padding:2px 5px;font-size:10.5px}.loan-line .amount{min-width:0}}
 

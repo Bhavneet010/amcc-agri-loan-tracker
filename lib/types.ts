@@ -10,6 +10,12 @@ export const lakhs = (paise: number) => `₹${new Intl.NumberFormat('en-IN', { m
 export const branchCode = (name: string) => name.match(/^\s*(\d+)/)?.[1] ?? name.trim().split(/[\s·-]+/)[0];
 export const atsDigits = (atsId: string) => atsId.replace(/\D/g, '');
 export const dateLabel = (date: string) => new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+const indiaDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+const dayNumber = (date: Date) => {
+  const parts = Object.fromEntries(indiaDay.formatToParts(date).map(part => [part.type, part.value]));
+  return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) / 86400000;
+};
+export const pendingDays = (createdAt: string, now = new Date()) => Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
 const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
 const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
 export function requestUrl(url: string, method: string, appOrigin: string) {

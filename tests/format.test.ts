@@ -1,6 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { atsDigits, branchCode, lakhs, requestUrl } from '../lib/types.ts';
+import { atsDigits, branchCode, dateLabel, lakhs, pendingDays, requestUrl } from '../lib/types.ts';
+
+test('shows the loan added date in India time', () => {
+  assert.equal(dateLabel('2026-10-11T18:40:00Z'), '12 Oct 2026');
+});
+
+test('counts pending calendar days in India time', () => {
+  const now = new Date('2026-10-12T18:10:00Z');
+  assert.equal(pendingDays('2026-10-11T18:20:00Z', now), 1);
+  assert.equal(pendingDays('2026-10-11T18:40:00Z', now), 0);
+  assert.equal(pendingDays('2026-10-09T18:20:00Z', now), 3);
+});
 
 test('shows amounts in lakhs', () => {
   assert.equal(lakhs(10000000), '₹1 L');
