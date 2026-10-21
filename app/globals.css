@@ -257,17 +257,17 @@ main>.message{margin:18px 24px 0}
 @media(max-width:440px){.loan-line{gap:7px}.loan-line .amount{min-width:0}.loan-line .status{padding:4px 7px;gap:5px}.loan-card{padding-right:2px}}
 @media(max-width:360px){.loan-line .status{padding:0;width:22px;height:22px;justify-content:center;border-radius:50%}.loan-line .status>span:first-child{width:8px;height:8px}.loan-line .status-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}}
 
-/* Loan cards keep the identifying details and amount distinct from supporting details. */
+/* Loan cards show the essential details in one compact row. */
 .loan-card{padding-right:12px}
-.loan-card .loan-line{gap:10px;min-height:42px}
-.loan-card .loan-line .ats{margin-right:0}
-.loan-card .loan-meta{display:flex;align-items:baseline;gap:12px;min-width:0;padding:0 2px 10px 0;pointer-events:none}
-.loan-card .loan-meta .loan-added-date{flex:none;color:var(--muted);font:400 11px/1.3 var(--sans);white-space:nowrap}
-.loan-card .loan-meta .borrower{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--muted);font-size:11px}
+.loan-card .loan-line{gap:10px;min-height:48px}
+.loan-card .loan-line .ats{flex:0 1 auto;margin-right:0}
+.loan-card .loan-line .borrower{flex:1 1 auto}
 .loan-card .loan-line .pending-circle{flex:none;display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:#fcf5e8;color:#986f2e;font:700 12px/1 var(--sans);font-variant-numeric:tabular-nums}
 .loan-card .loan-line .status.sanctioned{gap:5px}
 @media(max-width:680px){
   .loan-card .loan-line{gap:8px}
+  .loan-card .loan-line .ats{flex:1 1 auto}
+  .loan-card .loan-line .borrower{display:none}
   .loan-card .loan-line .row-action{display:none}
   .loan-card .loan-line .status.sanctioned{width:31px;height:31px;padding:0;justify-content:center;border-radius:50%}
   .loan-card .loan-line .status.sanctioned .status-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}

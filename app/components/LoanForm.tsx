@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
-import { atsDigits, request, rupees } from '../../lib/types';
+import { atsDigits, dateLabel, request, rupees } from '../../lib/types';
 import Modal from './Modal';
 export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void; onDeleted: () => void }) {
   const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
@@ -18,8 +18,8 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const tone = loan?.category ?? category;
   const kind = tone === 'new' ? 'New loan' : 'Renewal loan';
   const icon = tone === 'new' ? <Sprout size={20}/> : <RefreshCcw size={19}/>;
-  // An existing loan is headed by its ATS number, with the loan type in the eyebrow and the branch below.
-  const head = loan ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || loan.atsId}</span>, subtitle: loan.branchName } : { tone, icon, title: kind };
+  // An existing loan is headed by its ATS number, with the branch and added date below.
+  const head = loan ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || loan.atsId}</span>, subtitle: `${loan.branchName} · Added ${dateLabel(loan.createdAt)}` } : { tone, icon, title: kind };
   const readOnly = !!loan && !admin && loan.status === 'sanctioned';
   async function remove() {
     setError(''); setSaving(true);
