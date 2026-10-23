@@ -341,3 +341,7 @@ main>.message{margin:18px 24px 0}
 .modal.toned .button.primary{background:var(--tone)}
 .modal.toned .button.primary:hover{background:var(--tone-2)}
 @media(max-width:680px){.modal.toned{padding:0;border-radius:16px}.modal.toned h2{font-size:22px}.modal.toned .modal-head{padding:16px 14px 16px 16px}.modal.toned>form,.modal.toned>.modal-actions{padding-inline:16px}.modal.toned>.review-summary{margin-inline:16px}.modal.toned .modal-actions .button{flex:1}.modal.toned .modal-actions .delete-button{flex:0 0 auto}}
+
+.status.returned,.modal.toned .review-status.returned{background:#fff0e8;color:#9d4c30}
+.returned-alert .remarks{color:#9d4c30}.returned-alert strong{font-weight:600}
+@media(max-width:680px){.loan-card .loan-line .status.returned{width:31px;height:31px;padding:0;justify-content:center;border-radius:50%}.loan-card .loan-line .status.returned .status-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}}

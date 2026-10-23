@@ -2,8 +2,9 @@ import { DATA_ORIGIN, SUPABASE_KEY, SUPABASE_REGION } from './supabase-config.ts
 export type Branch = { id: string; name: string; version: number };
 export type Loan = {
   id: string; branchId: string; branchName: string; category: 'new' | 'renewal'; atsId: string; borrowerName?: string;
-  amountPaise: number; status: 'pending' | 'sanctioned'; remarks: string;
+  amountPaise: number; status: 'pending' | 'sanctioned' | 'returned'; remarks: string;
   compliance: 'none' | 'awaiting' | 'complied'; version: number; createdAt: string; updatedAt: string;
+  returnedDate?:string|null;returnReason?:string;sanctionDate?:string|null;statusChangedAt?:string;statusHistory?:{id:string;fromStatus:string;toStatus:string;reason:string;sourceApp:string;author:string;createdAt:string;returnedDate?:string}[];
   shareEligible?: boolean; remarkHistory?: {id:string;body:string;sourceApp:string;author:string;createdAt:string}[];
 };
 export const rupees = (paise: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: paise % 100 ? 2 : 0 }).format(paise / 100);

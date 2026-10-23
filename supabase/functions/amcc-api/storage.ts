@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Config, RecordData, Storage } from './handler.ts';
 import { AppError } from './validation.ts';
+import {findNirnayCandidates,readNirnayMatch} from './nirnay-candidates.ts';
 
 function checked<T>(result: { data: T; error: any }): NonNullable<T> {
   if (result.error) {
@@ -23,7 +24,7 @@ export function createStorage(client: SupabaseClient): Storage {
     async listLoans(filters) {
       const rows: RecordData[] = [];
       for (let offset = 0; ; offset += 1000) {
-        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id)').eq('agri_archived',false).order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
+        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*)').eq('agri_archived',false).order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
         if (filters.branchId) query = query.eq('branch_id', filters.branchId);
         if (filters.category) query = query.eq('category', filters.category);
         const page = checked(await query); rows.push(...page.map(mapLoan));
@@ -31,7 +32,7 @@ export function createStorage(client: SupabaseClient): Storage {
       }
     },
     async getLoan(id) {
-      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id)').eq('id', id).eq('agri_archived',false).maybeSingle());
+      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*)').eq('id', id).eq('agri_archived',false).maybeSingle());
       if (!row) throw new AppError('Loan not found.', 404);
       return mapLoan(row);
     },
@@ -46,7 +47,19 @@ export function createStorage(client: SupabaseClient): Storage {
     async clearLoginAttempts(key) { checked(await client.from('amcc_login_attempts').delete().eq('key', key)); },
     async listSharedLoans() { return checked(await client.rpc('amcc_list_shared')); },
     async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
-    async createSharedLoan(input,source) { return checked(await client.rpc('amcc_create_shared',{p_input:input,p_source:source})); },
+    async createSharedLoan(input,source) {
+      const payload={...input};
+      if(!input.allowDistinct){
+        const [branches,links]=await Promise.all([this.listBranches(),client.from('amcc_nirnay_links').select('firebase_id').not('firebase_id','is',null)]);
+        const branch=branches.find(row=>row.id===input.branchId);if(!branch)throw new AppError('Choose a valid branch.');
+        if(input.nirnayMatchId){payload.existingNirnay={...await readNirnayMatch(input.nirnayMatchId,{...input,branchName:branch.name}),branchId:input.branchId,borrowerName:input.borrowerName,amountPaise:input.amountPaise};}
+        else {
+          const candidates=await findNirnayCandidates({borrowerName:input.borrowerName,branchName:branch.name,linkedIds:checked(links).map(row=>row.firebase_id)});
+          if(candidates.length)return {needsConfirmation:true,error:'An existing Nirnay application matches this borrower. Review its status before adding another application.',candidates};
+        }
+      }
+      return checked(await client.rpc('amcc_create_shared',{p_input:payload,p_source:source}));
+    },
     async updateNirnay(id,input) {
       const payload={...input};
       if (input.data.amount!==undefined) {
@@ -66,5 +79,5 @@ export function createStorage(client: SupabaseClient): Storage {
   };
 }
 function mapLoan(row: RecordData): RecordData {
-  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),shareEligible:row.share_eligible,remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
+  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),returnedDate:row.returned_date,returnReason:row.return_reason,sanctionDate:row.sanction_date,statusChangedAt:row.status_changed_at,statusHistory:(row.amcc_status_events||[]).map((e:any)=>({id:e.id,fromStatus:e.from_status,toStatus:e.to_status,reason:e.reason,returnedDate:e.returned_date,sourceApp:e.source_app,author:e.author,requestId:e.request_id,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)),shareEligible:row.share_eligible,remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
 }

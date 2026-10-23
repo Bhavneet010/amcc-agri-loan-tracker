@@ -33,7 +33,7 @@
 .summary-card-heading button{display:flex;align-items:center;gap:14px;padding:0;border:0;background:none;color:inherit;font:700 18px/1.2 'Times New Roman',Georgia,serif;text-align:left}
 .summary-card-heading svg{width:22px;height:24px;stroke-width:2.6}
 .summary-card-heading time{background:#ffffff20;border-radius:9px;padding:6px 8px;font:400 14px/1 'Times New Roman',Georgia,serif}
-.summary-counts{display:grid;grid-template-columns:1fr 1fr;margin-top:30px}
+.summary-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:30px}
 .summary-count{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:0;border:0;background:none;color:inherit;font:700 18px/1.15 'Times New Roman',Georgia,serif;text-align:left}
 .featured .summary-count{align-items:center;text-align:center}
 .featured .sanctioned-count{border-left:1px solid #ffffff33}
@@ -188,3 +188,13 @@
   .landscape-home .empty-state p{margin-top:calc(6 * var(--home-unit));font-size:calc(15 * var(--home-unit))}
 }
 @media(prefers-reduced-motion:reduce){.home-add-loan:active{transform:none}}
+
+/* Three decision states share the existing summary card. */
+.featured .returned-count{border-left:1px solid #ffffff33}
+.returned-count svg{color:#ffbca1}
+.featured .summary-count{font-size:clamp(11px,2.8vw,18px)}
+.featured .summary-number{gap:6px}.featured .summary-number strong{font-size:clamp(24px,6.2vw,40px)}.featured .summary-number svg{width:clamp(18px,4.6vw,29px);height:clamp(18px,4.6vw,29px)}
+.compact .returned-count svg{color:#a05237}
+@media(max-width:680px){.compact .summary-counts{gap:3px;margin-top:6px}.compact .summary-count{gap:2px;font-size:8px}.compact .summary-number{gap:4px}.compact .summary-number strong{font-size:15px}.compact .summary-number svg{width:14px;height:14px}.compact .sanctioned-count{padding-top:4px}}
+
+@media(max-width:360px){.featured .summary-count{font-size:10px}.featured .summary-number strong{font-size:23px}.featured .summary-number svg{width:16px;height:16px}}

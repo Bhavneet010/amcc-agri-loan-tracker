@@ -30,14 +30,25 @@ export function publicChanges(record: any, input: any): Record<string, any> {
 }
 export function adminChanges(input: any): Record<string, any> {
   const result: Record<string, any> = {};
-  if (!Object.keys(input).length || Object.keys(input).some(k => !['remarks', 'status'].includes(k))) throw new AppError('Invalid admin update.');
+  if (!Object.keys(input).length || Object.keys(input).some(k => !['remarks', 'status','returnReason','returnedDate','sanctionDate'].includes(k))) throw new AppError('Invalid admin update.');
   if ('status' in input) {
-    if (!['pending', 'sanctioned'].includes(input.status)) throw new AppError('Invalid loan status.');
+    if (!['pending', 'sanctioned','returned'].includes(input.status)) throw new AppError('Invalid loan status.');
     result.status = input.status;
   }
   if ('remarks' in input) {
     if (typeof input.remarks !== 'string' || input.remarks.length > 2000) throw new AppError('Remarks must be at most 2,000 characters.');
     result.remarks = input.remarks.trim();
   }
+  for(const key of ['returnReason','returnedDate','sanctionDate'])if(key in input)result[key]=input[key];
   return result;
+}
+export function validateDecision(current:any,input:any){
+ const status=input.status??current.status;
+ if(status==='returned'&&current.category==='renewal')throw new AppError('Only fresh applications can be returned.');
+ if(input.returnReason!==undefined&&(typeof input.returnReason!=='string'||!input.returnReason.trim()||input.returnReason.length>2000))throw new AppError('Enter a return reason of 1–2,000 characters.');
+ if(status==='returned'&&current.status!=='returned'&&!input.returnReason?.trim())throw new AppError('Enter a return reason.');
+ for(const key of ['returnedDate','sanctionDate'])if(input[key]!==undefined){
+  const value=input[key];const date=typeof value==='string'?new Date(value+'T00:00:00Z'):new Date(NaN);
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==value)throw new AppError('Enter a valid decision date.');
+ }
 }

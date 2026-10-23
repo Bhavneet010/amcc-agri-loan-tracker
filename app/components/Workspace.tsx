@@ -21,8 +21,8 @@ const rememberBranches = (list: Branch[]) => { try { localStorage.setItem(branch
 const recentCount = 5;
 type Category = 'new' | 'renewal';
 const groups: { id: Category; label: string }[] = [{ id: 'new', label: 'New loans' }, { id: 'renewal', label: 'Renewals' }];
-type View = 'all' | 'pending' | 'sanctioned';
-const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' }];
+type View = 'all' | 'pending' | 'sanctioned' | 'returned';
+const views: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'sanctioned', label: 'Sanctioned' },{id:'returned',label:'Returned'}];
 const inView = (loan: Loan, view: View) => view === 'all' || loan.status === view;
 export default function Workspace() {
   const [branches, setBranches] = useState<Branch[]>([]); const [branchId, setBranch] = useState('');
@@ -142,13 +142,13 @@ export default function Workspace() {
   function create(kind: 'new' | 'renewal') { setAddChoice(false); setCategory(kind); setForm('new'); }
   const filtered = !!(search || compliance);
   const visibleLoans = useMemo(() => loans.filter(loan => inView(loan, view) && `${loan.atsId} ${loan.borrowerName ?? ''} ${loan.branchName}`.toLowerCase().includes(search.toLowerCase()) && (!compliance || loan.compliance === compliance)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [loans, view, search, compliance]);
-  const limited = view === 'all' || view === 'sanctioned';
+  const limited = view === 'all' || view === 'sanctioned' || view==='returned';
   const grouped = groups.map(group => {
     const all = visibleLoans.filter(loan => loan.category === group.id);
     return { ...group, all, shown: showAll.includes(group.id) || filtered || !limited ? all : all.slice(0, recentCount) };
   });
   const viewLabel = views.find(v => v.id === view)!.label.toLowerCase();
-  const emptyTitle = filtered ? 'No matching loans' : view === 'pending' ? 'Nothing pending' : view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
+  const emptyTitle = filtered ? 'No matching loans' : view === 'pending' ? 'Nothing pending' : view==='returned'?'No returned loans': view === 'sanctioned' ? 'No sanctioned loans' : 'No applications yet';
   const emptyText = filtered ? 'Try another ATS number or clear the filters.' : view === 'all' ? 'Add your first application to start tracking its progress.' : 'Choose All to see every application.';
   function chooseView(next: View) { setView(next); setShowAll([]); }
   // Admins see every branch, so sections start collapsed for them; branch users start with both open.
@@ -214,7 +214,7 @@ export default function Workspace() {
     {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); rememberBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={saved => { applySaved(saved); setForm(null); setNotice('Loan saved to the shared workspace.'); }} onDeleted={id => { applyDeleted(id); setForm(null); setNotice('Application deleted.'); }}/>: null}
-    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
+    {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open. Fresh Agriculture applications linked with Nirnay share Pending, Sanctioned and Returned status. An admin supplies a reason when returning an application and can move it back to Pending after resubmission.</p></div></Modal> : null}
     <InstallPrompt canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help}/>
   </div>;
 }

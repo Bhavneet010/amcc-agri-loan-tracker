@@ -1,9 +1,9 @@
-import { AppError } from './validation.ts';
+import { AppError,validateDecision } from './validation.ts';
 export const normalizeBorrower = (name: string) => name.normalize('NFKC').trim().toUpperCase().replace(/\s+/g, ' ');
 const requestId = (id: unknown) => { if (typeof id !== 'string' || !/^[a-zA-Z0-9:_-]{8,180}$/.test(id)) throw new AppError('A stable save request ID is required.'); return id; };
-const localFields = new Set(['documentationDate','disbursementDate','status','allocatedTo','manualOfficer','manualOfficerMonth','receiveDate','sanctionDate','returnedDate','reminderMails','monthEndCleared','monthEndClearedMonth','monthEndClearedAt','loanType','isTermLoan','isCC','isBre','isFreshCC','manuallyCreated','category','remarks','customerName','branch','amount','acNumber','updatedAt','updatedBy']);
+const localFields = new Set(['returnReason','documentationDate','disbursementDate','status','allocatedTo','manualOfficer','manualOfficerMonth','receiveDate','sanctionDate','returnedDate','reminderMails','monthEndCleared','monthEndClearedMonth','monthEndClearedAt','loanType','isTermLoan','isCC','isBre','isFreshCC','manuallyCreated','category','remarks','customerName','branch','amount','acNumber','updatedAt','updatedBy']);
 export function validateSharedCreate(input: any, source: 'agri' | 'nirnay') {
-  const allowed = ['branchId','borrowerName','amountPaise','atsId','requestId','linkExistingId','allowDistinct','author','remarks','nirnayData'];
+  const allowed = ['branchId','borrowerName','amountPaise','atsId','requestId','linkExistingId','nirnayMatchId','allowDistinct','author','remarks','nirnayData'];
   if (!input || Object.keys(input).some(k => !allowed.includes(k))) throw new AppError('Invalid shared application fields.');
   if (!/^branch-(0[1-9]|1[0-3])$/.test(input.branchId)) throw new AppError('Choose a valid branch.');
   const name = typeof input.borrowerName === 'string' ? input.borrowerName.trim() : '';
@@ -14,6 +14,7 @@ export function validateSharedCreate(input: any, source: 'agri' | 'nirnay') {
   if (input.allowDistinct !== undefined && typeof input.allowDistinct !== 'boolean') throw new AppError('Confirm whether this is a different application.');
   if (input.linkExistingId !== undefined && (typeof input.linkExistingId !== 'string' || input.linkExistingId.length > 100)) throw new AppError('Invalid existing application.');
   if (input.remarks !== undefined && (typeof input.remarks !== 'string' || input.remarks.length > 2000)) throw new AppError('Remarks must be at most 2,000 characters.');
+  if(input.nirnayMatchId!==undefined&&(typeof input.nirnayMatchId!=='string'||!/^[-a-zA-Z0-9_]{1,160}$/.test(input.nirnayMatchId)))throw new AppError('Invalid Nirnay match.');
   const nirnayData = input.nirnayData || {};
   validateLocalData(nirnayData);
   if(nirnayData.isFreshCC===false)throw new AppError('Only fresh Agriculture applications can be shared.');
@@ -44,6 +45,7 @@ export async function handleLinkage(request: Request, path: string, db: LinkStor
     if (request.method === 'GET') return { data: await db.listSharedLoans(), status: 200 };
     if (request.method !== 'POST') throw new AppError('Method not allowed.', 405);
     const data = validateSharedCreate(input, 'nirnay');
+    if(data.nirnayMatchId&&!admin)throw new AppError('Admin login is required to link an existing Nirnay decision.',401);
     if (data.remarks?.trim() && !admin) throw new AppError('Admin login is required to share remarks.', 401);
     const saved = await db.createSharedLoan(data, 'nirnay');
     return { data: saved, status: saved.needsConfirmation ? 409 : 200 };
@@ -53,5 +55,10 @@ export async function handleLinkage(request: Request, path: string, db: LinkStor
   const patch = validateNirnayPatch(input);
   const current = await db.getSharedLoan(id);
   if ('remarks' in patch.data && patch.data.remarks.trim() !== current.remarks && !admin) throw new AppError('Admin login is required to share remarks.', 401);
+  const decisionChanged=['status','returnReason','returnedDate','sanctionDate'].some(key=>key in patch.data&&patch.data[key]!==''&&patch.data[key]!==current[key]);
+  if(decisionChanged&&!admin)throw new AppError('Admin login is required to change a shared decision.',401);
+  // Old inline editors include empty dates while pending; those do not clear decision history.
+  for(const key of ['returnedDate','sanctionDate'])if(patch.data[key]==='')delete patch.data[key];
+  validateDecision({...current,category:'new'},patch.data);
   return { data: await db.updateNirnay(id, patch), status: 200 };
 }

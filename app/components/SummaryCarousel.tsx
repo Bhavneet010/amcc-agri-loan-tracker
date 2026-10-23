@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { CalendarDays, ChartNoAxesColumnIncreasing, CircleCheck, Clock } from 'lucide-react';
+import { CalendarDays, ChartNoAxesColumnIncreasing, CircleCheck, Clock,Undo2 } from 'lucide-react';
 import type { Loan } from '../../lib/types';
 import { summarizeLoans, type SummaryPeriod } from '../../lib/loan-summary';
 
 const periods: SummaryPeriod[] = ['today', 'all', 'month'];
 const labels = { today: 'Today', month: 'This Month', all: 'All Time' };
 
-export default function SummaryCarousel({ loans, loading, onStatus }: { loans: Loan[]; loading: boolean; onStatus: (status: 'pending' | 'sanctioned') => void }) {
+export default function SummaryCarousel({ loans, loading, onStatus }: { loans: Loan[]; loading: boolean; onStatus: (status: Loan['status']) => void }) {
   const [period, setPeriod] = useState<SummaryPeriod>('today');
   const touchStart = useRef<number | null>(null);
   const [drag, setDrag] = useState(0);
@@ -34,7 +34,7 @@ export default function SummaryCarousel({ loans, loading, onStatus }: { loans: L
       {periods.map(id => {
         const index = slotOf(id);
         const central = index === 1;
-        const counts = now ? summarizeLoans(loans, id, now) : { pending: 0, sanctioned: 0 };
+        const counts = now ? summarizeLoans(loans, id, now) : { pending: 0, sanctioned: 0,returned:0 };
         const Icon = id === 'all' ? ChartNoAxesColumnIncreasing : CalendarDays;
         return <article key={id} className={`summary-card ${central ? 'featured' : 'compact'} position-${index}${wrapping === id ? ' wrapping' : ''}`} aria-label={`${labels[id]} summary`}
           onTransitionEnd={e => { if (e.target === e.currentTarget && e.propertyName === 'left' && wrapping === id) setWrapping(null); }}>
@@ -43,6 +43,7 @@ export default function SummaryCarousel({ loans, loading, onStatus }: { loans: L
           <div className="summary-counts">
             <button type="button" className="summary-count pending-count" onClick={() => onStatus('pending')} aria-label={`${labels[id]}: ${counts.pending} pending, show pending applications`}><span className="summary-number"><Clock aria-hidden="true"/><strong>{loading ? '—' : counts.pending}</strong></span><span>Pending</span></button>
             <button type="button" className="summary-count sanctioned-count" onClick={() => onStatus('sanctioned')} aria-label={`${labels[id]}: ${counts.sanctioned} sanctioned, show sanctioned applications`}><span className="summary-number"><CircleCheck aria-hidden="true"/><strong>{loading ? '—' : counts.sanctioned}</strong></span><span>Sanctioned</span></button>
+            <button type="button" className="summary-count returned-count" onClick={() => onStatus('returned')} aria-label={`${labels[id]}: ${counts.returned} returned, show returned applications`}><span className="summary-number"><Undo2 aria-hidden="true"/><strong>{loading ? '—' : counts.returned}</strong></span><span>Returned</span></button>
           </div>
           </div>
         </article>;

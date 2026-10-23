@@ -1,4 +1,4 @@
-import { AppError, validateLoanInput, publicChanges, adminChanges } from './validation.ts';
+import { AppError, validateLoanInput, publicChanges, adminChanges,validateDecision } from './validation.ts';
 import { isAdmin, sessionCookie, signSession, verifyPassword } from './auth.ts';
 import { handleLinkage, validateSharedCreate, type LinkStorage } from './linkage.ts';
 
@@ -103,13 +103,14 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
           return json((await db.listLoans({ branchId, category })).map(publicLoan));
         }
         const input = await body(request);
-        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','allowDistinct'].includes(k))) throw new AppError('Invalid loan fields.');
+        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','nirnayMatchId','allowDistinct'].includes(k))) throw new AppError('Invalid loan fields.');
         if (!['new', 'renewal'].includes(input.category)) throw new AppError('Choose New or Renewal.');
         const branches = await db.listBranches();
         if (!branches.some(b => b.id === input.branchId)) throw new AppError('Choose a valid branch.');
         const validated=validateLoanInput(input);
         if (input.category==='new' && config.linkageEnabled && db.createSharedLoan) {
-          const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
+          const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.nirnayMatchId?{nirnayMatchId:input.nirnayMatchId}:{}),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
+          if(shared.nirnayMatchId&&!await isAdmin(request,config.sessionSecret))throw new AppError('Admin login is required to link an existing Nirnay decision.',401);
           const saved=await db.createSharedLoan(shared,'agri');
           return json(saved,saved.needsConfirmation?409:201);
         }
@@ -129,13 +130,15 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
       }
       const { version: expectedVersion, requestId, ...fields } = input;
       if(requestId!==undefined&&(typeof requestId!=='string'||!/^[a-zA-Z0-9:_-]{8,180}$/.test(requestId)))throw new AppError('Invalid save request ID.');
-      const adminUpdate = 'remarks' in fields || 'status' in fields;
+      const adminUpdate = ['remarks','status','returnReason','returnedDate','sanctionDate'].some(key=>key in fields);
       if (adminUpdate && !admin) throw new AppError('Admin login is required.', 401);
       const changes = admin && adminUpdate ? adminChanges(fields) : publicChanges(record, fields);
+      validateDecision(record,changes);
       if ((changes.status ?? record.status) === 'sanctioned') { changes.remarks = ''; changes.compliance = 'none'; }
       if (record.shareEligible && (changes.status ?? record.status)==='sanctioned') changes.remarks = typeof fields.remarks==='string'?fields.remarks.trim():record.remarks;
       else if (record.status === 'sanctioned' && changes.status === 'pending') { changes.remarks ??= ''; changes.compliance = changes.remarks ? 'awaiting' : 'none'; }
       else if ('remarks' in changes && changes.remarks !== record.remarks) changes.compliance = changes.remarks ? 'awaiting' : 'none';
+      if((changes.status??record.status)==='returned')changes.compliance='none';
       return json(publicLoan(await db.updateLoan(id, expectedVersion, {...changes,requestId:requestId||crypto.randomUUID()}, admin && adminUpdate ? 'admin' : 'branch')));
     } catch (error) {
       if (error instanceof AppError) return json({ error: error.message }, error.status);
