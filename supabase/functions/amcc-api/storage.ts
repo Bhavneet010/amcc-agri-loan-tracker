@@ -15,14 +15,15 @@ function checked<T>(result: { data: T; error: any }): NonNullable<T> {
 export function createStorage(client: SupabaseClient): Storage {
   return {
     async getConfig(): Promise<Config> {
-      const row = checked(await client.from('amcc_config').select('*').eq('id', true).single());
-      return { enabled: row.enabled, passwordSalt: row.password_salt, passwordHash: row.password_hash, sessionSecret: row.session_secret };
+      const [main,link] = await Promise.all([client.from('amcc_config').select('*').eq('id',true).single(),client.from('amcc_linkage_config').select('enabled').eq('id',true).single()]);
+      const row=checked(main),linkage=checked(link);
+      return { enabled: row.enabled, passwordSalt: row.password_salt, passwordHash: row.password_hash, sessionSecret: row.session_secret,linkageEnabled:linkage.enabled };
     },
     async listBranches() { return checked(await client.from('amcc_branches').select('id,name,version').order('id')); },
     async listLoans(filters) {
       const rows: RecordData[] = [];
       for (let offset = 0; ; offset += 1000) {
-        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name)').order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
+        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id)').eq('agri_archived',false).order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
         if (filters.branchId) query = query.eq('branch_id', filters.branchId);
         if (filters.category) query = query.eq('category', filters.category);
         const page = checked(await query); rows.push(...page.map(mapLoan));
@@ -30,7 +31,7 @@ export function createStorage(client: SupabaseClient): Storage {
       }
     },
     async getLoan(id) {
-      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name)').eq('id', id).maybeSingle());
+      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id)').eq('id', id).eq('agri_archived',false).maybeSingle());
       if (!row) throw new AppError('Loan not found.', 404);
       return mapLoan(row);
     },
@@ -43,8 +44,27 @@ export function createStorage(client: SupabaseClient): Storage {
     },
     async loginAttempt(key) { return checked(await client.rpc('amcc_login_attempt', { p_key: key })); },
     async clearLoginAttempts(key) { checked(await client.from('amcc_login_attempts').delete().eq('key', key)); },
+    async listSharedLoans() { return checked(await client.rpc('amcc_list_shared')); },
+    async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
+    async createSharedLoan(input,source) { return checked(await client.rpc('amcc_create_shared',{p_input:input,p_source:source})); },
+    async updateNirnay(id,input) {
+      const payload={...input};
+      if (input.data.amount!==undefined) {
+        const paise=Math.round(Number(input.data.amount)*10000000);
+        if(!Number.isSafeInteger(paise)||paise<=0)throw new AppError('Enter a valid positive amount.');
+        payload.amountPaise=paise;
+      }
+      if(input.data.customerName!==undefined && (typeof input.data.customerName!=='string'||!input.data.customerName.trim()||input.data.customerName.trim().length>120))throw new AppError('Enter a valid borrower name.');
+      if(input.data.branch!==undefined){
+        if(typeof input.data.branch!=='string')throw new AppError('Choose a valid branch.');
+        const code=input.data.branch.match(/^\s*(\d+)/)?.[1];
+        const branches=await this.listBranches();const branch=branches.find(b=>b.name.match(/^\s*(\d+)/)?.[1]===code);
+        if(!branch)throw new AppError('Choose a valid branch.');payload.branchId=branch.id;
+      }
+      return checked(await client.rpc('amcc_update_nirnay',{p_id:id,p_input:payload}));
+    },
   };
 }
 function mapLoan(row: RecordData): RecordData {
-  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id, borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString() };
+  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),shareEligible:row.share_eligible,remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
 }

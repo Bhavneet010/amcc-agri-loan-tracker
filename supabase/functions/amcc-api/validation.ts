@@ -2,9 +2,9 @@ export class AppError extends Error {
   status: number;
   constructor(message: string, status = 400) { super(message); this.status = status; }
 }
-export function validateLoanInput(input: any): { atsId: string; amountPaise: number; borrowerName?: string } {
+export function validateLoanInput(input: any, allowMissingAts=false): { atsId: string; amountPaise: number; borrowerName?: string } {
   const atsId = typeof input.atsId === 'string' ? input.atsId.trim() : '';
-  if (!atsId || atsId.length > 80) throw new AppError('Enter an ATS number of 1–80 characters.');
+  if ((!atsId&&!allowMissingAts) || atsId.length > 80) throw new AppError('Enter an ATS number of 1–80 characters.');
   const amount = String(input.amount ?? '');
   if (!/^\d+(\.\d{1,2})?$/.test(amount)) throw new AppError('Enter a positive amount with at most two decimal places.');
   const [whole, fraction = ''] = amount.split('.');
@@ -26,7 +26,7 @@ export function publicChanges(record: any, input: any): Record<string, any> {
     if (keys.length !== 1 || !record.remarks || !['complied', 'awaiting'].includes(input.compliance)) throw new AppError('There are no current remarks to comply with.');
     return { compliance: input.compliance };
   }
-  return validateLoanInput(input);
+  return validateLoanInput(input,!!record.shareEligible&&!record.atsId);
 }
 export function adminChanges(input: any): Record<string, any> {
   const result: Record<string, any> = {};

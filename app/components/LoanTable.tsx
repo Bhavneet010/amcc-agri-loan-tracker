@@ -8,10 +8,10 @@ export default function LoanTable({ loans, admin, onEdit, onCompliance, busy, fi
   return <ul className="loan-list">{loans.map(loan => {
     const daysPending = pendingDays(loan.createdAt);
     return <li key={loan.id} className={`loan-card ${loan.status === 'pending' && loan.remarks ? 'has-alert' : ''}`}>
-    <button type="button" className="loan-card-open" onClick={() => onEdit(loan)} aria-label={`Open ${loan.atsId}`}/>
+    <button type="button" className="loan-card-open" onClick={() => onEdit(loan)} aria-label={`Open ${loan.atsId||'ATS pending'} ${loan.borrowerName||''}`}/>
     <div className="loan-line">
       {admin ? <span className="loan-branch" title={loan.branchName}>{branchCode(loan.branchName)}</span> : null}
-      <strong className="ats" title={loan.atsId}><span className="ats-number">{/^ats\b/i.test(loan.atsId) ? <><span className="ats-tag">ATS</span>{loan.atsId.replace(/^ats[\s-]*/i, '')}</> : loan.atsId}</span></strong>
+      <strong className="ats" title={loan.atsId||'ATS pending'}><span className="ats-number">{/^ats\b/i.test(loan.atsId||'') ? <><span className="ats-tag">ATS</span>{loan.atsId.replace(/^ats[\s-]*/i, '')}</> : loan.atsId||'ATS pending'}</span></strong>
       {loan.borrowerName ? <span className="borrower" title={loan.borrowerName}>{loan.borrowerName}</span> : null}
       <span className="amount" title={rupees(loan.amountPaise)}>{lakhs(loan.amountPaise)}</span>
       {loan.status === 'pending' ? <span className="pending-circle" aria-label={`${daysPending} ${daysPending === 1 ? 'day' : 'days'} pending`} title={`${daysPending} ${daysPending === 1 ? 'day' : 'days'} pending`}>{daysPending}</span> : <><span className="status sanctioned" title="Sanctioned"><Check size={14} aria-hidden="true"/><span className="status-text">Sanctioned</span></span><span className="row-action"><button type="button" className={admin ? 'text-button review-button' : 'icon-button'} onClick={() => onEdit(loan)} aria-label={admin ? `Review ${loan.atsId}` : `View ${loan.atsId}`}>{admin ? <>Review <ArrowUpRight size={14}/></> : <Eye size={15}/>}</button></span></>}

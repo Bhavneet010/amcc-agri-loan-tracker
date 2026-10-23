@@ -11,6 +11,10 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const [baseVersion, setBaseVersion] = useState(loan?.version ?? 0); const [conflict, setConflict] = useState(false); const [latest, setLatest] = useState<Loan | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [requestId]=useState(()=>crypto.randomUUID());
+  const [candidates,setCandidates]=useState<Loan[]>([]);
+  const [linkExistingId,setLinkExistingId]=useState('');
+  const [allowDistinct,setAllowDistinct]=useState(false);
   const reviewing = admin && !!loan;
   // Sanctioning a new loan asks for the sanctioned amount, which replaces the amount the branch entered.
   const askSanctioned = reviewing && loan.category === 'new' && loan.status === 'pending' && status === 'sanctioned';
@@ -19,7 +23,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const kind = tone === 'new' ? 'New loan' : 'Renewal loan';
   const icon = tone === 'new' ? <Sprout size={20}/> : <RefreshCcw size={19}/>;
   // An existing loan is headed by its ATS number, with the branch and added date below.
-  const head = loan ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || loan.atsId}</span>, subtitle: `${loan.branchName} · Added ${dateLabel(loan.createdAt)}` } : { tone, icon, title: kind };
+  const head = loan ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || 'pending'}</span>, subtitle: `${loan.branchName} · Added ${dateLabel(loan.createdAt)}` } : { tone, icon, title: kind };
   const readOnly = !!loan && !admin && loan.status === 'sanctioned';
   async function remove() {
     setError(''); setSaving(true);
@@ -45,13 +49,14 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
     try {
       if (!reviewing && !borrowerName.trim()) throw new Error('Enter the borrower name.');
       const version = askSanctioned ? await saveSanctionedAmount() : baseVersion;
-      const payload = loan ? (reviewing ? { version, remarks: status === 'sanctioned' ? '' : remarks, status } : { version, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
-      const saved = await request<Loan>(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      const payload = loan ? (reviewing ? { version, remarks: status === 'sanctioned' && !loan.shareEligible ? '' : remarks, status } : { version, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount,requestId,...(linkExistingId?{linkExistingId}:{}),...(allowDistinct?{allowDistinct:true}:{}) };
+      const saved = await request<Loan>(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(loan?{...payload,requestId}:payload) });
       onSaved(saved);
-    } catch(e) { setError((e as Error).message); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
+    } catch(e) { const failure=e as Error & {candidates?:Loan[]};setError(failure.message);if(failure.candidates){setCandidates(failure.candidates);setAllowDistinct(false);setLinkExistingId('');} if (failure.message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
   }
   if (readOnly) return <Modal {...head} eyebrow={`Loan details · ${kind}`} onClose={onClose}>
     <div className="review-summary"><span>Loan amount</span><strong>{rupees(loan.amountPaise)}</strong><span>{loan.category === 'new' ? 'New loan' : 'Renewal'} · Sanctioned</span>{loan.borrowerName ? <span>Borrower: {loan.borrowerName}</span> : null}</div>
+    {loan.shareEligible ? <RemarkHistory loan={loan}/> : null}
     <div className="modal-actions"><button type="button" className="button primary" onClick={onClose}>Close</button></div>
   </Modal>;
   return <Modal {...head} eyebrow={`${reviewing ? 'Admin review' : loan ? 'Edit application' : 'Add application'}${loan ? ` · ${kind}` : ''}`} onClose={saving ? undefined : onClose}>
@@ -64,12 +69,18 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
         </div>
         <label>Borrower name<input value={borrowerName} onChange={e => setBorrowerName(e.target.value)} type="text" autoComplete="off" autoCapitalize="words" maxLength={120} placeholder="Full name of the borrower" required/></label>
       </>}
-      {reviewing ? <>{status === 'pending' ? <><label>Admin remarks<textarea rows={3} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label></> : <>{askSanctioned ? <label>Sanctioned amount (₹)<input value={sanctionedAmount} onChange={e => setSanctionedAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" title="Amount in rupees, with up to two decimal places" placeholder="e.g. 250000" required autoFocus/></label> : null}<small>{askSanctioned ? `Replaces the ${rupees(loan.amountPaise)} entered by the branch. ` : ''}Sanctioning a loan clears its admin remarks and compliance request.</small></>}</> : null}
+      {reviewing && loan.shareEligible && status==='sanctioned' ? <label>Shared remarks<textarea rows={3} value={remarks} onChange={e=>setRemarks(e.target.value)} maxLength={2000}/></label> : null}
+      {loan?.shareEligible ? <RemarkHistory loan={loan}/> : null}
+      {candidates.length ? <div className="review-summary" role="group" aria-label="Possible existing applications"><strong>Possible existing application</strong>{candidates.map(candidate=><button type="button" className="button secondary" key={candidate.id} onClick={()=>{setLinkExistingId(candidate.id);setAllowDistinct(false);setError('Existing application selected. Save to link it.');}}>{candidate.borrowerName} · {candidate.atsId||'ATS pending'} · {rupees(candidate.amountPaise)}{linkExistingId===candidate.id?' · Selected':''}</button>)}<button type="button" className="text-button" onClick={()=>{setAllowDistinct(true);setLinkExistingId('');setError('Different application confirmed. Save to add it.');}}>This is a different application{allowDistinct?' · Confirmed':''}</button></div> : null}
+      {reviewing ? <>{status === 'pending' ? <><label>Admin remarks<textarea rows={3} value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={2000} placeholder="Enter any documents or actions required from the branch…"/></label></> : <>{askSanctioned ? <label>Sanctioned amount (₹)<input value={sanctionedAmount} onChange={e => setSanctionedAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" title="Amount in rupees, with up to two decimal places" placeholder="e.g. 250000" required autoFocus/></label> : null}<small>{askSanctioned ? `Replaces the ${rupees(loan.amountPaise)} entered by the branch. ` : ''}{loan.shareEligible ? 'Sanctioning closes the compliance request and retains shared remarks.' : 'Sanctioning clears admin remarks and compliance.'}</small></>}</> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {conflict ? <button type="button" className="button secondary" onClick={reloadVersion} disabled={saving}>Load latest version, keep my draft</button> : null}
       {latest ? <div className="review-summary"><span>Latest saved version · {latest.atsId} · {rupees(latest.amountPaise)} · {latest.status}</span>{latest.borrowerName ? <span>Borrower: {latest.borrowerName}</span> : null}<span>Current remarks: {latest.remarks || 'None'}</span><small>Your draft is preserved above. Review it before saving over the latest version.</small></div> : null}
-      {loan && confirmDelete ? <div className="delete-confirm" role="alert"><p>Delete <strong>{loan.atsId}</strong>? This removes the application for everyone and can’t be undone.</p><div><button type="button" className="button secondary" onClick={() => setConfirmDelete(false)} disabled={saving}>Keep it</button><button type="button" className="button danger" onClick={remove} disabled={saving}>{saving ? 'Deleting…' : 'Yes, delete'}</button></div></div> : null}
+      {loan && confirmDelete ? <div className="delete-confirm" role="alert"><p>{loan.shareEligible?'Archive':'Delete'} <strong>{loan.atsId||loan.borrowerName}</strong>? {loan.shareEligible?'This hides it from Agri while retaining its shared record and remarks in Nirnay.':'This removes the application for everyone and can’t be undone.'}</p><div><button type="button" className="button secondary" onClick={() => setConfirmDelete(false)} disabled={saving}>Keep it</button><button type="button" className="button danger" onClick={remove} disabled={saving}>{saving ? 'Saving…' : loan.shareEligible?'Yes, archive':'Yes, delete'}</button></div></div> : null}
       <div className="modal-actions">{loan && !confirmDelete ? <button type="button" className="button delete-button" onClick={() => setConfirmDelete(true)} disabled={saving}><Trash2 size={15}/> Delete</button> : null}<button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}</button></div>
     </form>
   </Modal>;
+}
+function RemarkHistory({loan}:{loan:Loan}) {
+ return <div className="review-summary"><strong>Shared remarks history</strong>{loan.remarkHistory?.length ? loan.remarkHistory.map(note=><div key={note.id}><p>{note.body||'Remark cleared'}</p><small>{note.sourceApp==='nirnay'?'Nirnay':'Agri'} · {note.author} · {dateLabel(note.createdAt)}</small></div>) : <span>No shared remarks yet.</span>}</div>;
 }

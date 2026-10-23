@@ -1,7 +1,8 @@
 import { AppError, validateLoanInput, publicChanges, adminChanges } from './validation.ts';
 import { isAdmin, sessionCookie, signSession, verifyPassword } from './auth.ts';
+import { handleLinkage, validateSharedCreate, type LinkStorage } from './linkage.ts';
 
-export type Config = { enabled: boolean; passwordSalt: string; passwordHash: string; sessionSecret: string };
+export type Config = { enabled: boolean; passwordSalt: string; passwordHash: string; sessionSecret: string; linkageEnabled?: boolean };
 export type RecordData = Record<string, any>;
 export interface Storage {
   getConfig(): Promise<Config>;
@@ -14,9 +15,13 @@ export interface Storage {
   renameBranch(id: string, name: string, version: number): Promise<RecordData[]>;
   loginAttempt(key: string): Promise<number>;
   clearLoginAttempts(key: string): Promise<void>;
+  listSharedLoans?: LinkStorage['listSharedLoans'];
+  getSharedLoan?: LinkStorage['getSharedLoan'];
+  createSharedLoan?: LinkStorage['createSharedLoan'];
+  updateNirnay?: LinkStorage['updateNirnay'];
 }
-const allowedOrigins = new Set(['https://amcc-agri-loan-tracker.vercel.app', 'https://amcc-agri-loans.bhavneet.chatgpt.site', 'https://xebnciawqwscifzgrkbu.supabase.co']);
-const publicLoan = (row: RecordData) => row.status === 'sanctioned' ? { ...row, remarks: '', compliance: 'none' } : row;
+const allowedOrigins = new Set(['https://amcc-agri-loan-tracker.vercel.app', 'https://amcc-agri-loans.bhavneet.chatgpt.site', 'https://loan-tracker-xi.vercel.app', 'https://xebnciawqwscifzgrkbu.supabase.co']);
+const publicLoan = (row: RecordData) => row.status === 'sanctioned' && !row.shareEligible ? { ...row, remarks: '', compliance: 'none' } : row;
 function version(value: unknown): asserts value is number {
   if (!Number.isSafeInteger(value) || Number(value) < 1) throw new AppError('A record version is required.');
 }
@@ -48,17 +53,22 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
     if (originAllowed) headers['Access-Control-Allow-Origin'] = origin;
     const json = (value: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(value, { status, headers: { ...headers, ...extra } });
     try {
-      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|admin\/session)$/.test(path)) throw new AppError('Not found.', 404);
+      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
       if (request.method === 'OPTIONS') {
         if (!originAllowed) throw new AppError('Request origin is not allowed.', 403);
         return new Response(null, { status: 204, headers: { ...headers, 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'apikey, authorization, content-type, x-region', 'Access-Control-Max-Age': '600' } });
       }
       if (!keys.some(key => key && key === request.headers.get('apikey'))) throw new AppError('An application API key is required.', 401);
-      const methods = path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
+      const methods = path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
       if (!methods.includes(request.method)) throw new AppError('Method not allowed.', 405);
       if (request.method !== 'GET' && !originAllowed) throw new AppError('Request origin is not allowed.', 403);
       const config = await db.getConfig();
       if (!config.enabled) throw new AppError('The shared workspace is being migrated. Please try again shortly; nothing was changed.', 503);
+      if (path.startsWith('/api/linkage/')) {
+        if (!config.linkageEnabled) throw new AppError('Shared Agriculture linkage is not enabled yet.', 503);
+        const result = await handleLinkage(request, path, db as LinkStorage, request.method === 'GET' ? undefined : await body(request), await isAdmin(request, config.sessionSecret));
+        return json(result.data,result.status);
+      }
       if (path === '/api/admin/session') {
         if (request.method === 'DELETE') return json({ admin: false }, 200, { 'Set-Cookie': sessionCookie(request, '', true) });
         if (request.method === 'GET') {
@@ -93,11 +103,17 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
           return json((await db.listLoans({ branchId, category })).map(publicLoan));
         }
         const input = await body(request);
-        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount'].includes(k))) throw new AppError('Invalid loan fields.');
+        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','allowDistinct'].includes(k))) throw new AppError('Invalid loan fields.');
         if (!['new', 'renewal'].includes(input.category)) throw new AppError('Choose New or Renewal.');
         const branches = await db.listBranches();
         if (!branches.some(b => b.id === input.branchId)) throw new AppError('Choose a valid branch.');
-        return json(publicLoan(await db.createLoan({ branchId: input.branchId, category: input.category, ...validateLoanInput(input) })), 201);
+        const validated=validateLoanInput(input);
+        if (input.category==='new' && config.linkageEnabled && db.createSharedLoan) {
+          const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
+          const saved=await db.createSharedLoan(shared,'agri');
+          return json(saved,saved.needsConfirmation?409:201);
+        }
+        return json(publicLoan(await db.createLoan({ branchId: input.branchId, category: input.category, ...validated })), 201);
       }
       const id = decodeURIComponent(path.slice('/api/loans/'.length));
       if (request.method === 'GET') return json(publicLoan(await db.getLoan(id)));
@@ -111,14 +127,16 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
         await db.deleteLoan(id, input.version, admin);
         return json({ deleted: true, id });
       }
-      const { version: expectedVersion, ...fields } = input;
+      const { version: expectedVersion, requestId, ...fields } = input;
+      if(requestId!==undefined&&(typeof requestId!=='string'||!/^[a-zA-Z0-9:_-]{8,180}$/.test(requestId)))throw new AppError('Invalid save request ID.');
       const adminUpdate = 'remarks' in fields || 'status' in fields;
       if (adminUpdate && !admin) throw new AppError('Admin login is required.', 401);
       const changes = admin && adminUpdate ? adminChanges(fields) : publicChanges(record, fields);
       if ((changes.status ?? record.status) === 'sanctioned') { changes.remarks = ''; changes.compliance = 'none'; }
+      if (record.shareEligible && (changes.status ?? record.status)==='sanctioned') changes.remarks = typeof fields.remarks==='string'?fields.remarks.trim():record.remarks;
       else if (record.status === 'sanctioned' && changes.status === 'pending') { changes.remarks ??= ''; changes.compliance = changes.remarks ? 'awaiting' : 'none'; }
       else if ('remarks' in changes && changes.remarks !== record.remarks) changes.compliance = changes.remarks ? 'awaiting' : 'none';
-      return json(publicLoan(await db.updateLoan(id, expectedVersion, changes, admin && adminUpdate ? 'admin' : 'branch')));
+      return json(publicLoan(await db.updateLoan(id, expectedVersion, {...changes,requestId:requestId||crypto.randomUUID()}, admin && adminUpdate ? 'admin' : 'branch')));
     } catch (error) {
       if (error instanceof AppError) return json({ error: error.message }, error.status);
       if (error instanceof SyntaxError || error instanceof URIError) return json({ error: 'Invalid request data.' }, 400);

@@ -4,12 +4,13 @@ export type Loan = {
   id: string; branchId: string; branchName: string; category: 'new' | 'renewal'; atsId: string; borrowerName?: string;
   amountPaise: number; status: 'pending' | 'sanctioned'; remarks: string;
   compliance: 'none' | 'awaiting' | 'complied'; version: number; createdAt: string; updatedAt: string;
+  shareEligible?: boolean; remarkHistory?: {id:string;body:string;sourceApp:string;author:string;createdAt:string}[];
 };
 export const rupees = (paise: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: paise % 100 ? 2 : 0 }).format(paise / 100);
 export const lakhs = (paise: number) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(paise / 10000000)} L`;
 // Branch names look like "8117 · Rajban"; the leading number is the branch code.
 export const branchCode = (name: string) => name.match(/^\s*(\d+)/)?.[1] ?? name.trim().split(/[\s·-]+/)[0];
-export const atsDigits = (atsId: string) => atsId.replace(/\D/g, '');
+export const atsDigits = (atsId: string | null | undefined) => (atsId||'').replace(/\D/g, '');
 export const dateLabel = (date: string) => new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 const indiaDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
 const dayNumber = (date: Date) => {
@@ -32,6 +33,6 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     response = await fetch(target, { ...options, headers, cache: 'no-store', signal: options.signal ?? AbortSignal.timeout(15000) });
   } catch { throw new Error('Cannot connect. Check your connection and try again.'); }
   const data: any = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Unable to complete the request (error ${response.status}). Please try again.`);
+  if (!response.ok) { const error = new Error(data.error || `Unable to complete the request (error ${response.status}). Please try again.`) as Error & { candidates?: Loan[]; status?: number }; error.candidates=data.candidates;error.status=response.status;throw error; }
   return data as T;
 }

@@ -21,3 +21,11 @@ The Supabase function source and SQL migration are in `supabase/`; the shared pu
 The 23 October 2026 migration preserved all 13 branches, 45 loans, and 193 audit entries, including IDs, borrower names, timestamps, versions, remarks, and compliance. Every persisted field was compared against a final raw D1 snapshot after the legacy API was redirected to a gated Supabase service. D1 remains an intact historical backup; it no longer receives application writes.
 
 Snapshots, import SQL, and credentials stay under ignored `outputs/` or private environment files. `scripts/prepare-amcc-import.mjs` prepares a gated import; it refuses to import while the Supabase API is enabled. After new Supabase writes begin, recovery must reconcile those writes before returning traffic to an older database. Never run an old snapshot import against the live service.
+
+## Shared Agriculture applications with Nirnay
+
+The [Nirnay app](https://loan-tracker-xi.vercel.app) shares the four fresh applications pending at activation and future fresh Agriculture applications through the same Supabase service. Three existing Nirnay applications were matched by branch, borrower and exact amount; their Firebase documents remain intact and display once. Historical sanctioned/returned applications and renewals are excluded.
+
+Borrower, branch, exact amount and remarks use one permanent shared record. Nirnay keeps its own officer, dates and status; changing status in one app does not sanction or return the other app. Shared remarks retain an append-only history, including after sanction or archive. Nirnay prompts for the existing Agri admin password before changing shared remarks; its normal officer selection does not grant administrative access.
+
+Nirnay does not require ATS. Its new applications appear here as **ATS pending** until the branch adds the ATS through the normal edit form. Agri creates still require ATS. Retries reuse a request ID, known ATS prevents duplicate entries, and possible borrower matches require an explicit link or confirmation of a different application. Archiving hides a shared application only from that app and preserves its identity and remarks.
