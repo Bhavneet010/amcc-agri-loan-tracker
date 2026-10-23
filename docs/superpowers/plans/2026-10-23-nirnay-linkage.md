@@ -40,5 +40,14 @@
 ## Task 3: Link and deploy
 
 - [x] Re-read and back up current pending records in both services; link exact matches, hold uncertain matches for explicit review, and verify history untouched.
-- [ ] Deploy the shared service and both verified repositories; run cross-app browser/API scenarios with isolated synthetic records and clean them up.
-- [ ] Verify production linkage counts, no duplicate displayed applications, retained historic data, and both deployed commits; record results.
+- [x] Deploy the shared service and both verified repositories; run cross-app browser/API scenarios with isolated synthetic records and clean them up.
+- [x] Verify production linkage counts, no duplicate displayed applications, retained historic data, and both deployed commits; record results.
+
+## Verified production result
+
+- Supabase `amcc-api` version 6 serves the shared linkage; all three SQL migrations are applied.
+- Agri implementation `d8e3a44` and Nirnay implementation `5931f61` are deployed at their existing URLs. Nirnay region adjustment `4492d9c` runs its gateway in Mumbai, matching Agri.
+- 32 Agri tests, typecheck and production build pass. All 86 Nirnay tests and JavaScript syntax checks pass. Independent review has no remaining material findings.
+- Live browser/API tests pass for both creation directions, a full Nirnay form create without ATS, protected remark saves, two-way remark propagation/history, exact paise, ATS completion, independent workflow status after Agri sanction, stale-update rejection, request retries, candidate confirmation, and archive/relink restoration.
+- Synthetic loans, audit/link/history/request rows and generated synthetic notifications were removed. The final original baseline is 45 Agri loans, 193 audit entries and 1,076,640,000 paise, with four shared applications and three existing Firebase mappings. Every mapped Firebase identity appears once; historical applications and original Firestore loan documents remain intact.
+- Shared tables and mutation RPCs reject public-role access. The admin password remains private; snapshots and verification scripts remain ignored.
