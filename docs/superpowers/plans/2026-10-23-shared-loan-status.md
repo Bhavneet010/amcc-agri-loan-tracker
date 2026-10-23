@@ -32,6 +32,15 @@
 
 ## Task 3: Correct and deploy
 
-- [ ] Back up current linked data and the verified the reported borrower Firebase document; attach only that identity and adopt its existing Returned decision transactionally.
-- [ ] Deploy service and both main branches, verify live bidirectional decisions, authentication, duplicates and the reported borrower's single returned view, then clean synthetic records.
-- [ ] Record final data integrity and deployment evidence.
+- [x] Back up current linked data and the verified the reported borrower Firebase document; attach only that identity and adopt its existing Returned decision transactionally.
+- [x] Deploy service and both main branches, verify live bidirectional decisions, authentication, duplicates and the reported borrower's single returned view, then clean synthetic records.
+- [x] Record final data integrity and deployment evidence.
+
+## Production verification
+
+- Supabase migration applied; `amcc-api` version 9 is active. Agri implementation `b947bbc` and Nirnay implementation `06883bd` are READY at their existing production URLs.
+- Agri: 37 tests, TypeScript check and production build pass. Nirnay: 88 tests and module syntax checks pass. Independent review has no remaining material findings.
+- Both local and live browser flows verified Nirnay return with an explicitly selected date, Agri resubmission and sanction, two-way propagation, retained remarks/reasons/history, stale-write rejection and required admin authentication. Mobile 390/320 layouts were inspected.
+- The reported existing returned identity is attached once and remains Returned with its original decision date. Its original Firestore document is unchanged; all 44 unrelated Agri records match the pre-change backup.
+- Final baseline: 45 loans, 1,076,640,000 paise; four linked fresh applications (three Pending, one Returned), four Firebase mappings, 194 audit entries and one decision event. The added audit/event is the targeted correction. No synthetic loans or synthetic notifications remain.
+- Public roles cannot read decision events or execute identity attachment; source snapshots, repair SQL and browser evidence remain ignored.
