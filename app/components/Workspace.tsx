@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Layers2, Leaf, LogOut, Plus, RefreshCw, Search, Settings as Gear, ShieldCheck, SlidersHorizontal, WifiOff } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
+import { upsertLoan } from '../../lib/loan-state';
 import LoanTable from './LoanTable';
 import LoanForm from './LoanForm';
 import Settings from './Settings';
@@ -37,6 +38,10 @@ export default function Workspace() {
   const selected = branches.find(b => b.id === branchId);
   const refresh = useCallback(() => setRefreshKey(key => key + 1), []);
   const loadedKey = useRef<string | null>(null);
+  const loanRead = useRef<AbortController | null>(null);
+  const realtimeConnected = useRef(false);
+  const currentFilter = useRef(filterBranch);
+  useEffect(() => { currentFilter.current = filterBranch; }, [filterBranch]);
 
   useEffect(() => {
     let alive = true;
@@ -70,18 +75,35 @@ export default function Workspace() {
     if (loadedKey.current !== key) { loadedKey.current = key; setLoading(true); setLoans([]); }
     setError('');
     async function load() {
+      loanRead.current?.abort();
+      const controller = new AbortController();
+      loanRead.current = controller;
       try {
-        const rows = await request<Loan[]>('/api/loans' + (filterBranch ? `?branchId=${encodeURIComponent(filterBranch)}` : ''));
-        if (alive) { setLoans(rows); setError(''); }
-      } catch(e) { if (alive) setError((e as Error).message); }
-      finally { if (alive) setLoading(false); }
+        const rows = await request<Loan[]>('/api/loans' + (filterBranch ? `?branchId=${encodeURIComponent(filterBranch)}` : ''), { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) });
+        if (alive && !controller.signal.aborted) { setLoans(rows); setError(''); }
+      } catch(e) { if (alive && !controller.signal.aborted) setError((e as Error).message); }
+      finally { if (alive && !controller.signal.aborted) setLoading(false); }
     }
     void load();
-    const timer = setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 20000);
+    let ticks = 0;
+    const timer = setInterval(() => { ticks++; if (document.visibilityState === 'visible' && (!realtimeConnected.current || ticks % 4 === 0)) void load(); }, 15000);
     const visible = () => { if (document.visibilityState === 'visible') void load(); };
     document.addEventListener('visibilitychange', visible);
-    return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
+    return () => { alive = false; loanRead.current?.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
   }, [ready, branchId, activeAdmin, filterBranch, refreshKey]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true; let stop: (() => void) | undefined;
+    void import('../../lib/realtime').then(({ subscribeToChanges }) => {
+      if (!alive) return;
+      stop = subscribeToChanges(() => {
+        refresh();
+        void request<Branch[]>('/api/branches').then(list => { if (alive) { setBranches(list); rememberBranches(list); } }).catch(() => {});
+      }, connected => { realtimeConnected.current = connected; });
+    }).catch(() => { realtimeConnected.current = false; });
+    return () => { alive = false; stop?.(); };
+  }, [ready, refresh]);
 
   useEffect(() => {
     const check = () => { setOnline(navigator.onLine); if (navigator.onLine) refresh(); };
@@ -94,9 +116,22 @@ export default function Workspace() {
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4500); return () => clearTimeout(timer); }, [notice]);
 
   function chooseBranch(id: string) { setBranch(id); setSettings(false); if (activeAdmin) setAdminFilter(id); try { localStorage.setItem(preferenceKey, id); } catch {} setSearch(''); }
+  function applySaved(saved: Loan) {
+    // A save can finish after the user switches branches. Apply it only to the current view.
+    if (currentFilter.current && saved.branchId !== currentFilter.current) return;
+    loanRead.current?.abort();
+    setLoans(current => upsertLoan(current, saved, currentFilter.current));
+    setLoading(false);
+    refresh();
+  }
+  function applyDeleted(id: string) {
+    loanRead.current?.abort();
+    setLoans(current => current.filter(loan => loan.id !== id));
+    refresh();
+  }
   async function complianceUpdate(loan: Loan) {
     setBusy(loan.id); setError('');
-    try { await request(`/api/loans/${loan.id}`, { method: 'PATCH', body: JSON.stringify({ version: loan.version, compliance: loan.compliance === 'complied' ? 'awaiting' : 'complied' }) }); setNotice(loan.compliance === 'complied' ? 'Compliance reopened.' : 'Marked as complied.'); refresh(); }
+    try { const saved = await request<Loan>(`/api/loans/${loan.id}`, { method: 'PATCH', body: JSON.stringify({ version: loan.version, compliance: loan.compliance === 'complied' ? 'awaiting' : 'complied' }) }); applySaved(saved); setNotice(loan.compliance === 'complied' ? 'Compliance reopened.' : 'Marked as complied.'); }
     catch(e) { setError((e as Error).message); } finally { setBusy(''); }
   }
   async function logout() {
@@ -178,7 +213,7 @@ export default function Workspace() {
     </div></Modal> : null}
     {ready && (settings || (!branchId && !activeAdmin)) && !login ? <Settings branches={branches} selected={activeAdmin ? adminFilter : branchId} admin={activeAdmin} initial={!branchId && !activeAdmin} onSelect={chooseBranch} onClose={branchId || activeAdmin ? () => setSettings(false) : undefined} onRenamed={list => { setBranches(list); rememberBranches(list); setNotice('Branch name updated.'); refresh(); }} onAdmin={() => { setSettings(false); setLogin(true); }}/>: null}
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
-    {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={() => { setForm(null); setNotice('Loan saved to the shared workspace.'); refresh(); }} onDeleted={() => { setForm(null); setNotice('Application deleted.'); refresh(); }}/>: null}
+    {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={saved => { applySaved(saved); setForm(null); setNotice('Loan saved to the shared workspace.'); }} onDeleted={id => { applyDeleted(id); setForm(null); setNotice('Application deleted.'); }}/>: null}
     {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open.</p></div></Modal> : null}
     <InstallPrompt canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help}/>
   </div>;

@@ -33,7 +33,7 @@ test('keeps only the digits of an ATS number', () => {
 
 test('public loan and branch reads bypass the gateway only on the production app', () => {
   const app = 'https://amcc-agri-loan-tracker.vercel.app';
-  const data = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
+  const data = 'https://xebnciawqwscifzgrkbu.supabase.co/functions/v1/amcc-api';
   assert.equal(requestUrl('/api/branches', 'GET', app), `${data}/api/branches`);
   assert.equal(requestUrl('/api/loans?branchId=branch-01', 'GET', app), `${data}/api/loans?branchId=branch-01`);
   assert.equal(requestUrl('/api/loans/loan-id', 'GET', app), '/api/loans/loan-id');
@@ -41,3 +41,4 @@ test('public loan and branch reads bypass the gateway only on the production app
   assert.equal(requestUrl('/api/admin/session', 'GET', app), '/api/admin/session');
   assert.equal(requestUrl('/api/loans', 'GET', 'http://localhost:3000'), '/api/loans');
 });
+

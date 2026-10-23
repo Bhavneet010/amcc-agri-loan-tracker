@@ -1,3 +1,4 @@
+import { DATA_ORIGIN, SUPABASE_KEY, SUPABASE_REGION } from './supabase-config.ts';
 export type Branch = { id: string; name: string; version: number };
 export type Loan = {
   id: string; branchId: string; branchName: string; category: 'new' | 'renewal'; atsId: string; borrowerName?: string;
@@ -17,7 +18,6 @@ const dayNumber = (date: Date) => {
 };
 export const pendingDays = (createdAt: string, now = new Date()) => Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
 const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
-const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
 export function requestUrl(url: string, method: string, appOrigin: string) {
   return method.toUpperCase() === 'GET' && appOrigin === APP_ORIGIN && /^\/api\/(?:branches|loans)(?:\?|$)/.test(url) ? DATA_ORIGIN + url : url;
 }
@@ -27,6 +27,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     const method = (options.method || 'GET').toUpperCase();
     const target = requestUrl(url, method, typeof window === 'undefined' ? '' : window.location.origin);
     const headers = new Headers(options.headers);
+    if (target.startsWith(DATA_ORIGIN + '/api/')) { headers.set('apikey', SUPABASE_KEY); headers.set('x-region', SUPABASE_REGION); }
     if (method !== 'GET' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     response = await fetch(target, { ...options, headers, cache: 'no-store', signal: options.signal ?? AbortSignal.timeout(15000) });
   } catch { throw new Error('Cannot connect. Check your connection and try again.'); }

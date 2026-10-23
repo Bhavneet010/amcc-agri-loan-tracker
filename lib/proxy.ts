@@ -1,4 +1,4 @@
-const DATA_ORIGIN = 'https://amcc-agri-loans.bhavneet.chatgpt.site';
+import { DATA_ORIGIN, SUPABASE_KEY, SUPABASE_REGION } from './supabase-config.ts';
 
 function upstreamError(method: string, status: number) {
   if (method === 'DELETE' && (status === 404 || status === 405 || status === 501)) return 'The shared loan service doesn’t support deleting applications yet, so nothing was removed.';
@@ -14,15 +14,18 @@ export async function proxyRequest(request: Request, fetcher: typeof fetch = fet
     return Response.json({ error: 'Method not allowed.' }, { status: 405 });
   }
   if (request.method !== 'GET' && request.headers.get('origin') !== url.origin) {
+    console.warn('[gateway] Rejected request origin', request.headers.get('origin'), 'expected', url.origin);
     return Response.json({ error: 'Request origin is not allowed.' }, { status: 403 });
   }
 
   const headers = new Headers();
+  headers.set('apikey', SUPABASE_KEY);
+  headers.set('x-region', SUPABASE_REGION);
   const cookie = request.headers.get('cookie');
   const contentType = request.headers.get('content-type');
   if (cookie) headers.set('cookie', cookie);
   if (contentType) headers.set('content-type', contentType);
-  if (request.method !== 'GET') headers.set('origin', DATA_ORIGIN);
+  if (request.method !== 'GET') headers.set('origin', new URL(DATA_ORIGIN).origin);
 
   try {
     const upstream = await fetcher(DATA_ORIGIN + url.pathname + url.search, {

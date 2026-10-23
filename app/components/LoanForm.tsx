@@ -4,7 +4,7 @@ import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react
 import type { Branch, Loan } from '../../lib/types';
 import { atsDigits, dateLabel, request, rupees } from '../../lib/types';
 import Modal from './Modal';
-export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: () => void; onDeleted: () => void }) {
+export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: (saved: Loan) => void; onDeleted: (id: string) => void }) {
   const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
   const [borrowerName, setBorrowerName] = useState(loan?.borrowerName ?? '');
   const [branch, setBranch] = useState(loan?.branchId ?? branchId); const [remarks, setRemarks] = useState(loan?.remarks ?? ''); const [status, setStatus] = useState(loan?.status ?? 'pending');
@@ -23,7 +23,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const readOnly = !!loan && !admin && loan.status === 'sanctioned';
   async function remove() {
     setError(''); setSaving(true);
-    try { await request(`/api/loans/${loan!.id}`, { method: 'DELETE', body: JSON.stringify({ version: baseVersion }) }); onDeleted(); }
+    try { await request(`/api/loans/${loan!.id}`, { method: 'DELETE', body: JSON.stringify({ version: baseVersion }) }); onDeleted(loan!.id); }
     catch(e) { const message = (e as Error).message; setError(/method not allowed/i.test(message) ? 'The shared loan service doesn’t allow deleting applications yet, so nothing was removed.' : message); setConfirmDelete(false); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
   }
   async function reloadVersion() {
@@ -35,8 +35,7 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   // Save the sanctioned amount first while the loan is still pending, then sanction it.
   async function saveSanctionedAmount() {
     const paise = Math.round(Number(sanctionedAmount) * 100);
-    await request(`/api/loans/${loan!.id}`, { method: 'PATCH', body: JSON.stringify({ version: baseVersion, atsId: loan!.atsId, ...(loan!.borrowerName ? { borrowerName: loan!.borrowerName } : {}), amount: sanctionedAmount }) });
-    const current = await request<Loan>(`/api/loans/${loan!.id}`);
+    const current = await request<Loan>(`/api/loans/${loan!.id}`, { method: 'PATCH', body: JSON.stringify({ version: baseVersion, atsId: loan!.atsId, ...(loan!.borrowerName ? { borrowerName: loan!.borrowerName } : {}), amount: sanctionedAmount }) });
     setBaseVersion(current.version);
     if (current.amountPaise !== paise) throw new Error(`The shared loan service kept the amount at ${rupees(current.amountPaise)}, so the loan was not sanctioned.`);
     return current.version;
@@ -47,8 +46,8 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
       if (!reviewing && !borrowerName.trim()) throw new Error('Enter the borrower name.');
       const version = askSanctioned ? await saveSanctionedAmount() : baseVersion;
       const payload = loan ? (reviewing ? { version, remarks: status === 'sanctioned' ? '' : remarks, status } : { version, atsId, borrowerName: borrowerName.trim(), amount }) : { branchId: branch, category, atsId, borrowerName: borrowerName.trim(), amount };
-      await request(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      onSaved();
+      const saved = await request<Loan>(loan ? `/api/loans/${loan.id}` : '/api/loans', { method: loan ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      onSaved(saved);
     } catch(e) { setError((e as Error).message); if ((e as Error).message.includes('updated by someone else')) setConflict(true); } finally { setSaving(false); }
   }
   if (readOnly) return <Modal {...head} eyebrow={`Loan details · ${kind}`} onClose={onClose}>

@@ -4,12 +4,20 @@ This installable PWA serves the thirteen AMCC branches from Vercel. Branch users
 
 ## Where the data lives
 
-Loan records, branch names, audit history, and admin login attempt counters live in **Cloudflare D1**, attached to the [AMCC shared data service](https://amcc-agri-loans.bhavneet.chatgpt.site). Vercel hosts the interface. On the production domain, the browser loads public branch and loan lists directly from the shared service; writes and admin session requests still pass through Vercel server functions. GitHub stores source code only. The app depends on the shared data service staying available; do not delete or restrict it while this Vercel app is in use.
+Loan records, branch names, audit history, and admin login attempt counters live in **Supabase**, in dedicated `amcc_` tables in project `xebnciawqwscifzgrkbu`. Vercel hosts the interface. Public lists load directly from the `amcc-api` Supabase Edge Function; writes and admin session requests pass through same-origin Vercel routes. The older [Sites service](https://amcc-agri-loans.bhavneet.chatgpt.site) now forwards its API to the same Supabase service, so older installed clients also use the new database. GitHub stores source code only.
 
-The API functions run in Vercel's Mumbai region (`bom1`, set in `vercel.json`) to stay close to the branches. The selected branch and the branch names are remembered in browser local storage so the app opens without waiting on the network. Loan records are never stored in the browser cache. Admin sessions use an HttpOnly cookie, last 30 days, and renew when the app checks the session. Keep the existing admin password private; it is not committed to this repository or stored in Vercel.
+The Vercel gateway runs in Mumbai (`bom1`). Database operations execute in Seoul (`ap-northeast-2`) alongside the existing Supabase database. Successful saves update the screen from the returned record immediately. Supabase Realtime publishes a minimal revision signal when loans or branches change; browsers refresh their current view, with periodic fallback and reconnect checks. Selected branch and branch names are remembered locally; loan records are never persisted in the browser cache.
+
+Admin sessions retain the existing HttpOnly cookie, password, 30-day lifetime, and renewal behavior. The Supabase function's server environment holds the privileged API key; server-only `amcc_config` holds the existing password hash/salt and session-signing secret. Browser code contains only a publishable key. RLS and grants deny public access to loan storage, audit, login counters, configuration, and mutation RPCs. The shared-link branch access model is implemented by the validated API; this migration does not introduce branch logins.
 
 ## Development
 
 Node.js 22.13 or newer is required. Run `npm ci`, then `npm run dev`. The local app uses the same shared data service, so test entries are real records. Run `npm test`, `npm run typecheck`, and `npm run build` before deploying. Pushing to the linked `main` branch deploys to Vercel.
 
-The source data service has its own code and D1 migrations, maintained separately. This repository contains the Vercel interface and API gateway. If the data service URL changes, update `DATA_ORIGIN` in `lib/proxy.ts` and `lib/types.ts`, verify the API contract and read-only CORS access, and redeploy.
+The Supabase function source and SQL migration are in `supabase/`; the shared public connection settings are in `lib/supabase-config.ts`. The function validates its application key and signed admin sessions itself, so its platform JWT check is disabled. It grants no direct database write access to the public key. Database mutations and audit events commit atomically and reject stale versions.
+
+## Migration and recovery
+
+The 23 October 2026 migration preserved all 13 branches, 45 loans, and 193 audit entries, including IDs, borrower names, timestamps, versions, remarks, and compliance. Every persisted field was compared against a final raw D1 snapshot after the legacy API was redirected to a gated Supabase service. D1 remains an intact historical backup; it no longer receives application writes.
+
+Snapshots, import SQL, and credentials stay under ignored `outputs/` or private environment files. `scripts/prepare-amcc-import.mjs` prepares a gated import; it refuses to import while the Supabase API is enabled. After new Supabase writes begin, recovery must reconcile those writes before returning traffic to an older database. Never run an old snapshot import against the live service.

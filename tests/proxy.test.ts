@@ -10,8 +10,9 @@ test('routes requests to the existing shared data service and carries admin cook
   };
   const request = new Request('https://app.vercel.app/api/admin/session', { method: 'POST', headers: { cookie: 'amcc_admin=old', origin: 'https://app.vercel.app', 'content-type': 'application/json' }, body: '{"password":"test"}' });
   const response = await proxyRequest(request, fetcher as typeof fetch);
-  assert.equal(received.url, 'https://amcc-agri-loans.bhavneet.chatgpt.site/api/admin/session');
-  assert.equal((received.init.headers as Headers).get('origin'), 'https://amcc-agri-loans.bhavneet.chatgpt.site');
+  assert.equal(received.url, 'https://xebnciawqwscifzgrkbu.supabase.co/functions/v1/amcc-api/api/admin/session');
+  assert.equal((received.init.headers as Headers).get('origin'), 'https://xebnciawqwscifzgrkbu.supabase.co');
+  assert.ok((received.init.headers as Headers).get('apikey'));
   assert.equal((received.init.headers as Headers).get('cookie'), 'amcc_admin=old');
   assert.equal(received.init.body, '{"password":"test"}');
   assert.equal(response.headers.get('set-cookie')?.includes('amcc_admin=abc'), true);
@@ -44,7 +45,7 @@ test('forwards loan deletes to the shared data service', async () => {
   const fetcher = async (url: string, init: RequestInit) => { received.url = url; received.init = init; return Response.json({ ok: true }); };
   const response = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc123', { method: 'DELETE', headers: { origin: 'https://app.vercel.app', 'content-type': 'application/json' }, body: '{"version":3}' }), fetcher as typeof fetch);
   assert.equal(response.status, 200);
-  assert.equal(received.url, 'https://amcc-agri-loans.bhavneet.chatgpt.site/api/loans/abc123');
+  assert.equal(received.url, 'https://xebnciawqwscifzgrkbu.supabase.co/functions/v1/amcc-api/api/loans/abc123');
   assert.equal(received.init.method, 'DELETE');
   assert.equal(received.init.body, '{"version":3}');
   const foreign = await proxyRequest(new Request('https://app.vercel.app/api/loans/abc123', { method: 'DELETE', headers: { origin: 'https://evil.example' } }), fetcher as typeof fetch);
@@ -59,3 +60,4 @@ test('turns a non-JSON error from the data service into a readable message', asy
   const other = await proxyRequest(new Request('https://app.vercel.app/api/loans'), (async () => new Response('<html>oops</html>', { status: 500 })) as unknown as typeof fetch);
   assert.match((await other.json()).error, /\(500\)/);
 });
+

@@ -1,0 +1,5 @@
+[functions.amcc-api]
+# The handler checks the application API key and the existing signed admin session.
+verify_jwt = false
+entrypoint = "./functions/amcc-api/index.ts"
+import_map = "./functions/amcc-api/deno.json"
