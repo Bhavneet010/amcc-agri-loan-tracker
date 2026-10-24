@@ -46,7 +46,6 @@ export async function handleLinkage(request: Request, path: string, db: LinkStor
     if (request.method !== 'POST') throw new AppError('Method not allowed.', 405);
     const data = validateSharedCreate(input, 'nirnay');
     if(data.nirnayMatchId&&!admin)throw new AppError('Admin login is required to link an existing Nirnay decision.',401);
-    if (data.remarks?.trim() && !admin) throw new AppError('Admin login is required to share remarks.', 401);
     const saved = await db.createSharedLoan(data, 'nirnay');
     return { data: saved, status: saved.needsConfirmation ? 409 : 200 };
   }
@@ -54,7 +53,7 @@ export async function handleLinkage(request: Request, path: string, db: LinkStor
   const id = decodeURIComponent(path.slice('/api/linkage/loans/'.length));
   const patch = validateNirnayPatch(input);
   const current = await db.getSharedLoan(id);
-  if ('remarks' in patch.data && patch.data.remarks.trim() !== current.remarks && !admin) throw new AppError('Admin login is required to share remarks.', 401);
+  if (patch.archived !== undefined && current.status === 'sanctioned' && !admin) throw new AppError('Admin login is required to delete or restore a sanctioned loan.',401);
   const decisionChanged=['status','returnReason','returnedDate','sanctionDate'].some(key=>key in patch.data&&patch.data[key]!==''&&patch.data[key]!==current[key]);
   if(decisionChanged&&!admin)throw new AppError('Admin login is required to change a shared decision.',401);
   // Old inline editors include empty dates while pending; those do not clear decision history.
