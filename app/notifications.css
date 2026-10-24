@@ -2,7 +2,6 @@
 .modal.alerts .modal-head{gap:11px;padding:15px 14px 15px 16px}
 .modal.alerts .modal-icon{width:36px;height:36px;border-radius:10px}
 .modal.alerts h2{font-size:21px}
-.modal.alerts .modal-head .modal-heading p{font-size:12px;margin-top:2px}
 .modal.alerts .modal-close:focus-visible{outline:2px solid #ffffffb0;outline-offset:2px}
 .modal.alerts>.notification-list{padding:14px 14px 2px}
 .modal.alerts>.notification-footer{padding:0 14px 14px}
@@ -14,8 +13,7 @@
 .notification-ats{flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.3px;font-variant-numeric:tabular-nums;color:var(--tone);background:var(--tone-soft);border-radius:5px;padding:3px 6px;white-space:nowrap}
 .notification-event{display:grid;gap:7px;margin-top:9px}
 .notification-event+.notification-event{padding-top:9px;border-top:1px dashed #dce8df}
-.notification-meta{display:flex;align-items:center;gap:6px;font-size:10px;color:#8a978e;line-height:1.4}
-.notification-source{font-weight:700;color:var(--green);background:var(--green-light);border-radius:4px;padding:2px 6px}
+.notification-meta{font-size:10px;color:#8a978e;line-height:1.4}
 .notification-decision{display:grid;gap:3px;font-size:13px;line-height:1.5}
 .notification-decision strong{color:var(--green)}
 .notification-remarks{margin:0;padding:9px 11px;border-left:3px solid var(--amber);border-radius:4px 8px 8px 4px;background:#fcf5e8}
