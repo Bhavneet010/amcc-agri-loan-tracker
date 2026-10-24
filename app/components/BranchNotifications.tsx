@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BellRing, CheckCheck } from 'lucide-react';
 import Modal from './Modal';
-import { request } from '../../lib/types';
+import { atsDigits, request } from '../../lib/types';
 import { groupNotifications, notificationDeviceId, type NotificationFeed } from '../../lib/notifications';
 
 const empty: NotificationFeed = { items: [], hasMore: false };
@@ -57,14 +57,14 @@ export default function BranchNotifications({ branchId, branchName, blocked, ref
     finally { ackBusy.current = false; setSaving(false); setReload(value => value + 1); }
   }
   if (!open) return error && !feed.items.length ? <p className="notification-storage-note" role="status">{error}</p> : null;
-  return <Modal title="Alerts" subtitle={branchName} icon={<BellRing size={18}/>} className="alerts" onClose={saving ? undefined : () => setDismissed(true)}>
+  return <Modal title="Alerts" subtitle={branchName} icon={<BellRing size={18}/>} tone="new" className="alerts" onClose={saving ? undefined : () => setDismissed(true)}>
     <div className="notification-list" aria-label="Unread loan alerts">
       {groupNotifications(feed.items).map(group => <section className="notification-loan" key={group.loanId}>
-        <div className="notification-loan-head"><h3>{group.borrowerName || 'Loan application'}</h3><span className="notification-ats">{group.atsId ? `ATS ${group.atsId}` : 'ATS pending'}</span></div>
+        <div className="notification-loan-head"><h3>{group.borrowerName || 'Loan application'}</h3><span className="notification-ats">{atsDigits(group.atsId) ? `ATS ${atsDigits(group.atsId)}` : 'ATS pending'}</span></div>
         {group.events.map(event => <div className="notification-event" key={event.id}>
           {event.decisionChanged ? <div className="notification-decision"><strong>{event.statusChanged ? `${statusLabel(event.fromStatus)} → ${statusLabel(event.toStatus)}` : `${statusLabel(event.toStatus)} details updated`}</strong>{event.toStatus === 'returned' ? <>{event.returnReason ? <p>{event.returnReason}</p> : null}{event.returnedDate ? <small>Return date: {decisionDate(event.returnedDate)}</small> : null}</> : null}{event.toStatus === 'sanctioned' && event.sanctionDate ? <small>Sanction date: {decisionDate(event.sanctionDate)}</small> : null}</div> : null}
           {event.remarksChanged ? <blockquote className={`notification-remarks${event.remarks ? '' : ' cleared'}`}><span>{event.remarks ? 'Remarks' : 'Remarks cleared'}</span>{event.remarks ? <p>{event.remarks}</p> : null}</blockquote> : null}
-          <p className="notification-meta">{event.sourceApp === 'nirnay' ? 'Nirnay' : 'Admin'} · <time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time></p>
+          <p className="notification-meta"><span className="notification-source">{event.sourceApp === 'nirnay' ? 'Nirnay' : 'Admin'}</span><time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time></p>
         </div>)}
       </section>)}
     </div>
