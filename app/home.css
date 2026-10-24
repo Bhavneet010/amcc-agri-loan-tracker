@@ -192,7 +192,7 @@
 /* Three decision states share the existing summary card. */
 .featured .returned-count{border-left:1px solid #ffffff33}
 .returned-count svg{color:#ffbca1}
-.featured .summary-counts{column-gap:4px}
+.featured .summary-counts{grid-template-columns:minmax(0,5fr) minmax(0,8fr) minmax(0,5fr);column-gap:4px}
 .featured .summary-count{min-width:0;width:100%;gap:10px;font-size:clamp(11px,3.6vw,22px)}
 .featured .summary-count>span:last-child{white-space:nowrap}
 .featured .summary-number{gap:6px}.featured .summary-number strong{font-size:clamp(30px,8.2vw,52px)}.featured .summary-number svg{width:clamp(18px,5.3vw,34px);height:clamp(18px,5.3vw,34px)}
