@@ -21,11 +21,12 @@ function seenBefore() { try { return localStorage.getItem(seenKey) === '1' || lo
 function rememberShown() { try { localStorage.setItem(seenKey, '1'); } catch {} }
 
 // Offer installation on the first phone visit only, even when the user dismisses it.
-export default function InstallPrompt({ canShow }: { canShow: boolean }) {
+export default function InstallPrompt({ canShow, onOpenChange }: { canShow: boolean; onOpenChange?: (open: boolean) => void }) {
   const [platform, setPlatform] = useState<Platform>('other');
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
   const [open, setOpen] = useState(false); const [steps, setSteps] = useState(false);
   const [inApp, setInApp] = useState(false); const [iosSafari, setIosSafari] = useState(true);
+  useEffect(() => { onOpenChange?.(open); return () => onOpenChange?.(false); }, [open, onOpenChange]);
 
   useEffect(() => {
     const ua = navigator.userAgent; const current = detectPlatform();

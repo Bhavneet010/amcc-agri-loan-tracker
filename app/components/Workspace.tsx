@@ -11,6 +11,7 @@ import AdminLogin from './AdminLogin';
 import Modal from './Modal';
 import InstallPrompt from './InstallPrompt';
 import SummaryCarousel from './SummaryCarousel';
+import BranchNotifications from './BranchNotifications';
 
 const preferenceKey = 'amcc.branch.v1';
 const adminModeKey = 'amcc.adminMode.v1';
@@ -33,6 +34,7 @@ export default function Workspace() {
   const [settings, setSettings] = useState(false); const [login, setLogin] = useState(false); const [form, setForm] = useState<Loan | 'new' | null>(null); const [addChoice, setAddChoice] = useState(false);
   const [busy, setBusy] = useState(''); const [online, setOnline] = useState(true); const [help, setHelp] = useState(false); const [menu, setMenu] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); const [filters, setFilters] = useState(false); const [showAll, setShowAll] = useState<Category[]>([]); const [collapsed, setCollapsed] = useState<Category[]>([]);
+  const [installOpen, setInstallOpen] = useState(false);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
   const selected = branches.find(b => b.id === branchId);
@@ -215,6 +217,7 @@ export default function Workspace() {
     {login ? <AdminLogin onClose={() => setLogin(false)} onLogin={() => { setLogin(false); setAdmin(true); setViewAdmin(true); rememberAdminMode(true); setAdminFilter(''); setNotice('Welcome to the admin workspace.'); }}/>: null}
     {form ? <LoanForm key={form === 'new' ? 'new' : form.id} branches={branches} branchId={activeAdmin ? adminFilter || branchId : branchId} category={category} loan={form === 'new' ? undefined : form} admin={activeAdmin} onClose={() => setForm(null)} onSaved={saved => { applySaved(saved); setForm(null); setNotice('Loan saved to the shared workspace.'); }} onDeleted={id => { applyDeleted(id); setForm(null); setNotice('Application deleted.'); }}/>: null}
     {help ? <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}><div className="help-content"><h3>Working with loans</h3><p>Select a branch, choose New loans or Renewals, and add the ATS number and amount. Read admin remarks and mark them complied with once the action is complete.</p><h3>Switching branches</h3><p>Use Settings or the branch selector at the top. Everyone with this link can switch between all thirteen branches.</p><h3>Shared updates</h3><p>Loans are stored in a shared database. Keep an internet connection to save changes. The workspace refreshes automatically while open. Fresh Agriculture applications linked with Nirnay share Pending, Sanctioned and Returned status. An admin supplies a reason when returning an application and can move it back to Pending after resubmission.</p></div></Modal> : null}
-    <InstallPrompt canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help}/>
+    {ready && sessionChecked && !activeAdmin && selected ? <BranchNotifications key={branchId} branchId={branchId} branchName={selected.name} refreshKey={refreshKey} blocked={!!(settings || login || form || help || addChoice || menu || filters || installOpen)}/> : null}
+    <InstallPrompt canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help} onOpenChange={setInstallOpen}/>
   </div>;
 }

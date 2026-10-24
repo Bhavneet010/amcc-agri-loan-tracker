@@ -21,7 +21,7 @@ const dayNumber = (date: Date) => {
 export const pendingDays = (createdAt: string, now = new Date()) => Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
 const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
 export function requestUrl(url: string, method: string, appOrigin: string) {
-  return method.toUpperCase() === 'GET' && appOrigin === APP_ORIGIN && /^\/api\/(?:branches|loans)(?:\?|$)/.test(url) ? DATA_ORIGIN + url : url;
+  return method.toUpperCase() === 'GET' && appOrigin === APP_ORIGIN && /^\/api\/(?:branches|loans|notifications)(?:\?|$)/.test(url) ? DATA_ORIGIN + url : url;
 }
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   let response;

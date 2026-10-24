@@ -7,7 +7,7 @@ function upstreamError(method: string, status: number) {
 
 export async function proxyRequest(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
   const url = new URL(request.url);
-  if (!/^\/api\/(branches|loans(?:\/[^/]+)?|admin\/session)$/.test(url.pathname)) {
+  if (!/^\/api\/(branches|loans(?:\/[^/]+)?|notifications|admin\/session)$/.test(url.pathname)) {
     return Response.json({ error: 'Not found.' }, { status: 404 });
   }
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) {

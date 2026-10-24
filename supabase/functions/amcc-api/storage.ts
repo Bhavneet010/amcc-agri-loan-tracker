@@ -46,6 +46,8 @@ export function createStorage(client: SupabaseClient): Storage {
     async loginAttempt(key) { return checked(await client.rpc('amcc_login_attempt', { p_key: key })); },
     async clearLoginAttempts(key) { checked(await client.from('amcc_login_attempts').delete().eq('key', key)); },
     async listSharedLoans() { return checked(await client.rpc('amcc_list_shared')); },
+    async listNotifications(branchId, deviceId) { return checked(await client.rpc('amcc_list_notifications', { p_branch_id: branchId, p_device_id: deviceId })); },
+    async readNotifications(branchId, deviceId, eventIds) { return checked(await client.rpc('amcc_read_notifications', { p_branch_id: branchId, p_device_id: deviceId, p_event_ids: eventIds })); },
     async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
     async createSharedLoan(input,source) {
       const payload={...input};

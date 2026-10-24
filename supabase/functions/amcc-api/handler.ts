@@ -1,6 +1,7 @@
 import { AppError, validateLoanInput, publicChanges, adminChanges,validateDecision } from './validation.ts';
 import { isAdmin, sessionCookie, signSession, verifyPassword } from './auth.ts';
 import { handleLinkage, validateSharedCreate, type LinkStorage } from './linkage.ts';
+import { handleNotifications, type NotificationStorage } from './notifications.ts';
 
 export type Config = { enabled: boolean; passwordSalt: string; passwordHash: string; sessionSecret: string; linkageEnabled?: boolean };
 export type RecordData = Record<string, any>;
@@ -19,6 +20,8 @@ export interface Storage {
   getSharedLoan?: LinkStorage['getSharedLoan'];
   createSharedLoan?: LinkStorage['createSharedLoan'];
   updateNirnay?: LinkStorage['updateNirnay'];
+  listNotifications?: NotificationStorage['listNotifications'];
+  readNotifications?: NotificationStorage['readNotifications'];
 }
 const allowedOrigins = new Set(['https://amcc-agri-loan-tracker.vercel.app', 'https://amcc-agri-loans.bhavneet.chatgpt.site', 'https://loan-tracker-xi.vercel.app', 'https://xebnciawqwscifzgrkbu.supabase.co']);
 const publicLoan = (row: RecordData) => row.status === 'sanctioned' && !row.shareEligible ? { ...row, remarks: '', compliance: 'none' } : row;
@@ -53,17 +56,18 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
     if (originAllowed) headers['Access-Control-Allow-Origin'] = origin;
     const json = (value: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(value, { status, headers: { ...headers, ...extra } });
     try {
-      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
+      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|notifications|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
       if (request.method === 'OPTIONS') {
         if (!originAllowed) throw new AppError('Request origin is not allowed.', 403);
         return new Response(null, { status: 204, headers: { ...headers, 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'apikey, authorization, content-type, x-region', 'Access-Control-Max-Age': '600' } });
       }
       if (!keys.some(key => key && key === request.headers.get('apikey'))) throw new AppError('An application API key is required.', 401);
-      const methods = path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
+      const methods = path === '/api/notifications' ? ['GET','POST'] : path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
       if (!methods.includes(request.method)) throw new AppError('Method not allowed.', 405);
       if (request.method !== 'GET' && !originAllowed) throw new AppError('Request origin is not allowed.', 403);
       const config = await db.getConfig();
       if (!config.enabled) throw new AppError('The shared workspace is being migrated. Please try again shortly; nothing was changed.', 503);
+      if (path === '/api/notifications') return json(await handleNotifications(request, db as NotificationStorage, request.method === 'GET' ? undefined : await body(request)));
       if (path.startsWith('/api/linkage/')) {
         if (!config.linkageEnabled) throw new AppError('Shared Agriculture linkage is not enabled yet.', 503);
         const result = await handleLinkage(request, path, db as LinkStorage, request.method === 'GET' ? undefined : await body(request), await isAdmin(request, config.sessionSecret));
