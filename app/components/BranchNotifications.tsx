@@ -57,19 +57,19 @@ export default function BranchNotifications({ branchId, branchName, blocked, ref
     finally { ackBusy.current = false; setSaving(false); setReload(value => value + 1); }
   }
   if (!open) return error && !feed.items.length ? <p className="notification-storage-note" role="status">{error}</p> : null;
-  return <Modal title="Updates to your loans" eyebrow="Branch updates" subtitle={branchName} icon={<BellRing size={22}/>} onClose={saving ? undefined : () => setDismissed(true)}>
-    <div className="notification-list" aria-label="Unread loan updates">
+  return <Modal title="Alerts" subtitle={branchName} icon={<BellRing size={18}/>} className="alerts" onClose={saving ? undefined : () => setDismissed(true)}>
+    <div className="notification-list" aria-label="Unread loan alerts">
       {groupNotifications(feed.items).map(group => <section className="notification-loan" key={group.loanId}>
-        <h3>{group.borrowerName || 'Loan application'}</h3><p className="notification-ats">{group.atsId ? `ATS ${group.atsId}` : 'ATS pending'}</p>
+        <div className="notification-loan-head"><h3>{group.borrowerName || 'Loan application'}</h3><span className="notification-ats">{group.atsId ? `ATS ${group.atsId}` : 'ATS pending'}</span></div>
         {group.events.map(event => <div className="notification-event" key={event.id}>
-          <p className="notification-meta">{event.sourceApp === 'nirnay' ? 'Nirnay' : 'Admin'} · <time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time></p>
           {event.decisionChanged ? <div className="notification-decision"><strong>{event.statusChanged ? `${statusLabel(event.fromStatus)} → ${statusLabel(event.toStatus)}` : `${statusLabel(event.toStatus)} details updated`}</strong>{event.toStatus === 'returned' ? <>{event.returnReason ? <p>{event.returnReason}</p> : null}{event.returnedDate ? <small>Return date: {decisionDate(event.returnedDate)}</small> : null}</> : null}{event.toStatus === 'sanctioned' && event.sanctionDate ? <small>Sanction date: {decisionDate(event.sanctionDate)}</small> : null}</div> : null}
-          {event.remarksChanged ? <div className="notification-remarks"><strong>{event.remarks ? 'Remarks' : 'Remarks cleared'}</strong>{event.remarks ? <p>{event.remarks}</p> : null}</div> : null}
+          {event.remarksChanged ? <blockquote className={`notification-remarks${event.remarks ? '' : ' cleared'}`}><span>{event.remarks ? 'Remarks' : 'Remarks cleared'}</span>{event.remarks ? <p>{event.remarks}</p> : null}</blockquote> : null}
+          <p className="notification-meta">{event.sourceApp === 'nirnay' ? 'Nirnay' : 'Admin'} · <time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time></p>
         </div>)}
       </section>)}
     </div>
     <div className="notification-footer">
-      <p>{feed.hasMore ? 'More unread updates will appear after this batch.' : 'Marking these read applies only to this phone.'}</p>
+      <p>{feed.hasMore ? 'More unread alerts will appear after this batch.' : 'Marking read applies only to this phone.'}</p>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setDismissed(true)}>Later</button><button type="button" className="button primary" disabled={saving} onClick={markRead}><CheckCheck size={17}/>{saving ? 'Saving…' : 'Mark as read'}</button></div>
     </div>
