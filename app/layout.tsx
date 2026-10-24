@@ -1,23 +1,23 @@
-import type { Metadata } from "next";
-import { DM_Sans, Source_Serif_4 } from "next/font/google";
-import "./globals.css";
-import "./home.css";
-import "./notifications.css";
+import type { Metadata } from 'next';
+import { DM_Sans, Source_Serif_4 } from 'next/font/google';
+import './globals.css';
+import './home.css';
+import './notifications.css';
 
 // Self-hosted at build time; a CSS @import of Google Fonts is dropped from the production bundle.
-const sans = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const serif = Source_Serif_4({ subsets: ["latin"], axes: ["opsz"], variable: "--font-serif", display: "swap" });
+const sans = DM_Sans({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const serif = Source_Serif_4({ subsets: ['latin'], axes: ['opsz'], variable: '--font-serif', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: "AMCC | Agri Loan Tracker",
-  description: "A shared workspace for agricultural loan sourcing and renewals across thirteen branches.",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "AMCC Loans", statusBarStyle: "default" },
+  title: 'AMCC | Agri Loan Tracker',
+  description: 'A shared workspace for agricultural loan sourcing and renewals across thirteen branches.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'AMCC Loans', statusBarStyle: 'default' },
   // Next only emits the unprefixed tag; older iOS needs this one to open the home-screen app full screen.
-  other: { "apple-mobile-web-app-capable": "yes" },
+  other: { 'apple-mobile-web-app-capable': 'yes' },
   icons: {
-    icon: "/favicon.svg",
-    apple: "/icon-192.png",
+    icon: '/favicon.svg',
+    apple: '/icon-192.png',
   },
 };
 

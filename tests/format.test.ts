@@ -42,7 +42,6 @@ test('public loan and branch reads bypass the gateway only on the production app
   assert.equal(requestUrl('/api/loans', 'GET', 'http://localhost:3000'), '/api/loans');
 });
 
-
 test('ages pending badges by days waited', () => {
   assert.equal(pendingAge(0), 'fresh');
   assert.equal(pendingAge(6), 'fresh');

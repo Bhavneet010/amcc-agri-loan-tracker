@@ -1,7 +1,27 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-export default function Modal({ title, subtitle, eyebrow, icon, tone, chooser, className, onClose, children }: { title: React.ReactNode; subtitle?: string; eyebrow?: string; icon?: React.ReactNode; tone?: 'new' | 'renewal'; chooser?: boolean; className?: string; onClose?: () => void; children: React.ReactNode }) {
+export default function Modal({
+  title,
+  subtitle,
+  eyebrow,
+  icon,
+  tone,
+  chooser,
+  className,
+  onClose,
+  children,
+}: {
+  title: React.ReactNode;
+  subtitle?: string;
+  eyebrow?: string;
+  icon?: React.ReactNode;
+  tone?: 'new' | 'renewal';
+  chooser?: boolean;
+  className?: string;
+  onClose?: () => void;
+  children: React.ReactNode;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
@@ -10,8 +30,40 @@ export default function Modal({ title, subtitle, eyebrow, icon, tone, chooser, c
     if (chooser) dialog.focus();
     return () => dialog.close();
   }, [chooser]);
-  return <dialog ref={ref} className={`${tone ? `modal toned tone-${tone}` : 'modal'}${chooser ? ' chooser' : ''}${className ? ` ${className}` : ''}`} onCancel={e => { e.preventDefault(); onClose?.(); }} onClick={e => { if (!chooser || e.target !== e.currentTarget) return; const box = e.currentTarget.getBoundingClientRect(); if (e.clientY < box.top || e.clientY > box.bottom || e.clientX < box.left || e.clientX > box.right) onClose?.(); }} tabIndex={chooser ? -1 : undefined} aria-labelledby="modal-title">
-    <div className="modal-head">{icon ? <span className="modal-icon" aria-hidden="true">{icon}</span> : null}<div className="modal-heading">{eyebrow ? <span className="modal-eyebrow">{eyebrow}</span> : null}<h2 id="modal-title">{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</div>{onClose ? <button type="button" className="icon-button modal-close" onClick={onClose} aria-label="Close"><X size={19}/></button> : null}</div>
-    {children}
-  </dialog>;
+  return (
+    <dialog
+      ref={ref}
+      className={`${tone ? `modal toned tone-${tone}` : 'modal'}${chooser ? ' chooser' : ''}${className ? ` ${className}` : ''}`}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose?.();
+      }}
+      onClick={(e) => {
+        if (!chooser || e.target !== e.currentTarget) return;
+        const box = e.currentTarget.getBoundingClientRect();
+        if (e.clientY < box.top || e.clientY > box.bottom || e.clientX < box.left || e.clientX > box.right) onClose?.();
+      }}
+      tabIndex={chooser ? -1 : undefined}
+      aria-labelledby="modal-title"
+    >
+      <div className="modal-head">
+        {icon ? (
+          <span className="modal-icon" aria-hidden="true">
+            {icon}
+          </span>
+        ) : null}
+        <div className="modal-heading">
+          {eyebrow ? <span className="modal-eyebrow">{eyebrow}</span> : null}
+          <h2 id="modal-title">{title}</h2>
+          {subtitle ? <p>{subtitle}</p> : null}
+        </div>
+        {onClose ? (
+          <button type="button" className="icon-button modal-close" onClick={onClose} aria-label="Close">
+            <X size={19} />
+          </button>
+        ) : null}
+      </div>
+      {children}
+    </dialog>
+  );
 }

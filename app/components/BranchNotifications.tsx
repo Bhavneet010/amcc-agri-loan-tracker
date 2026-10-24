@@ -7,11 +7,30 @@ import { groupNotifications, notificationDeviceId, type NotificationFeed } from 
 
 const empty: NotificationFeed = { items: [], hasMore: false };
 const statusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1);
-const changeTime = (date: string) => new Date(date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-const decisionDate = (date: string) => new Date(date + 'T00:00:00+05:30').toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' });
+const changeTime = (date: string) =>
+  new Date(date).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+const decisionDate = (date: string) =>
+  new Date(date + 'T00:00:00+05:30').toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 
-export default function BranchNotifications({ branchId, blocked, refreshKey }: {
-  branchId: string; blocked: boolean; refreshKey: number;
+export default function BranchNotifications({
+  branchId,
+  blocked,
+  refreshKey,
+}: {
+  branchId: string;
+  blocked: boolean;
+  refreshKey: number;
 }) {
   const [feed, setFeed] = useState<NotificationFeed>(empty);
   const [dismissed, setDismissed] = useState(false);
@@ -23,8 +42,11 @@ export default function BranchNotifications({ branchId, blocked, refreshKey }: {
   const [reload, setReload] = useState(0);
   const open = feed.items.length > 0 && !dismissed && !blocked;
   useEffect(() => {
-    try { setDevice(notificationDeviceId(localStorage)); }
-    catch { setError('Updates need site storage enabled to remember this phone.'); }
+    try {
+      setDevice(notificationDeviceId(localStorage));
+    } catch {
+      setError('Updates need site storage enabled to remember this phone.');
+    }
   }, []);
   useEffect(() => {
     if (!device) return;
@@ -32,46 +54,140 @@ export default function BranchNotifications({ branchId, blocked, refreshKey }: {
     let controller: AbortController | undefined;
     async function load() {
       if (ackBusy.current || document.visibilityState !== 'visible') return;
-      controller?.abort(); controller = new AbortController();
+      controller?.abort();
+      controller = new AbortController();
       const generation = ++readGeneration.current;
       try {
-        const next = await request<NotificationFeed>(`/api/notifications?branchId=${encodeURIComponent(branchId)}&deviceId=${encodeURIComponent(device)}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) });
-        if (alive && generation === readGeneration.current && !ackBusy.current) { setFeed(next); }
-      } catch { /* A transient feed failure retries on resume; loan use remains available. */ }
+        const next = await request<NotificationFeed>(
+          `/api/notifications?branchId=${encodeURIComponent(branchId)}&deviceId=${encodeURIComponent(device)}`,
+          { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) },
+        );
+        if (alive && generation === readGeneration.current && !ackBusy.current) {
+          setFeed(next);
+        }
+      } catch {
+        /* A transient feed failure retries on resume; loan use remains available. */
+      }
     }
     void load();
-    const resume = () => { if (document.visibilityState === 'visible') { setDismissed(false); void load(); } };
-    document.addEventListener('visibilitychange', resume); window.addEventListener('online', resume);
+    const resume = () => {
+      if (document.visibilityState === 'visible') {
+        setDismissed(false);
+        void load();
+      }
+    };
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('online', resume);
     const timer = setInterval(() => void load(), 30000);
-    return () => { alive = false; controller?.abort(); ++readGeneration.current; clearInterval(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); };
+    return () => {
+      alive = false;
+      controller?.abort();
+      ++readGeneration.current;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('online', resume);
+    };
   }, [branchId, device, refreshKey, reload]);
 
   async function markRead() {
     if (ackBusy.current || !device) return;
-    const ids = feed.items.map(item => item.id);
-    ackBusy.current = true; ++readGeneration.current; setSaving(true); setError('');
+    const ids = feed.items.map((item) => item.id);
+    ackBusy.current = true;
+    ++readGeneration.current;
+    setSaving(true);
+    setError('');
     try {
-      await request('/api/notifications', { method: 'POST', body: JSON.stringify({ branchId, deviceId: device, eventIds: ids }) });
-      setFeed(current => ({ ...current, items: current.items.filter(item => !ids.includes(item.id)) }));
-    } catch (e) { setError((e as Error).message); }
-    finally { ackBusy.current = false; setSaving(false); setReload(value => value + 1); }
+      await request('/api/notifications', {
+        method: 'POST',
+        body: JSON.stringify({ branchId, deviceId: device, eventIds: ids }),
+      });
+      setFeed((current) => ({ ...current, items: current.items.filter((item) => !ids.includes(item.id)) }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      ackBusy.current = false;
+      setSaving(false);
+      setReload((value) => value + 1);
+    }
   }
-  if (!open) return error && !feed.items.length ? <p className="notification-storage-note" role="status">{error}</p> : null;
-  return <Modal title="Alerts" icon={<BellRing size={18}/>} tone="new" className="alerts" onClose={saving ? undefined : () => setDismissed(true)}>
-    <div className="notification-list" aria-label="Unread loan alerts">
-      {groupNotifications(feed.items).map(group => <section className="notification-loan" key={group.loanId}>
-        <div className="notification-loan-head"><h3>{group.borrowerName || 'Loan application'}</h3><span className="notification-ats">{atsDigits(group.atsId) ? `ATS ${atsDigits(group.atsId)}` : 'ATS pending'}</span></div>
-        {group.events.map(event => <div className="notification-event" key={event.id}>
-          {event.decisionChanged ? <div className="notification-decision"><strong>{event.statusChanged ? <>{statusLabel(event.fromStatus)} → </> : null}<span className={`status-word ${event.toStatus}`}>{statusLabel(event.toStatus)}</span>{event.statusChanged ? null : ' details updated'}</strong>{event.toStatus === 'returned' ? <>{event.returnReason ? <p>{event.returnReason}</p> : null}{event.returnedDate ? <small>Return date: {decisionDate(event.returnedDate)}</small> : null}</> : null}{event.toStatus === 'sanctioned' && event.sanctionDate ? <small>Sanction date: {decisionDate(event.sanctionDate)}</small> : null}</div> : null}
-          {event.remarksChanged ? <blockquote className={`notification-remarks${event.remarks ? '' : ' cleared'}`}><span>{event.remarks ? 'Remarks' : 'Remarks cleared'}</span>{event.remarks ? <p>{event.remarks}</p> : null}</blockquote> : null}
-          <p className="notification-meta">Updated <time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time></p>
-        </div>)}
-      </section>)}
-    </div>
-    <div className="notification-footer">
-      <p>{feed.hasMore ? 'More unread alerts will appear after this batch.' : 'Marking read applies only to this phone.'}</p>
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
-      <div className="modal-actions"><button type="button" className="button secondary" disabled={saving} onClick={() => setDismissed(true)}>Later</button><button type="button" className="button primary" disabled={saving} onClick={markRead}><CheckCheck size={17}/>{saving ? 'Saving…' : 'Mark as read'}</button></div>
-    </div>
-  </Modal>;
+  if (!open)
+    return error && !feed.items.length ? (
+      <p className="notification-storage-note" role="status">
+        {error}
+      </p>
+    ) : null;
+  return (
+    <Modal
+      title="Alerts"
+      icon={<BellRing size={18} />}
+      tone="new"
+      className="alerts"
+      onClose={saving ? undefined : () => setDismissed(true)}
+    >
+      <div className="notification-list" aria-label="Unread loan alerts">
+        {groupNotifications(feed.items).map((group) => (
+          <section className="notification-loan" key={group.loanId}>
+            <div className="notification-loan-head">
+              <h3>{group.borrowerName || 'Loan application'}</h3>
+              <span className="notification-ats">
+                {atsDigits(group.atsId) ? `ATS ${atsDigits(group.atsId)}` : 'ATS pending'}
+              </span>
+            </div>
+            {group.events.map((event) => (
+              <div className="notification-event" key={event.id}>
+                {event.decisionChanged ? (
+                  <div className="notification-decision">
+                    <strong>
+                      {event.statusChanged ? <>{statusLabel(event.fromStatus)} → </> : null}
+                      <span className={`status-word ${event.toStatus}`}>{statusLabel(event.toStatus)}</span>
+                      {event.statusChanged ? null : ' details updated'}
+                    </strong>
+                    {event.toStatus === 'returned' ? (
+                      <>
+                        {event.returnReason ? <p>{event.returnReason}</p> : null}
+                        {event.returnedDate ? <small>Return date: {decisionDate(event.returnedDate)}</small> : null}
+                      </>
+                    ) : null}
+                    {event.toStatus === 'sanctioned' && event.sanctionDate ? (
+                      <small>Sanction date: {decisionDate(event.sanctionDate)}</small>
+                    ) : null}
+                  </div>
+                ) : null}
+                {event.remarksChanged ? (
+                  <blockquote className={`notification-remarks${event.remarks ? '' : ' cleared'}`}>
+                    <span>{event.remarks ? 'Remarks' : 'Remarks cleared'}</span>
+                    {event.remarks ? <p>{event.remarks}</p> : null}
+                  </blockquote>
+                ) : null}
+                <p className="notification-meta">
+                  Updated <time dateTime={event.createdAt}>{changeTime(event.createdAt)}</time>
+                </p>
+              </div>
+            ))}
+          </section>
+        ))}
+      </div>
+      <div className="notification-footer">
+        <p>
+          {feed.hasMore
+            ? 'More unread alerts will appear after this batch.'
+            : 'Marking read applies only to this phone.'}
+        </p>
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="modal-actions">
+          <button type="button" className="button secondary" disabled={saving} onClick={() => setDismissed(true)}>
+            Later
+          </button>
+          <button type="button" className="button primary" disabled={saving} onClick={markRead}>
+            <CheckCheck size={17} />
+            {saving ? 'Saving…' : 'Mark as read'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
