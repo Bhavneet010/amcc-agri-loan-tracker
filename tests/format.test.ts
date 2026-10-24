@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { atsDigits, branchCode, dateLabel, lakhs, pendingDays, requestUrl } from '../lib/types.ts';
+import { atsDigits, branchCode, dateLabel, lakhs, pendingAge, pendingDays, requestUrl } from '../lib/types.ts';
 
 test('shows the loan added date in India time', () => {
   assert.equal(dateLabel('2026-10-11T18:40:00Z'), '12 Oct 2026');
@@ -42,3 +42,11 @@ test('public loan and branch reads bypass the gateway only on the production app
   assert.equal(requestUrl('/api/loans', 'GET', 'http://localhost:3000'), '/api/loans');
 });
 
+
+test('ages pending badges by days waited', () => {
+  assert.equal(pendingAge(0), 'fresh');
+  assert.equal(pendingAge(6), 'fresh');
+  assert.equal(pendingAge(7), 'aging');
+  assert.equal(pendingAge(13), 'aging');
+  assert.equal(pendingAge(14), 'overdue');
+});

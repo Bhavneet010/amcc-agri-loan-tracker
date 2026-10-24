@@ -264,7 +264,9 @@ main>.message{margin:18px 24px 0}
 .loan-card .loan-line .borrower{flex:1 1 auto}
 .loan-card .loan-line .amount{margin-left:auto}
 .loan-card .loan-line .ats-tag{display:none}
-.loan-card .loan-line .pending-circle{flex:none;display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:#fcf5e8;color:#986f2e;font:700 12px/1 var(--sans);font-variant-numeric:tabular-nums}
+.loan-card .loan-line .pending-circle{flex:none;display:grid;place-items:center;min-width:31px;height:31px;padding:0 6px;border-radius:999px;background:#eef1ee;color:var(--muted);font:700 12px/1 var(--sans);font-variant-numeric:tabular-nums}
+.loan-card .loan-line .pending-circle.aging{background:#fcf5e8;color:#986f2e}
+.loan-card .loan-line .pending-circle.overdue{background:#fbe9e2;color:#9d4c30}
 .loan-card .loan-line .status.sanctioned{gap:5px}
 @media(max-width:680px){
   .loan-card .loan-line{gap:6px}
@@ -278,8 +280,8 @@ main>.message{margin:18px 24px 0}
 @media(max-width:380px){.loan-card{padding-right:10px}.loan-card .loan-line{gap:5px}.loan-card .loan-line .amount{min-width:0}}
 
 /* Delete application */
-.modal-actions .delete-button{margin-right:auto;border-color:#f0d3cc;background:#fff;color:#a04e43}
-.modal-actions .delete-button:hover{background:#fff1ee}
+.delete-link{display:inline-flex;align-items:center;gap:6px;justify-self:start;color:#a04e43;font-size:13px}
+.delete-link:hover{text-decoration:underline}
 .button.danger{background:#b4473a;color:#fff}
 .button.danger:hover{background:#9a3a2f}
 .delete-confirm{display:grid;gap:12px;padding:14px;border-radius:9px;background:#fff1ee;color:#7d3a31;font-size:13px;line-height:1.5}
@@ -340,7 +342,7 @@ main>.message{margin:18px 24px 0}
 .modal.toned .modal-actions{padding-top:14px;margin-top:2px}
 .modal.toned .button.primary{background:var(--tone)}
 .modal.toned .button.primary:hover{background:var(--tone-2)}
-@media(max-width:680px){.modal.toned{padding:0;border-radius:16px}.modal.toned h2{font-size:22px}.modal.toned .modal-head{padding:16px 14px 16px 16px}.modal.toned>form,.modal.toned>.modal-actions{padding-inline:16px}.modal.toned>.review-summary{margin-inline:16px}.modal.toned .modal-actions .button{flex:1}.modal.toned .modal-actions .delete-button{flex:0 0 auto}}
+@media(max-width:680px){.modal.toned{padding:0;border-radius:16px}.modal.toned h2{font-size:22px}.modal.toned .modal-head{padding:16px 14px 16px 16px}.modal.toned>form,.modal.toned>.modal-actions{padding-inline:16px}.modal.toned>.review-summary{margin-inline:16px}.modal.toned .modal-actions .button{flex:1}}
 
 .status.returned,.modal.toned .review-status.returned{background:#fff0e8;color:#9d4c30}
 .returned-alert .remarks{color:#9d4c30}.returned-alert strong{font-weight:600}

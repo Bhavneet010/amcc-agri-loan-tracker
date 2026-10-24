@@ -13,12 +13,20 @@ export const lakhs = (paise: number) => `₹${new Intl.NumberFormat('en-IN', { m
 export const branchCode = (name: string) => name.match(/^\s*(\d+)/)?.[1] ?? name.trim().split(/[\s·-]+/)[0];
 export const atsDigits = (atsId: string | null | undefined) => (atsId||'').replace(/\D/g, '');
 export const dateLabel = (date: string) => new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+// Drops the year for dates in the current year, so short headers fit on one line.
+export const shortDateLabel = (date: string, now = new Date()) => {
+  const year = (d: Date) => d.toLocaleDateString('en-IN', { year: 'numeric', timeZone: 'Asia/Kolkata' });
+  const sameYear = year(new Date(date)) === year(now);
+  return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), timeZone: 'Asia/Kolkata' });
+};
 const indiaDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
 const dayNumber = (date: Date) => {
   const parts = Object.fromEntries(indiaDay.formatToParts(date).map(part => [part.type, part.value]));
   return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) / 86400000;
 };
 export const pendingDays = (createdAt: string, now = new Date()) => Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
+// Pending badges warm up as an application waits: a week turns amber, two weeks turn clay.
+export const pendingAge = (days: number) => days >= 14 ? 'overdue' : days >= 7 ? 'aging' : 'fresh';
 const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
 export function requestUrl(url: string, method: string, appOrigin: string) {
   return method.toUpperCase() === 'GET' && appOrigin === APP_ORIGIN && /^\/api\/(?:branches|loans|notifications)(?:\?|$)/.test(url) ? DATA_ORIGIN + url : url;

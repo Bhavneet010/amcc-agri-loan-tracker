@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
-import { atsDigits, dateLabel, request, rupees } from '../../lib/types';
+import { atsDigits, request, rupees, shortDateLabel } from '../../lib/types';
 import Modal from './Modal';
 export default function LoanForm({ branches, branchId, category, loan, admin, onClose, onSaved, onDeleted }: { branches: Branch[]; branchId: string; category: 'new' | 'renewal'; loan?: Loan; admin: boolean; onClose: () => void; onSaved: (saved: Loan) => void; onDeleted: (id: string) => void }) {
   const [ats, setAts] = useState(atsDigits(loan?.atsId ?? '')); const atsId = `ATS ${ats}`; const [amount, setAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
@@ -26,9 +26,12 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
   const tone = loan?.category ?? category;
   const kind = tone === 'new' ? 'New loan' : 'Renewal loan';
   const icon = tone === 'new' ? <Sprout size={20}/> : <RefreshCcw size={19}/>;
-  // An existing loan is headed by its ATS number, with the branch and added date below.
-  const head = loan ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || 'pending'}</span>, subtitle: `${loan.branchName} · Added ${dateLabel(loan.createdAt)}` } : { tone, icon, title: kind };
   const readOnly = !!loan && !admin && loan.status !== 'pending';
+  // Admin review and read-only details are headed by the ATS number, since the form below doesn't show it.
+  // A branch edit shows the ATS and branch in its fields, so its header stays plain.
+  const head = !loan ? { tone, icon, title: kind }
+    : reviewing || readOnly ? { tone, icon, title: <span className="modal-ats"><span className="modal-ats-tag">ATS</span>{atsDigits(loan.atsId) || 'pending'}</span>, subtitle: `${loan.branchName} · Added ${shortDateLabel(loan.createdAt)}` }
+    : { tone, icon, title: kind, subtitle: `Added ${shortDateLabel(loan.createdAt)}` };
   async function remove() {
     setError(''); setSaving(true);
     try { await request(`/api/loans/${loan!.id}`, { method: 'DELETE', body: JSON.stringify({ version: baseVersion }) }); onDeleted(loan!.id); }
@@ -64,10 +67,10 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
     {loan.remarks?<div className="review-summary"><span>Remarks</span><p>{loan.remarks}</p></div>:null}
     <div className="modal-actions"><button type="button" className="button primary" onClick={onClose}>Close</button></div>
   </Modal>;
-  return <Modal {...head} eyebrow={`${reviewing ? 'Admin review' : loan ? 'Edit application' : 'Add application'}${loan ? ` · ${kind}` : ''}`} onClose={saving ? undefined : onClose}>
+  return <Modal {...head} eyebrow={reviewing ? `Admin review · ${kind}` : loan ? 'Edit application' : 'Add application'} onClose={saving ? undefined : onClose}>
     <form onSubmit={save} className="form-stack">
       {reviewing ? <div className="review-top"><div className="review-summary review-borrower-card">{loan.borrowerName ? <strong className="review-borrower" title={loan.borrowerName}>{loan.borrowerName}</strong> : null}<span className="review-amount">{rupees(loan.amountPaise)}</span></div><label className={`review-status ${status}`}><span>Status</span><select aria-label="Status" value={status} onChange={e => {const next=e.target.value as Loan['status'];setStatus(next);if(next==='returned'&&loan.status!=='returned')setReturnedDate(today());}}><option value="pending">Pending</option><option value="sanctioned">Sanctioned</option>{loan.category==='new'?<option value="returned">Returned</option>:null}</select><ChevronDown size={18} aria-hidden="true"/></label></div> : <>
-        {admin && !loan ? <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <div className="form-field"><span className="form-field-label">Branch</span><div className="field-static"><Building2 size={15}/>{branches.find(b => b.id === branch)?.name || loan?.branchName || 'No branch selected'}</div></div>}
+        {admin && !loan ? <label>Branch<select value={branch} onChange={e => setBranch(e.target.value)} required><option value="">Select branch</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : !loan ? <div className="form-field"><span className="form-field-label">Branch</span><div className="field-static"><Building2 size={15}/>{branches.find(b => b.id === branch)?.name || 'No branch selected'}</div></div> : null}
         <div className="form-row">
           <label>ATS number<span className="ats-input"><span className="ats-prefix" aria-hidden="true">ATS</span><input value={ats} onChange={e => setAts(atsDigits(e.target.value).slice(0, 9))} inputMode="numeric" pattern="[0-9]{8,9}" placeholder="8–9 digits" title="Enter the 8 or 9 digit ATS number" aria-label="ATS number, 8 or 9 digits" required autoFocus/></span></label>
           <label>Amount (₹)<input value={amount} onChange={e => setAmount(e.target.value)} type="text" inputMode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" title="Amount in rupees, with up to two decimal places" placeholder="e.g. 250000" required/></label>
@@ -82,7 +85,8 @@ export default function LoanForm({ branches, branchId, category, loan, admin, on
       {conflict ? <button type="button" className="button secondary" onClick={reloadVersion} disabled={saving}>Load latest version, keep my draft</button> : null}
       {latest ? <div className="review-summary"><span>Latest saved version · {latest.atsId} · {rupees(latest.amountPaise)} · {latest.status}</span>{latest.borrowerName ? <span>Borrower: {latest.borrowerName}</span> : null}<span>Current remarks: {latest.remarks || 'None'}</span><small>Your draft is preserved above. Review it before saving over the latest version.</small></div> : null}
       {loan && confirmDelete ? <div className="delete-confirm" role="alert"><p>Delete <strong>{loan.atsId||loan.borrowerName}</strong>? {loan.shareEligible?'This removes the linked application from both Agri and Nirnay.':'This removes the application for everyone and can’t be undone.'}</p><div><button type="button" className="button secondary" onClick={() => setConfirmDelete(false)} disabled={saving}>Keep it</button><button type="button" className="button danger" onClick={remove} disabled={saving}>{saving ? 'Saving…' : 'Yes, delete'}</button></div></div> : null}
-      <div className="modal-actions">{loan && !confirmDelete ? <button type="button" className="button delete-button" onClick={() => setConfirmDelete(true)} disabled={saving}><Trash2 size={15}/> Delete</button> : null}<button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}</button></div>
+      <div className="modal-actions"><button type="button" className="button secondary" onClick={onClose} disabled={saving}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}</button></div>
+      {loan && !confirmDelete ? <button type="button" className="text-button delete-link" onClick={() => setConfirmDelete(true)} disabled={saving}><Trash2 size={14}/> Delete application</button> : null}
     </form>
   </Modal>;
 }
