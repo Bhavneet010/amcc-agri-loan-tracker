@@ -72,8 +72,8 @@ const dayNumber = (date: Date) => {
 };
 export const pendingDays = (createdAt: string, now = new Date()) =>
   Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
-// Pending badges warm up as an application waits: a week turns amber, two weeks turn clay.
-export const pendingAge = (days: number) => (days >= 14 ? 'overdue' : days >= 7 ? 'aging' : 'fresh');
+// Pending badges warm up as an application waits: 3 days turns amber, 6 days turns clay.
+export const pendingAge = (days: number) => (days >= 6 ? 'overdue' : days >= 3 ? 'aging' : 'fresh');
 const APP_ORIGIN = 'https://amcc-agri-loan-tracker.vercel.app';
 export function requestUrl(url: string, method: string, appOrigin: string) {
   return method.toUpperCase() === 'GET' &&

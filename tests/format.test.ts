@@ -44,8 +44,8 @@ test('public loan and branch reads bypass the gateway only on the production app
 
 test('ages pending badges by days waited', () => {
   assert.equal(pendingAge(0), 'fresh');
-  assert.equal(pendingAge(6), 'fresh');
-  assert.equal(pendingAge(7), 'aging');
-  assert.equal(pendingAge(13), 'aging');
-  assert.equal(pendingAge(14), 'overdue');
+  assert.equal(pendingAge(2), 'fresh');
+  assert.equal(pendingAge(3), 'aging');
+  assert.equal(pendingAge(5), 'aging');
+  assert.equal(pendingAge(6), 'overdue');
 });
