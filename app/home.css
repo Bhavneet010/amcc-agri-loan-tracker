@@ -195,6 +195,7 @@
 .featured .summary-counts{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:4px}
 .featured .summary-count{min-width:0;width:100%;gap:10px;font-size:clamp(11px,3.6vw,22px)}
 .featured .summary-count>span:last-child{white-space:nowrap;font-size:clamp(10px,3vw,22px)}
+.featured .sanctioned-count>span:last-child{transform:translateX(1.5px)}
 .featured .summary-number{gap:6px}.featured .summary-number strong{font-size:clamp(30px,8.2vw,52px)}.featured .summary-number svg{width:clamp(18px,5.3vw,34px);height:clamp(18px,5.3vw,34px)}
 .compact .returned-count svg{color:#a05237}
 @media(max-width:680px){.compact .summary-counts{gap:2px;margin-top:4px}.compact .summary-count{gap:1px;font-size:10px}.compact .summary-number{gap:4px}.compact .summary-number strong{font-size:17px}.compact .summary-number svg{width:14px;height:14px}.compact .sanctioned-count{padding-top:3px}}
