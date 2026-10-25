@@ -85,7 +85,6 @@ export default function Workspace() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState(false);
   const [showAll, setShowAll] = useState<Category[]>([]);
-  const [collapsed, setCollapsed] = useState<Category[]>([]);
   const [installOpen, setInstallOpen] = useState(false);
   const activeAdmin = admin && viewAdmin;
   const filterBranch = activeAdmin ? adminFilter : branchId;
@@ -354,6 +353,7 @@ export default function Workspace() {
       shown: showAll.includes(group.id) || filtered || !limited ? all : all.slice(0, recentCount),
     };
   });
+  const tab = grouped.find((group) => group.id === category)!;
   const viewLabel = views.find((v) => v.id === view)!.label.toLowerCase();
   const emptyTitle = filtered
     ? 'No matching loans'
@@ -372,13 +372,6 @@ export default function Workspace() {
   function chooseView(next: View) {
     setView(next);
     setShowAll([]);
-  }
-  // Admins see every branch, so sections start collapsed for them; branch users start with both open.
-  useEffect(() => {
-    setCollapsed(activeAdmin ? ['new', 'renewal'] : []);
-  }, [activeAdmin]);
-  function toggleGroup(id: Category) {
-    setCollapsed((current) => (current.includes(id) ? current.filter((c) => c !== id) : [...current, id]));
   }
   const activeFilters =
     (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
@@ -520,36 +513,18 @@ export default function Workspace() {
             loading={loading}
             onStatus={(status) => chooseView(view === status ? 'all' : status)}
           />
-          <h2 className="sr-only">Add an application</h2>
-          <button className="home-add-loan" onClick={() => setAddChoice(true)} disabled={!canAdd}>
-            <span className="home-add-icon">
-              <Plus aria-hidden="true" />
-            </span>
-            <span className="home-add-text">
-              <strong>Add Loan</strong>
-              <span>New loan or renewal</span>
-            </span>
-            <svg
-              className="home-add-mark"
-              viewBox="0 0 64 72"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M8 6h34l14 14v42a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4z" />
-              <path d="M42 6v14h14" />
-              <path d="M14 30h12M20 24v12M34 30h12M14 48h12M34 46h12M34 52h12" />
-            </svg>
-            <ChevronRight className="home-add-arrow" aria-hidden="true" />
-          </button>
         </section>
         <section className="recent" aria-labelledby="recent-heading">
-          <h2 id="recent-heading" className="sr-only">
-            Applications
-          </h2>
+          <div className="applications-head">
+            <h2 id="recent-heading">Applications</h2>
+            <div className="add-loan-action">
+              <button type="button" className="add-loan-pill" onClick={() => setAddChoice(true)} disabled={!canAdd}>
+                <Plus aria-hidden="true" />
+                Add Loan
+              </button>
+              <span>New loan or renewal</span>
+            </div>
+          </div>
           <div className="table-toolbar">
             <label className="search-field">
               <Search size={21} strokeWidth={1.75} />
@@ -636,69 +611,47 @@ export default function Workspace() {
               ) : null}
             </div>
           </div>
-          {loading ? (
-            <div className="loading-state">
-              <RefreshCw size={23} className="spin" />
-              <p>Loading shared applications…</p>
-            </div>
-          ) : !visibleLoans.length ? (
-            <LoanTable
-              loans={[]}
-              admin={activeAdmin}
-              onEdit={setForm}
-              onCompliance={complianceUpdate}
-              busy={busy}
-              filtered={filtered}
-              emptyTitle={emptyTitle}
-              emptyText={emptyText}
-            />
-          ) : (
-            grouped.map((group) => {
-              const open = !collapsed.includes(group.id);
-              return (
-                <div key={group.id} className={`loan-group ${open ? 'open' : ''}`}>
-                  <h3 className="loan-group-head">
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.id)}
-                      aria-expanded={open}
-                      aria-controls={`loan-group-${group.id}`}
-                    >
-                      <ChevronDown className="loan-group-chevron" aria-hidden="true" />
-                      <span>{group.label}</span>
-                      <span className="loan-group-count">{group.all.length}</span>
-                    </button>
-                  </h3>
-                  <div className="loan-group-body" id={`loan-group-${group.id}`} inert={!open}>
-                    <div>
-                      {group.all.length ? (
-                        <LoanTable
-                          loans={group.shown}
-                          admin={activeAdmin}
-                          onEdit={setForm}
-                          onCompliance={complianceUpdate}
-                          busy={busy}
-                          filtered={filtered}
-                          emptyTitle={emptyTitle}
-                          emptyText={emptyText}
-                        />
-                      ) : (
-                        <p className="loan-group-empty">
-                          No {group.label.toLowerCase()} {filtered ? 'match' : view === 'all' ? 'yet' : viewLabel}.
-                        </p>
-                      )}
-                      {group.all.length > group.shown.length ? (
-                        <button className="show-more" onClick={() => setShowAll((current) => [...current, group.id])}>
-                          Show all {group.all.length} {view === 'all' ? '' : viewLabel + ' '}
-                          {group.label.toLowerCase()}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+          <div className="tabs" role="tablist" aria-label="Loan category">
+            {grouped.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                role="tab"
+                id={`${group.id}-tab`}
+                aria-selected={category === group.id}
+                aria-controls="loans-panel"
+                className={category === group.id ? 'selected' : ''}
+                onClick={() => setCategory(group.id)}
+              >
+                {group.label} <span>{loading ? 0 : group.all.length}</span>
+              </button>
+            ))}
+          </div>
+          <div id="loans-panel" role="tabpanel" aria-labelledby={`${tab.id}-tab`}>
+            {loading ? (
+              <div className="loading-state">
+                <RefreshCw size={23} className="spin" />
+                <p>Loading shared applications…</p>
+              </div>
+            ) : (
+              <LoanTable
+                loans={tab.shown}
+                admin={activeAdmin}
+                onEdit={setForm}
+                onCompliance={complianceUpdate}
+                busy={busy}
+                filtered={filtered}
+                emptyTitle={emptyTitle}
+                emptyText={emptyText}
+              />
+            )}
+          </div>
+          {!loading && tab.all.length > tab.shown.length ? (
+            <button className="show-more" onClick={() => setShowAll((current) => [...current, tab.id])}>
+              Show all {tab.all.length} {view === 'all' ? '' : viewLabel + ' '}
+              {tab.label.toLowerCase()}
+            </button>
+          ) : null}
         </section>
       </main>
       {notice ? (
