@@ -13,7 +13,7 @@
   inset: auto 0 0;
   height: 300px;
   /* Keep the river valley and small hillside fields visible together. */
-  background: url('/home-river-valley.webp') center/cover no-repeat;
+  background: url('/home-river-valley-v2.webp') center/cover no-repeat;
   -webkit-mask-image: linear-gradient(transparent, #000 35%);
   mask-image: linear-gradient(transparent, #000 35%);
   opacity: 0.7;
@@ -1094,6 +1094,37 @@
   }
 }
 
+/* Fit all three statuses inside side cards, including two-line period headings. */
+.compact .summary-card-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  row-gap: 4px;
+}
+.compact .summary-counts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+  gap: 2px;
+}
+.compact .summary-count {
+  min-height: 0;
+  justify-content: center;
+  gap: 0;
+  font-size: 12px;
+  line-height: 1.1;
+}
+.compact .summary-number strong {
+  font-size: 22px;
+}
+.compact .summary-number svg {
+  width: 17px;
+  height: 17px;
+}
+.compact .sanctioned-count {
+  padding-top: 0;
+}
+
 /* Compact phone controls leave more room for applications, without scaling input text. */
 @media (max-width: 680px) {
   .home-landscape {
@@ -1104,7 +1135,7 @@
   }
   .summary-carousel,
   .summary-card.featured {
-    height: 112px;
+    height: 128px;
   }
   .summary-card {
     border-radius: 13px;
@@ -1130,7 +1161,7 @@
     font-size: 10px;
   }
   .featured .summary-counts {
-    margin-top: 9px;
+    margin-top: 13px;
     column-gap: 3px;
   }
   .featured .summary-count {
@@ -1153,9 +1184,13 @@
   }
   .summary-card.compact {
     top: 4px;
-    height: 104px;
+    height: 120px;
     padding-top: 7px;
     padding-bottom: 7px;
+  }
+  .compact .summary-card-body {
+    grid-template-rows: 22px minmax(0, 1fr);
+    row-gap: 3px;
   }
   .compact .summary-card-heading button {
     gap: 4px;
@@ -1167,12 +1202,12 @@
     height: 12px;
   }
   .compact .summary-counts {
-    margin-top: 4px;
+    margin-top: 0;
     gap: 2px;
   }
   .compact .summary-count {
     gap: 0;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1.1;
   }
   .compact .summary-number {
@@ -1186,7 +1221,7 @@
     height: 12px;
   }
   .compact .sanctioned-count {
-    padding-top: 2px;
+    padding-top: 0;
   }
   .summary-pagination {
     height: 20px;
