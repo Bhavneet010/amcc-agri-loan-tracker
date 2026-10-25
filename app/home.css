@@ -8,11 +8,14 @@
   font-family: var(--sans);
 }
 .home-landscape {
-  position: absolute;
+  position: fixed;
   z-index: -1;
-  inset: 0 0 auto;
+  inset: auto 0 0;
   height: 300px;
-  background: url('/home-landscape.png') center -31px/100% 100% no-repeat;
+  /* Show the sky-to-hills band and crop the white fade so the hills sit on the bottom edge. */
+  background: url('/home-landscape.png') center top/100% 150% no-repeat;
+  -webkit-mask-image: linear-gradient(transparent, #000 35%);
+  mask-image: linear-gradient(transparent, #000 35%);
   pointer-events: none;
 }
 .landscape-home .appbar {
@@ -103,7 +106,7 @@
   padding: 0 0 50px;
 }
 .landscape-home .summary {
-  margin: 68px 0 0;
+  margin: 14px 0 0;
 }
 .summary-carousel {
   --ease-card: cubic-bezier(0.32, 0.72, 0, 1);
@@ -833,15 +836,24 @@
 }
 @media (min-width: 681px) {
   .home-landscape {
+    left: 50%;
+    width: 760px;
+    transform: translateX(-50%);
     height: 360px;
-    background-size: 760px 360px;
+    background-size: 100% 150%;
+    -webkit-mask-image: linear-gradient(transparent, #000 35%),
+      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(transparent, #000 35%),
+      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-composite: intersect;
   }
   .landscape-home .appbar {
     padding: 24px 28px 0;
     height: 72px;
   }
   .landscape-home .summary {
-    margin-top: 75px;
+    margin-top: 20px;
   }
   .summary-carousel {
     height: 218px;
@@ -948,7 +960,6 @@
   }
   .home-landscape {
     height: calc(300 * var(--home-unit));
-    background-position: center calc(-31 * var(--home-unit));
   }
   .landscape-home .appbar {
     height: calc(51 * var(--home-unit));
@@ -994,7 +1005,7 @@
     padding-bottom: calc(50 * var(--home-unit));
   }
   .landscape-home .summary {
-    margin-top: calc(68 * var(--home-unit));
+    margin-top: calc(14 * var(--home-unit));
   }
   .summary-carousel,
   .summary-card.featured {
