@@ -374,34 +374,34 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 8px;
 }
 .applications-head h2 {
-  margin: 6px 0 0;
-  font: 700 27px/1.15 var(--serif);
+  margin: 4px 0 0;
+  font: 700 22px/1.15 var(--serif);
   color: #0b3d2c;
 }
 .add-loan-action {
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 .add-loan-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 22px 0 18px;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px 0 13px;
   border: 0;
   border-radius: 999px;
   background: var(--green);
   color: #fff;
-  font: 700 16px/1 var(--sans);
-  box-shadow: 0 6px 14px #0f3d2733;
+  font: 700 14px/1 var(--sans);
+  box-shadow: 0 4px 10px #0f3d2733;
 }
 .add-loan-pill svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   stroke-width: 2.4;
 }
 .add-loan-pill:hover {
@@ -414,7 +414,7 @@
   opacity: 0.55;
 }
 .add-loan-action > span {
-  font: 400 12px/1.2 var(--sans);
+  font: 400 11px/1.2 var(--sans);
   color: #5f6d66;
 }
 .landscape-home .recent .tabs {
@@ -422,8 +422,8 @@
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
   gap: 0;
-  height: 46px;
-  margin-top: 14px;
+  height: 38px;
+  margin-top: 10px;
   border: 1px solid #e1e7e3;
   border-radius: 12px;
   background: #ffffffd9;
@@ -436,7 +436,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  font: 600 16px/1 var(--sans);
+  font: 600 14px/1 var(--sans);
   color: #4f5c55;
 }
 .landscape-home .tabs button.selected {
@@ -454,26 +454,26 @@
   background: var(--green);
 }
 .landscape-home .tabs button > span {
-  min-width: 28px;
-  padding: 4px 8px;
-  border-radius: 8px;
+  min-width: 24px;
+  padding: 3px 7px;
+  border-radius: 7px;
   background: #eef1ee;
   color: #33433a;
-  font: 600 13px/1 var(--sans);
+  font: 600 12px/1 var(--sans);
 }
 .landscape-home .tabs button.selected > span {
   background: #cfe8da;
   color: #0b3d2c;
 }
 .landscape-home .table-toolbar {
-  gap: 11px;
-  padding-top: 14px;
+  gap: 10px;
+  padding-top: 10px;
 }
 .landscape-home .loan-list {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 .landscape-home .table-toolbar .search-field input {
-  height: 48px;
+  height: 42px;
   border: 1px solid #dfdfe3;
   border-radius: 9px;
   padding: 0 12px 0 50px;
@@ -491,8 +491,8 @@
   stroke-width: 1.65;
 }
 .landscape-home .filter-button {
-  width: 50px;
-  height: 48px;
+  width: 44px;
+  height: 42px;
   border-radius: 8px;
   background: #ffffffd9;
   border-color: #b6d1c5;
@@ -970,14 +970,14 @@
     padding: 0 calc(20 * var(--home-unit));
   }
   .landscape-home .table-toolbar {
-    gap: calc(11 * var(--home-unit));
-    padding-top: calc(14 * var(--home-unit));
+    gap: calc(10 * var(--home-unit));
+    padding-top: calc(10 * var(--home-unit));
   }
   .landscape-home .loan-list {
-    margin-top: calc(14 * var(--home-unit));
+    margin-top: calc(10 * var(--home-unit));
   }
   .landscape-home .table-toolbar .search-field input {
-    height: calc(48 * var(--home-unit));
+    height: calc(42 * var(--home-unit));
     border-radius: calc(9 * var(--home-unit));
     padding-left: calc(50 * var(--home-unit));
     font-size: calc(16 * var(--home-unit));
@@ -988,8 +988,8 @@
     height: calc(23 * var(--home-unit));
   }
   .landscape-home .filter-button {
-    width: calc(50 * var(--home-unit));
-    height: calc(48 * var(--home-unit));
+    width: calc(44 * var(--home-unit));
+    height: calc(42 * var(--home-unit));
     border-radius: calc(8 * var(--home-unit));
   }
   .landscape-home .filter-button > svg {
