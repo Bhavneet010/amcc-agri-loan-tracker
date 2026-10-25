@@ -25,7 +25,7 @@ const fragment = `
     vec2 distance = (p - center) / radius;
     float canopy = 1.0 - smoothstep(0.3, 1.0, dot(distance, distance));
     float height = clamp((center.y + radius.y - p.y) / (2.0 * radius.y), 0.0, 1.0);
-    return canopy * height * height * sin(time * 0.75 + phase);
+    return canopy * height * height * sin(time * 1.05 + phase);
   }
 
   void main() {
@@ -39,8 +39,8 @@ const fragment = `
       * smoothstep(0.50, 0.57, p.y);
     float depth = smoothstep(0.50, 1.0, p.y);
     vec2 flow = vec2(
-      sin(p.y * 120.0 - time * 2.0 + sin(p.x * 30.0)) * 0.0018,
-      sin(p.x * 96.0 + p.y * 65.0 - time * 1.8) * 0.0009
+      sin(p.y * 120.0 - time * 3.4 + sin(p.x * 30.0)) * 0.006,
+      sin(p.x * 96.0 + p.y * 65.0 - time * 3.0) * 0.0032
     ) * water * depth;
     // Small, softly bounded canopy regions bend near their tops; trunks stay rooted.
     float foliage = smoothstep(0.06, 0.14, original.g - original.b);
@@ -52,9 +52,10 @@ const fragment = `
       + tree(p, vec2(0.72, 0.78), vec2(0.045, 0.065), 2.0)
       + tree(p, vec2(0.94, 0.86), vec2(0.045, 0.080), 0.3)
       + tree(p, vec2(0.10, 0.85), vec2(0.050, 0.080), 1.0);
-    vec2 moving = source + flow + vec2(breeze * foliage * 0.004, 0.0);
+    vec2 moving = source + flow + vec2(breeze * foliage * 0.018, 0.0);
     vec3 colour = texture2D(landscape, clamp(moving, 0.001, 0.999)).rgb;
-    colour += water * depth * 0.01 * sin(p.y * 180.0 - time * 2.7 + sin(p.x * 32.0));
+    float ripple = sin(p.y * 140.0 - time * 4.2 + sin(p.x * 32.0));
+    colour += water * depth * (0.03 * ripple + 0.018 * smoothstep(0.65, 0.98, ripple));
     gl_FragColor = vec4(colour, 1.0);
   }
 `;
