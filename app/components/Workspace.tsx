@@ -27,6 +27,7 @@ import AdminLogin from './AdminLogin';
 import Modal from './Modal';
 import InstallPrompt from './InstallPrompt';
 import SummaryCarousel from './SummaryCarousel';
+import HomeLandscape from './HomeLandscape';
 import BranchNotifications from './BranchNotifications';
 
 const preferenceKey = 'amcc.branch.v1';
@@ -382,7 +383,7 @@ export default function Workspace() {
   }
   return (
     <div className="app-shell landscape-home">
-      <div className="home-landscape" aria-hidden="true" />
+      <HomeLandscape />
       <header className="appbar">
         <a className="brand" href="/" aria-label="AMCC Paonta Sahib loan tracker home">
           <span className="brand-icon">
