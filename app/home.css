@@ -12,8 +12,8 @@
   z-index: -1;
   inset: auto 0 0;
   height: 300px;
-  /* Show the sky-to-hills band and crop the white fade so the hills sit on the bottom edge. */
-  background: url('/home-landscape.png') center top/100% 150% no-repeat;
+  /* Keep the river valley and small hillside fields visible together. */
+  background: url('/home-river-valley.webp') center/cover no-repeat;
   -webkit-mask-image: linear-gradient(transparent, #000 35%);
   mask-image: linear-gradient(transparent, #000 35%);
   opacity: 0.7;
@@ -734,12 +734,12 @@
     width: 760px;
     transform: translateX(-50%);
     height: 360px;
-    background-size: 100% 150%;
-    -webkit-mask-image: linear-gradient(transparent, #000 35%),
-      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    background-size: cover;
+    -webkit-mask-image:
+      linear-gradient(transparent, #000 35%), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     -webkit-mask-composite: source-in;
-    mask-image: linear-gradient(transparent, #000 35%),
-      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image:
+      linear-gradient(transparent, #000 35%), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     mask-composite: intersect;
   }
   .landscape-home .appbar {
@@ -1091,5 +1091,200 @@
   }
   .compact .summary-number strong {
     font-size: calc(17 * var(--home-unit));
+  }
+}
+
+/* Compact phone controls leave more room for applications, without scaling input text. */
+@media (max-width: 680px) {
+  .home-landscape {
+    height: clamp(240px, 34svh, 300px);
+  }
+  .landscape-home .summary {
+    margin-top: 8px;
+  }
+  .summary-carousel,
+  .summary-card.featured {
+    height: 112px;
+  }
+  .summary-card {
+    border-radius: 13px;
+  }
+  .summary-card.featured {
+    padding: 10px;
+  }
+  .summary-card-heading {
+    gap: 5px;
+  }
+  .summary-card-heading button {
+    gap: 6px;
+    font-size: 16px;
+    min-height: 24px;
+  }
+  .summary-card-heading svg {
+    width: 17px;
+    height: 18px;
+  }
+  .summary-card-heading time {
+    padding: 5px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+  .featured .summary-counts {
+    margin-top: 9px;
+    column-gap: 3px;
+  }
+  .featured .summary-count {
+    gap: 5px;
+    font-size: 11px;
+    min-height: 48px;
+  }
+  .featured .summary-count > span:last-child {
+    font-size: 11px;
+  }
+  .featured .summary-number {
+    gap: 4px;
+  }
+  .featured .summary-number strong {
+    font-size: 28px;
+  }
+  .featured .summary-number svg {
+    width: 18px;
+    height: 18px;
+  }
+  .summary-card.compact {
+    top: 4px;
+    height: 104px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .compact .summary-card-heading button {
+    gap: 4px;
+    min-height: 14px;
+    font-size: 9px;
+  }
+  .compact .summary-card-heading svg {
+    width: 12px;
+    height: 12px;
+  }
+  .compact .summary-counts {
+    margin-top: 4px;
+    gap: 2px;
+  }
+  .compact .summary-count {
+    gap: 0;
+    font-size: 8px;
+    line-height: 1.1;
+  }
+  .compact .summary-number {
+    gap: 3px;
+  }
+  .compact .summary-number strong {
+    font-size: 14px;
+  }
+  .compact .summary-number svg {
+    width: 12px;
+    height: 12px;
+  }
+  .compact .sanctioned-count {
+    padding-top: 2px;
+  }
+  .summary-pagination {
+    height: 20px;
+    gap: 0;
+  }
+  .summary-pagination button {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 20px;
+    border-radius: 0;
+    background: transparent;
+  }
+  .summary-pagination button::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #bdd3c6;
+  }
+  .summary-pagination button[aria-pressed='true'] {
+    background: transparent;
+  }
+  .summary-pagination button[aria-pressed='true']::after {
+    background: var(--green);
+  }
+  .landscape-home .recent {
+    padding: 0 16px;
+  }
+  .applications-head {
+    align-items: center;
+    margin-top: 2px;
+  }
+  .applications-head h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  .add-loan-pill {
+    height: 32px;
+    padding: 0 12px;
+    gap: 5px;
+    font-size: 13px;
+  }
+  .add-loan-pill svg {
+    width: 16px;
+    height: 16px;
+  }
+  .add-loan-action > span {
+    display: none;
+  }
+  .landscape-home .table-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-top: 6px;
+  }
+  .landscape-home .table-toolbar .search-field input {
+    height: 40px;
+    padding: 0 10px 0 35px;
+    border-radius: 8px;
+    /* 16px prevents focus zoom in iOS Safari. */
+    font-size: 16px;
+  }
+  .landscape-home .search-field svg {
+    left: 11px;
+    width: 18px;
+    height: 18px;
+  }
+  .landscape-home .filter-button {
+    width: 40px;
+    height: 40px;
+  }
+  .landscape-home .filter-button > svg {
+    width: 19px;
+    height: 19px;
+  }
+  .landscape-home .filter-count {
+    top: -5px;
+    right: -4px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 11px;
+    line-height: 17px;
+  }
+  .landscape-home .recent .tabs {
+    height: 34px;
+    margin-top: 6px;
+    border-radius: 9px;
+  }
+  .landscape-home .tabs button {
+    gap: 8px;
+    font-size: 13px;
+  }
+  .landscape-home .tabs button > span {
+    min-width: 21px;
+    padding: 3px 5px;
+    font-size: 11px;
+  }
+  .landscape-home .loan-list {
+    margin-top: 8px;
   }
 }
