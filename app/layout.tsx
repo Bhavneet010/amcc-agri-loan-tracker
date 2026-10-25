@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { DM_Sans, Source_Serif_4 } from 'next/font/google';
 import './globals.css';
 import './home.css';
@@ -20,6 +20,9 @@ export const metadata: Metadata = {
     apple: '/icon-192.png',
   },
 };
+
+// Draw edge to edge so the home landscape reaches under the phone's home indicator and gesture bar.
+export const viewport: Viewport = { viewportFit: 'cover' };
 
 export default function RootLayout({
   children,

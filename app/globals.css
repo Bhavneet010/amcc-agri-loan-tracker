@@ -640,7 +640,7 @@ small {
 }
 .toast {
   position: fixed;
-  bottom: 28px;
+  bottom: calc(28px + env(safe-area-inset-bottom));
   left: calc(50% + 0px);
   transform: translateX(-50%);
   background: var(--green);
@@ -888,7 +888,7 @@ small {
 .install-sheet {
   position: fixed;
   left: calc(50% + 0px);
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));
   background: var(--surface);
