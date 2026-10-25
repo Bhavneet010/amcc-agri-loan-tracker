@@ -1,8 +1,4 @@
 /* Home screen measured against the supplied 846 × 1860 mobile reference. */
-/* Any strip the page can't paint behind the browser or gesture bar takes the fields' colour. */
-html:has(.landscape-home) {
-  background: #c7dbbf;
-}
 .landscape-home {
   position: relative;
   isolation: isolate;
@@ -16,8 +12,8 @@ html:has(.landscape-home) {
   z-index: -1;
   inset: auto 0 0;
   height: 300px;
-  /* Crop to the hills and fields (source rows 200–645 of 1020) so the fields sit on the bottom edge. */
-  background: url('/home-landscape.png') center 35% / auto 229% no-repeat;
+  /* Show the sky-to-hills band and crop the white fade so the hills sit on the bottom edge. */
+  background: url('/home-landscape.png') center top/100% 150% no-repeat;
   -webkit-mask-image: linear-gradient(transparent, #000 35%);
   mask-image: linear-gradient(transparent, #000 35%);
   opacity: 0.7;
@@ -845,6 +841,7 @@ html:has(.landscape-home) {
     width: 760px;
     transform: translateX(-50%);
     height: 360px;
+    background-size: 100% 150%;
     -webkit-mask-image: linear-gradient(transparent, #000 35%),
       linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     -webkit-mask-composite: source-in;
