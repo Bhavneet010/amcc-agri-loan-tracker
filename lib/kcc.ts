@@ -173,6 +173,14 @@ function allocate(rows: KccRowResult[], cultivated: number | null, districtIndex
   return errors;
 }
 
+/** Problems with one crop entry on its own (crop, area and district rate), or '' when it can be added. */
+export function kccRowError(row: KccRow, district: string): string {
+  return rowResult(
+    row,
+    kccDistricts.findIndex((name) => name === district),
+  ).error;
+}
+
 export function calculateKcc(input: KccInput): KccResult {
   const errors: string[] = [];
   const districtIndex = kccDistricts.findIndex((district) => district === input.district);

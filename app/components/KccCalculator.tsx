@@ -7,6 +7,7 @@ import {
   blankKccInput,
   blankKccRow,
   calculateKcc,
+  kccRowError,
   kccSeasons,
   seasonLabel,
   type AreaInput,
@@ -15,7 +16,7 @@ import {
   type KccRowResult,
   type KccSeasonName,
 } from '../../lib/kcc';
-import { kccDistricts } from '../../lib/kcc-sof';
+import { kccCrops, kccDistricts } from '../../lib/kcc-sof';
 import Modal from './Modal';
 import KccAreaInput from './KccAreaInput';
 import KccCropPicker from './KccCropPicker';
@@ -30,36 +31,53 @@ const money = new Intl.NumberFormat('en-IN', {
 const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 const showMoney = (value: number | null) => (value === null ? '—' : money.format(value));
 const showArea = (value: number | null) => (value === null ? '—' : number.format(value));
+const acres = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 4 });
+const showAcres = (value: number | null) => (value === null ? '—' : acres.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
-const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
+const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
 
-function CropCard({
-  row,
-  index,
-  calculated,
-  onChange,
-  onRemove,
-  showErrors,
+function CropEditor({
+  initial,
+  isNew,
+  district,
+  onSave,
+  onClose,
 }: {
-  row: KccRow;
-  index: number;
-  calculated: KccRowResult | undefined;
-  onChange: (row: KccRow) => void;
-  onRemove: () => void;
-  showErrors: boolean;
+  initial: KccRow;
+  isNew: boolean;
+  district: string;
+  onSave: (row: KccRow) => void;
+  onClose: () => void;
 }) {
-  const touched = !!row.cropId || row.area.values.some((value) => value.trim());
+  const [row, setRow] = useState(initial);
+  const [tried, setTried] = useState(false);
   const id = `crop-${row.id}`;
+  const crop = cropsById.get(row.cropId);
+  const rate = crop?.rates[kccDistricts.findIndex((name) => name === district)] ?? null;
+  const error = kccRowError(row, district);
+  const touched = !!row.cropId || row.area.values.some((value) => value.trim());
   return (
-    <article className={styles.cropCard} data-season={row.season} aria-label={`Crop ${index + 1}`}>
-      <div className={styles.cropHead}>
-        <span>Crop {String(index + 1).padStart(2, '0')}</span>
-        <label htmlFor={`${id}-season`} className={styles.seasonPick}>
-          <span className="sr-only">Season</span>
+    <Modal
+      title={isNew ? `Add ${seasonLabel(row.season)} crop` : 'Edit crop'}
+      titleId={`${id}-title`}
+      className={styles.editor}
+      onClose={onClose}
+    >
+      <form
+        className={styles.editorBody}
+        data-season={row.season}
+        onSubmit={(event) => {
+          event.preventDefault();
+          setTried(true);
+          if (!error) onSave(row);
+        }}
+      >
+        <label htmlFor={`${id}-season`}>
+          Season
           <select
             id={`${id}-season`}
             value={row.season}
-            onChange={(event) => onChange({ ...row, season: event.target.value as KccSeasonName })}
+            onChange={(event) => setRow({ ...row, season: event.target.value as KccSeasonName })}
           >
             {kccSeasons.map((season) => (
               <option key={season.value} value={season.value}>
@@ -68,83 +86,123 @@ function CropCard({
             ))}
           </select>
         </label>
-        <button type="button" className={styles.remove} aria-label={`Remove crop ${index + 1}`} onClick={onRemove}>
-          <Trash2 size={15} />
-          Remove
-        </button>
-      </div>
-      <KccCropPicker
-        id={`${id}-crop`}
-        cropId={row.cropId}
-        season={row.season}
-        onChange={(cropId) => onChange({ ...row, cropId })}
-      />
-      <div className={styles.rateLine}>
-        <span>Scale of Finance</span>
-        <strong>
-          {showMoney(calculated?.rate ?? null)} <span>/ acre</span>
-        </strong>
-      </div>
-      {calculated && specialBasis.test(calculated.label) ? (
-        <p className={styles.basisNote}>
-          The source label specifies a cultivation/activity size. This beta follows the workbook’s confirmed per-acre
-          calculation; review this entry’s basis before use.
-        </p>
-      ) : null}
-      <KccAreaInput id={id} value={row.area} onChange={(area) => onChange({ ...row, area })} />
-      {calculated?.error && (touched || showErrors) ? (
-        <p className={styles.error} role="status">
-          {calculated.error}
-        </p>
-      ) : null}
-      <dl className={styles.rowResults}>
-        <div>
-          <dt>Recorded acres</dt>
-          <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
+        <KccCropPicker
+          id={`${id}-crop`}
+          cropId={row.cropId}
+          season={row.season}
+          onChange={(cropId) => setRow({ ...row, cropId })}
+        />
+        <div className={styles.rateLine}>
+          <span>Scale of Finance</span>
+          <strong>
+            {showMoney(rate)} <span>/ acre</span>
+          </strong>
         </div>
-        {row.season === 'longTerm' ? (
-          <>
-            <div>
-              <dt>Kharif / Rabi share</dt>
-              <dd>
-                {calculated?.finance === null || calculated?.finance === undefined
-                  ? '—'
-                  : `${percent(calculated.seasonShares!.kharif)} / ${percent(calculated.seasonShares!.rabi)}`}
-              </dd>
-            </div>
-            <div>
-              <dt>Kharif / Rabi acres</dt>
-              <dd>
-                {calculated?.finance === null || calculated?.finance === undefined
-                  ? '—'
-                  : `${showArea(calculated.seasonAcres!.kharif)} / ${showArea(calculated.seasonAcres!.rabi)}`}
-              </dd>
-            </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <dt>{seasonLabel(row.season)} share</dt>
-              <dd>{calculated?.share === null || calculated?.share === undefined ? '—' : percent(calculated.share)}</dd>
-            </div>
-            <div>
-              <dt>Borrower acres</dt>
-              <dd>{showArea(calculated?.borrowerAcres ?? null)}</dd>
-            </div>
-          </>
-        )}
-        <div>
-          <dt>Crop finance</dt>
-          <dd>{showMoney(calculated?.finance ?? null)}</dd>
+        {crop && specialBasis.test(crop.label) ? (
+          <p className={styles.basisNote}>
+            The source label specifies a cultivation/activity size. This beta follows the workbook’s confirmed per-acre
+            calculation; review this entry’s basis before use.
+          </p>
+        ) : null}
+        <KccAreaInput id={id} value={row.area} onChange={(area) => setRow({ ...row, area })} />
+        {error && (touched || tried) ? (
+          <p className={styles.error} role="status">
+            {error}
+          </p>
+        ) : null}
+        <div className={styles.editorActions}>
+          <button type="button" className="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="button primary">
+            {isNew ? 'Add crop' : 'Save crop'}
+          </button>
         </div>
-      </dl>
-    </article>
+      </form>
+    </Modal>
+  );
+}
+
+function CropTable({
+  rows,
+  results,
+  total,
+  onEdit,
+  onRemove,
+}: {
+  rows: KccRow[];
+  results: KccRowResult[];
+  total: number | null;
+  onEdit: (row: KccRow) => void;
+  onRemove: (row: KccRow) => void;
+}) {
+  return (
+    <div className={styles.cropTable} role="table" aria-label="Crop pattern">
+      <div className={styles.cropHeader} role="row">
+        <span role="columnheader">Crop</span>
+        <span role="columnheader">Season</span>
+        <span role="columnheader">Acres</span>
+        <span role="columnheader">Finance</span>
+        <span role="columnheader">
+          <span className="sr-only">Remove</span>
+        </span>
+      </div>
+      {rows.map((row, index) => {
+        const result = results[index];
+        return (
+          <div key={row.id} className={styles.cropRow} role="row" data-season={row.season}>
+            <span role="cell">
+              <button
+                type="button"
+                className={styles.cropName}
+                onClick={() => onEdit(row)}
+                aria-label={`Edit ${result?.label}`}
+              >
+                {result?.label}
+              </button>
+            </span>
+            <span role="cell">
+              <span className={styles.seasonTag}>{seasonLabel(row.season)}</span>
+            </span>
+            <span role="cell" className={styles.num}>
+              {showAcres(result?.borrowerAcres ?? null)}
+              {row.season === 'longTerm' && result?.finance !== null && result?.seasonAcres ? (
+                <>
+                  <small>K {showAcres(result.seasonAcres.kharif)}</small>
+                  <small>R {showAcres(result.seasonAcres.rabi)}</small>
+                </>
+              ) : null}
+            </span>
+            <span role="cell" className={styles.num}>
+              {showMoney(result?.finance ?? null)}
+            </span>
+            <span role="cell">
+              <button
+                type="button"
+                className={styles.remove}
+                aria-label={`Remove ${result?.label}`}
+                onClick={() => onRemove(row)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </span>
+          </div>
+        );
+      })}
+      <div className={styles.cropTotal} role="row">
+        <span role="cell">Total crop finance</span>
+        <span role="cell" className={styles.num}>
+          {showMoney(total)}
+        </span>
+      </div>
+    </div>
   );
 }
 
 export default function KccCalculator({ onClose }: { onClose: () => void }) {
   const [input, setInput] = useState(blankKccInput);
   const [showErrors, setShowErrors] = useState(false);
+  const [editing, setEditing] = useState<{ row: KccRow; isNew: boolean } | null>(null);
   const [converter, setConverter] = useState<AreaInput>({ unit: 'bigha', values: ['', '', ''], karam: '' });
   const [converterVersion, setConverterVersion] = useState(0);
   const nextRow = useRef(0);
@@ -164,6 +222,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
   function reset() {
     setInput(blankKccInput());
     setShowErrors(false);
+    setEditing(null);
     setConverter({ unit: 'bigha', values: ['', '', ''], karam: '' });
     setConverterVersion((version) => version + 1);
   }
@@ -263,28 +322,17 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 <h3 id="kcc-crops-heading">Crops</h3>
               </div>
             </div>
-            <p className={styles.intro}>
-              Add each crop under Kharif, Rabi or Long-term. Kharif crops, and separately Rabi crops, share the
-              cultivated land in proportion to their recorded areas. Long-term crops stand in both seasons, with half of
-              their finance counted in each.
-            </p>
             {input.crops.length ? (
-              <div className={styles.cropList}>
-                {input.crops.map((row, index) => (
-                  <CropCard
-                    key={row.id}
-                    row={row}
-                    index={index}
-                    calculated={result.rows[index]}
-                    showErrors={showErrors}
-                    onChange={(changed) =>
-                      update({ crops: input.crops.map((current) => (current.id === row.id ? changed : current)) })
-                    }
-                    onRemove={() => update({ crops: input.crops.filter((current) => current.id !== row.id) })}
-                  />
-                ))}
-              </div>
-            ) : null}
+              <CropTable
+                rows={input.crops}
+                results={result.rows}
+                total={result.baseFinance}
+                onEdit={(row) => setEditing({ row, isNew: false })}
+                onRemove={(row) => update({ crops: input.crops.filter((current) => current.id !== row.id) })}
+              />
+            ) : (
+              <p className={styles.intro}>No crops added yet.</p>
+            )}
             <div className={styles.addCrop}>
               <span>Add crop</span>
               <div>
@@ -295,7 +343,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                     className="button"
                     data-season={season.value}
                     onClick={() =>
-                      update({ crops: [...input.crops, blankKccRow(`crop-${++nextRow.current}`, season.value)] })
+                      setEditing({ row: blankKccRow(`crop-${++nextRow.current}`, season.value), isNew: true })
                     }
                   >
                     <Plus size={16} />
@@ -354,16 +402,18 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
           </details>
         </div>
         <aside className={styles.results} ref={summary} tabIndex={-1} aria-label="KCC calculation results">
-          <div className={styles.resultHead}>
-            <span className={styles.eyebrow}>Your calculation</span>
-            <h3>Five-year limit</h3>
-            <p>{input.district} · FY 2026–27 basis</p>
-          </div>
           {result.annualLimits ? (
             <div className={styles.firstYear} role="status">
-              <span>Year 1</span>
-              <strong>{showMoney(result.annualLimits[0])}</strong>
-              <p>Includes 30% additional finance</p>
+              <div>
+                <span>Year 1 limit</span>
+                <strong>{showMoney(result.annualLimits[0])}</strong>
+                <p>Includes 30% additional finance</p>
+              </div>
+              <div>
+                <span>MPL (max. permissible)</span>
+                <strong>{showMoney(result.annualLimits[4])}</strong>
+                <p>Year 5 limit</p>
+              </div>
             </div>
           ) : (
             <div className={styles.pendingResult}>
@@ -432,6 +482,23 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
           </div>
         </aside>
       </div>
+      {editing ? (
+        <CropEditor
+          key={editing.row.id}
+          initial={editing.row}
+          isNew={editing.isNew}
+          district={input.district}
+          onClose={() => setEditing(null)}
+          onSave={(row) => {
+            update({
+              crops: editing.isNew
+                ? [...input.crops, row]
+                : input.crops.map((current) => (current.id === row.id ? row : current)),
+            });
+            setEditing(null);
+          }}
+        />
+      ) : null}
     </Modal>
   );
 }

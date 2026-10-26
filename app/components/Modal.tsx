@@ -9,6 +9,7 @@ export default function Modal({
   tone,
   chooser,
   className,
+  titleId = 'modal-title',
   onClose,
   children,
 }: {
@@ -19,6 +20,7 @@ export default function Modal({
   tone?: 'new' | 'renewal';
   chooser?: boolean;
   className?: string;
+  titleId?: string;
   onClose?: () => void;
   children: React.ReactNode;
 }) {
@@ -44,7 +46,7 @@ export default function Modal({
         if (e.clientY < box.top || e.clientY > box.bottom || e.clientX < box.left || e.clientX > box.right) onClose?.();
       }}
       tabIndex={chooser ? -1 : undefined}
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
     >
       <div className="modal-head">
         {icon ? (
@@ -54,7 +56,7 @@ export default function Modal({
         ) : null}
         <div className="modal-heading">
           {eyebrow ? <span className="modal-eyebrow">{eyebrow}</span> : null}
-          <h2 id="modal-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           {subtitle ? <p>{subtitle}</p> : null}
         </div>
         {onClose ? (

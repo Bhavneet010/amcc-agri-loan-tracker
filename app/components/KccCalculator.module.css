@@ -1,11 +1,52 @@
-.dialog {
+.dialog,
+.editor {
   --section-accent: #07624b;
   --section-soft: #eaf5ee;
-  width: min(1120px, calc(100vw - 24px));
-  max-width: 1120px;
+}
+.dialog:global(.modal) {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  inset: 0;
   padding: 14px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   background: #f4f8f5;
+}
+.toolbar,
+.layout {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+.editor:global(.modal) {
+  width: min(560px, calc(100vw - 24px));
+  padding: 18px;
   border-color: #c7dcd0;
+}
+.dialog .editor :global(.modal-head) {
+  top: -18px;
+  margin: -18px -18px 14px;
+  padding: 12px 18px;
+}
+.dialog .editor :global(.modal-head h2) {
+  font-size: 20px;
+}
+.editorBody {
+  display: grid;
+  gap: 12px;
+}
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+.editorActions :global(.button) {
+  min-height: 40px;
+  padding: 9px 14px;
 }
 .dialog :global(.modal-head) {
   position: sticky;
@@ -101,17 +142,17 @@
   background: #fff;
   min-width: 0;
 }
-.dialog [data-season='kharif'] {
+:is(.dialog, .editor) [data-season='kharif'] {
   --section-accent: #8b6019;
   --section-soft: #fff6e5;
   --section-border: #eadbbf;
 }
-.dialog [data-season='rabi'] {
+:is(.dialog, .editor) [data-season='rabi'] {
   --section-accent: #256d87;
   --section-soft: #ebf5fa;
   --section-border: #cee1eb;
 }
-.dialog [data-season='longTerm'] {
+:is(.dialog, .editor) [data-season='longTerm'] {
   --section-accent: #6a4a86;
   --section-soft: #f4effa;
   --section-border: #ddd0ea;
@@ -136,8 +177,7 @@
   color: var(--section-accent);
   margin-bottom: 3px;
 }
-.sectionHead h3,
-.resultHead h3 {
+.sectionHead h3 {
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.5px;
@@ -148,7 +188,7 @@
   grid-template-columns: 1.15fr 1fr 1fr;
   gap: 10px;
 }
-.dialog label {
+:is(.dialog, .editor) label {
   display: grid;
   gap: 5px;
   font-size: 11px;
@@ -156,8 +196,8 @@
   min-width: 0;
   color: #344c40;
 }
-.dialog input:not([type='checkbox']),
-.dialog select {
+:is(.dialog, .editor) input:not([type='checkbox']),
+:is(.dialog, .editor) select {
   width: 100%;
   font-weight: 400;
   font-size: 13px;
@@ -167,11 +207,11 @@
   border-radius: 6px;
   background-color: #fff;
 }
-.dialog select {
+:is(.dialog, .editor) select {
   text-overflow: ellipsis;
 }
-.dialog input:not([type='checkbox']):focus,
-.dialog select:focus {
+:is(.dialog, .editor) input:not([type='checkbox']):focus,
+:is(.dialog, .editor) select:focus {
   border-color: #3e9675;
   box-shadow: 0 0 0 2px #16705212;
 }
@@ -180,34 +220,6 @@
   color: #607167;
   line-height: 1.5;
   font-size: 11px;
-}
-.cropList {
-  display: grid;
-  gap: 9px;
-  margin-top: 10px;
-}
-.cropCard {
-  border: 1px solid var(--section-border, #dce7df);
-  border-left: 3px solid var(--section-accent);
-  border-radius: 7px;
-  padding: 10px;
-  min-width: 0;
-  background: #fff;
-}
-.cropHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-.cropHead > span {
-  flex: 1;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--section-accent);
 }
 .remove:hover {
   color: #9b3d32;
@@ -220,7 +232,6 @@
   gap: 4px 10px;
   font-size: 11px;
   padding: 7px 9px;
-  margin: 8px 0;
   border-radius: 5px;
   background: var(--section-soft);
   color: var(--section-accent);
@@ -267,7 +278,7 @@
   margin-top: 6px;
 }
 .basisNote {
-  margin: 0 0 8px;
+  margin: 0;
   padding: 8px;
   background: #fff7e8;
   border-radius: 5px;
@@ -277,45 +288,6 @@
   line-height: 1.5;
   color: #9b3d32;
   margin-top: 8px;
-}
-.rowResults {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  border: 1px solid #e3ebe6;
-  border-radius: 6px;
-  background: #f4f8f5;
-  margin: 8px 0 0;
-  padding: 8px;
-}
-.rowResults div {
-  min-width: 0;
-}
-.rowResults dt {
-  color: #607268;
-  font-size: 9px;
-  margin-bottom: 4px;
-}
-.rowResults dd {
-  font-size: 12px;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-  color: #254739;
-}
-.rowResults div:last-child dd {
-  color: #07624b;
-  font-weight: 700;
-}
-.seasonPick select {
-  width: auto;
-  min-height: 30px;
-  padding: 4px 26px 4px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--section-accent);
-  background-color: var(--section-soft);
-  border-color: color-mix(in srgb, var(--section-accent) 25%, white);
 }
 .addCrop {
   display: flex;
@@ -448,25 +420,26 @@
   outline: 2px solid #07624b;
   outline-offset: 3px;
 }
-.resultHead {
-  margin: -14px -14px 0;
-  padding: 12px 14px;
-  background: #e8f3ed;
-}
-.resultHead p {
-  color: #507560;
-  font-size: 10px;
-  margin-top: 4px;
-}
 .firstYear {
   display: grid;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
   padding: 15px 14px;
-  margin: 0 -14px;
+  margin: -14px -14px 0;
   color: #fff;
   background: linear-gradient(115deg, #07553f, #16705c);
 }
-.firstYear > span {
+.firstYear > div {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+}
+.firstYear > div + div {
+  padding-left: 12px;
+  border-left: 1px solid #ffffff33;
+}
+.firstYear span {
   text-transform: uppercase;
   letter-spacing: 1px;
   font-size: 10px;
@@ -475,7 +448,7 @@
 }
 .firstYear strong {
   font-family: var(--serif);
-  font-size: clamp(28px, 2.6vw, 35px);
+  font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 600;
   letter-spacing: -0.8px;
   overflow-wrap: anywhere;
@@ -629,6 +602,82 @@
   margin: 6px 0 0;
   padding-left: 16px;
 }
+.cropTable {
+  display: grid;
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cropHeader,
+.cropRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 76px 96px 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 4px;
+  border-bottom: 1px solid #e1ebe5;
+}
+.cropHeader {
+  font-size: 9px;
+  color: #607167;
+  padding-top: 0;
+}
+.cropRow {
+  border-left: 3px solid var(--section-accent);
+  padding-left: 7px;
+}
+.cropName {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: #254739;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.cropName:hover {
+  color: var(--section-accent);
+  text-decoration: underline;
+}
+.seasonTag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--section-accent);
+  background: var(--section-soft);
+}
+.num {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.num small {
+  display: block;
+  font-size: 9px;
+  color: #607167;
+}
+.cropHeader > :nth-child(3),
+.cropHeader > :nth-child(4) {
+  text-align: right;
+}
+.cropRow .remove {
+  padding: 5px;
+}
+.cropTotal {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 4px 2px 10px;
+  font-weight: 700;
+  color: #07624b;
+}
 @media (max-width: 850px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
@@ -639,11 +688,23 @@
   }
 }
 @media (max-width: 480px) {
-  .dialog {
+  .dialog:global(.modal) {
     padding: 10px;
-    width: calc(100vw - 12px);
-    max-height: calc(100dvh - 12px);
-    border-radius: 10px;
+  }
+  .editor:global(.modal) {
+    width: calc(100vw - 16px);
+    padding: 14px;
+  }
+  .dialog .editor :global(.modal-head) {
+    top: -14px;
+    margin: -14px -14px 12px;
+    padding: 11px 14px;
+  }
+  .cropHeader,
+  .cropRow {
+    grid-template-columns: minmax(0, 1fr) auto 58px 82px 26px;
+    gap: 6px;
+    font-size: 11px;
   }
   .dialog :global(.modal-head) {
     top: -10px;
@@ -664,12 +725,8 @@
     margin: -10px -10px 9px;
     padding: 9px 10px;
   }
-  .sectionHead h3,
-  .resultHead h3 {
+  .sectionHead h3 {
     font-size: 20px;
-  }
-  .cropCard {
-    padding: 9px;
   }
   .landFields {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -685,28 +742,21 @@
   .areaParts {
     gap: 7px;
   }
-  .dialog input:not([type='checkbox']),
-  .dialog select {
+  :is(.dialog, .editor) input:not([type='checkbox']),
+  :is(.dialog, .editor) select {
     font-size: 16px;
     padding: 8px;
     min-height: 40px;
   }
-  .rowResults {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
   .results {
     padding: 12px;
   }
-  .resultHead {
-    margin: -12px -12px 0;
-    padding: 11px 12px;
-  }
   .firstYear {
-    margin: 0 -12px;
+    margin: -12px -12px 0;
     padding: 13px 12px;
   }
   .firstYear strong {
-    font-size: 32px;
+    font-size: 21px;
   }
   .remove {
     min-height: 34px;
