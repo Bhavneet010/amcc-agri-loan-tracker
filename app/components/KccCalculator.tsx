@@ -46,7 +46,7 @@ function CropEditor({
   initial: KccRow;
   isNew: boolean;
   district: string;
-  onSave: (row: KccRow) => void;
+  onSave: (row: KccRow, next: boolean) => void;
   onClose: () => void;
 }) {
   const [row, setRow] = useState(initial);
@@ -69,7 +69,8 @@ function CropEditor({
         onSubmit={(event) => {
           event.preventDefault();
           setTried(true);
-          if (!error) onSave(row);
+          const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+          if (!error) onSave(row, submitter?.value === 'next');
         }}
       >
         <label htmlFor={`${id}-season`}>
@@ -111,11 +112,16 @@ function CropEditor({
           </p>
         ) : null}
         <div className={styles.editorActions}>
+          <button type="submit" className="button primary" value="close">
+            Save and Close
+          </button>
+          {isNew ? (
+            <button type="submit" className="button" value="next">
+              Save and Next
+            </button>
+          ) : null}
           <button type="button" className="button" onClick={onClose}>
             Cancel
-          </button>
-          <button type="submit" className="button primary">
-            {isNew ? 'Add crop' : 'Save crop'}
           </button>
         </div>
       </form>
@@ -489,13 +495,22 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
           isNew={editing.isNew}
           district={input.district}
           onClose={() => setEditing(null)}
-          onSave={(row) => {
+          onSave={(row, next) => {
             update({
               crops: editing.isNew
                 ? [...input.crops, row]
                 : input.crops.map((current) => (current.id === row.id ? row : current)),
             });
-            setEditing(null);
+            // Save and Next opens a blank crop in the same season, keeping the area unit just used.
+            const blank = blankKccRow(`crop-${++nextRow.current}`, row.season);
+            setEditing(
+              next
+                ? {
+                    row: { ...blank, area: { ...blank.area, unit: row.area.unit, karam: row.area.karam } },
+                    isNew: true,
+                  }
+                : null,
+            );
           }}
         />
       ) : null}
