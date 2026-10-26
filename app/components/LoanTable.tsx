@@ -1,5 +1,5 @@
 'use client';
-import { ArrowUpRight, Check, CircleDashed, Eye, FileText, Undo2 } from 'lucide-react';
+import { ArrowUpRight, Check, CircleDashed, Eye, FileText, Paperclip, Undo2 } from 'lucide-react';
 import type { Loan } from '../../lib/types';
 import { branchCode, lakhs, pendingAge, pendingDays, rupees } from '../../lib/types';
 const EmptyArt = () => (
@@ -71,6 +71,16 @@ export default function LoanTable({
               {loan.borrowerName ? (
                 <span className="borrower" title={loan.borrowerName}>
                   {loan.borrowerName}
+                </span>
+              ) : null}
+              {loan.chargeDetails?.hasImage ? (
+                <span
+                  className="charge-flag"
+                  role="img"
+                  aria-label="Charge details attached"
+                  title="Charge details attached"
+                >
+                  <Paperclip size={13} aria-hidden="true" />
                 </span>
               ) : null}
               <span className="amount" title={rupees(loan.amountPaise)}>

@@ -4,6 +4,10 @@ This installable PWA serves the thirteen AMCC branches from Vercel. Branch users
 
 When a branch opens or returns to the app, **Updates to your loans** shows unread remarks and status changes for that branch, including Nirnay changes to linked applications. Updates are grouped by borrower and ATS and include full remarks, return reasons and change times. **Mark as read** clears the displayed updates only on that phone; **Later** keeps them unread for the next opening. Read state follows a random installation ID retained in site storage, so clearing browser/app storage resets it. Only changes made after this feature was activated are included; initial creation, compliance changes and unchanged saves do not create notifications. Fresh loans and renewals are both covered. Installation instructions and loan editors take priority over the popup.
 
+## Renewal charge details
+
+Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No before they can be saved; the API enforces this for new renewals and for edits that leave a renewal above the limit. Choosing Yes lets the branch take or choose a photo, which the phone compresses (1600px long side, JPEG, usually under 450 KB) before upload. Images sit in the private `amcc-charge-details` Supabase Storage bucket and only an admin can view them, through five-minute signed links. When the loan is sanctioned or deleted, the API deletes the image file; the Yes/No answer stays in `amcc_charge_details`. Any cleanup that fails is retried the next time the loan is read.
+
 ## Where the data lives
 
 Loan records, branch names, audit history, and admin login attempt counters live in **Supabase**, in dedicated `amcc_` tables in project `xebnciawqwscifzgrkbu`. Vercel hosts the interface. Public lists load directly from the `amcc-api` Supabase Edge Function; writes and admin session requests pass through same-origin Vercel routes. The older [Sites service](https://amcc-agri-loans.bhavneet.chatgpt.site) now forwards its API to the same Supabase service, so older installed clients also use the new database. GitHub stores source code only.

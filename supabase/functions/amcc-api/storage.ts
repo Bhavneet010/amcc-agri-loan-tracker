@@ -3,6 +3,8 @@ import type { Config, RecordData, Storage } from './handler.ts';
 import { AppError } from './validation.ts';
 import {findNirnayCandidates,readNirnayMatch} from './nirnay-candidates.ts';
 
+const CHARGE_BUCKET = 'amcc-charge-details';
+
 function checked<T>(result: { data: T; error: any }): NonNullable<T> {
   if (result.error) {
     const { code, message } = result.error;
@@ -24,7 +26,7 @@ export function createStorage(client: SupabaseClient): Storage {
     async listLoans(filters) {
       const rows: RecordData[] = [];
       for (let offset = 0; ; offset += 1000) {
-        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*)').eq('agri_archived',false).order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
+        let query = client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*),amcc_charge_details(choice,image_path,uploaded_at)').eq('agri_archived',false).order('updated_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 999);
         if (filters.branchId) query = query.eq('branch_id', filters.branchId);
         if (filters.category) query = query.eq('category', filters.category);
         const page = checked(await query); rows.push(...page.map(mapLoan));
@@ -32,7 +34,7 @@ export function createStorage(client: SupabaseClient): Storage {
       }
     },
     async getLoan(id) {
-      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*)').eq('id', id).eq('agri_archived',false).maybeSingle());
+      const row = checked(await client.from('amcc_loans').select('*,amcc_branches!inner(name),amcc_remark_events(id,body,source_app,author,created_at,request_id),amcc_status_events(*),amcc_charge_details(choice,image_path,uploaded_at)').eq('id', id).eq('agri_archived',false).maybeSingle());
       if (!row) throw new AppError('Loan not found.', 404);
       return mapLoan(row);
     },
@@ -47,6 +49,27 @@ export function createStorage(client: SupabaseClient): Storage {
     async clearLoginAttempts(key) { checked(await client.from('amcc_login_attempts').delete().eq('key', key)); },
     async listSharedLoans() { return checked(await client.rpc('amcc_list_shared')); },
     async listNotifications(branchId, deviceId) { return checked(await client.rpc('amcc_list_notifications', { p_branch_id: branchId, p_device_id: deviceId })); },
+    async setCharge(loanId, choice, image) {
+      const row: RecordData = { loan_id: loanId, choice, updated_at: new Date().toISOString() };
+      if (image !== undefined) Object.assign(row, { image_path: image?.path ?? null, image_bytes: image?.bytes ?? null, uploaded_at: image ? row.updated_at : null });
+      checked(await client.from('amcc_charge_details').upsert(row, { onConflict: 'loan_id' }));
+    },
+    async clearChargeImage(loanId, path) {
+      checked(await client.from('amcc_charge_details').update({ image_path: null, image_bytes: null, updated_at: new Date().toISOString() }).eq('loan_id', loanId).eq('image_path', path));
+    },
+    async uploadChargeImage(path, bytes, contentType) {
+      const { error } = await client.storage.from(CHARGE_BUCKET).upload(path, bytes, { contentType, upsert: false });
+      if (error) throw new Error(`Charge image upload failed (${error.message}).`);
+    },
+    async removeChargeObject(path) {
+      const { error } = await client.storage.from(CHARGE_BUCKET).remove([path]);
+      if (error) throw new Error(`Charge image removal failed (${error.message}).`);
+    },
+    async signChargeImage(path) {
+      const { data, error } = await client.storage.from(CHARGE_BUCKET).createSignedUrl(path, 300);
+      if (error || !data) throw new Error(`Charge image link failed (${error?.message || 'unknown'}).`);
+      return data.signedUrl;
+    },
     async readNotifications(branchId, deviceId, eventIds) { return checked(await client.rpc('amcc_read_notifications', { p_branch_id: branchId, p_device_id: deviceId, p_event_ids: eventIds })); },
     async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
     async createSharedLoan(input,source) {
@@ -81,5 +104,10 @@ export function createStorage(client: SupabaseClient): Storage {
   };
 }
 function mapLoan(row: RecordData): RecordData {
-  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),returnedDate:row.returned_date,returnReason:row.return_reason,sanctionDate:row.sanction_date,statusChangedAt:row.status_changed_at,statusHistory:(row.amcc_status_events||[]).map((e:any)=>({id:e.id,fromStatus:e.from_status,toStatus:e.to_status,reason:e.reason,returnedDate:e.returned_date,sourceApp:e.source_app,author:e.author,requestId:e.request_id,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)),shareEligible:row.share_eligible,remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
+  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),returnedDate:row.returned_date,returnReason:row.return_reason,sanctionDate:row.sanction_date,statusChangedAt:row.status_changed_at,statusHistory:(row.amcc_status_events||[]).map((e:any)=>({id:e.id,fromStatus:e.from_status,toStatus:e.to_status,reason:e.reason,returnedDate:e.returned_date,sourceApp:e.source_app,author:e.author,requestId:e.request_id,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)),shareEligible:row.share_eligible,charge:chargeRow(row.amcc_charge_details),remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
+}
+// One-to-one embeds come back as an object; older PostgREST versions return a one-item array.
+function chargeRow(value: any) {
+  const row = Array.isArray(value) ? value[0] : value;
+  return row ? { choice: row.choice, imagePath: row.image_path, uploadedAt: row.uploaded_at } : undefined;
 }

@@ -2987,3 +2987,100 @@ main > .message {
     clip: rect(0, 0, 0, 0);
   }
 }
+
+/* Charge details for renewals above ₹2 lakh: a required Yes/No answer and an optional photo. */
+.charge-prompt {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--tone-ring, var(--line));
+  border-radius: 10px;
+  background: var(--tone-soft, var(--green-light));
+  min-width: 0;
+}
+.charge-prompt legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  font: 600 14px var(--sans);
+  color: var(--tone, var(--green));
+}
+.charge-prompt p {
+  margin: 0;
+  font: 400 13px/1.4 var(--sans);
+  color: var(--muted);
+}
+.charge-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.charge-choice button {
+  height: 40px;
+  border: 1px solid #d7dbd5;
+  border-radius: 8px;
+  background: var(--surface);
+  font: 600 15px var(--sans);
+  color: var(--ink);
+}
+.charge-choice button.selected {
+  border-color: var(--tone, var(--green));
+  background: var(--tone, var(--green));
+  color: #fff;
+}
+.charge-file {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  border: 1px dashed var(--tone-2, var(--green));
+  border-radius: 8px;
+  background: var(--surface);
+  font: 600 14px var(--sans);
+  color: var(--tone, var(--green));
+  cursor: pointer;
+}
+.charge-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.charge-preview {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  text-decoration: none;
+}
+.charge-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.charge-preview figcaption,
+.charge-preview small,
+.charge-prompt small,
+.charge-review small {
+  font: 400 12px var(--sans);
+  color: var(--muted);
+}
+.charge-review .button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.charge-flag {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: var(--amber);
+}

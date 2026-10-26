@@ -29,6 +29,8 @@ export type Loan = {
     returnedDate?: string;
   }[];
   shareEligible?: boolean;
+  // Renewals above ₹2 lakh: whether the branch chose to upload charge details, and if an image is still stored.
+  chargeDetails?: { choice: 'yes' | 'no'; hasImage: boolean; uploadedAt?: string | null };
   remarkHistory?: { id: string; body: string; sourceApp: string; author: string; createdAt: string }[];
 };
 export const rupees = (paise: number) =>

@@ -8,7 +8,7 @@ function upstreamError(method: string, status: number) {
 
 export async function proxyRequest(request: Request, fetcher: typeof fetch = fetch): Promise<Response> {
   const url = new URL(request.url);
-  if (!/^\/api\/(branches|loans(?:\/[^/]+)?|notifications|admin\/session)$/.test(url.pathname)) {
+  if (!/^\/api\/(branches|loans(?:\/[^/]+)?|loans\/[^/]+\/charge|notifications|admin\/session)$/.test(url.pathname)) {
     return Response.json({ error: 'Not found.' }, { status: 404 });
   }
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) {
@@ -32,7 +32,13 @@ export async function proxyRequest(request: Request, fetcher: typeof fetch = fet
     const upstream = await fetcher(DATA_ORIGIN + url.pathname + url.search, {
       method: request.method,
       headers,
-      body: request.method === 'GET' ? undefined : await request.text(),
+      // Charge detail images are binary; decoding them as text would corrupt the bytes.
+      body:
+        request.method === 'GET'
+          ? undefined
+          : contentType?.startsWith('image/')
+            ? await request.arrayBuffer()
+            : await request.text(),
       cache: 'no-store',
       redirect: 'manual',
       signal: AbortSignal.timeout(15000),

@@ -121,3 +121,23 @@ test('turns a non-JSON error from the data service into a readable message', asy
   );
   assert.match((await other.json()).error, /\(500\)/);
 });
+
+test('forwards charge detail images as unchanged bytes', async () => {
+  let forwarded: any;
+  const fetcher = async (url: string, init: RequestInit) => {
+    assert.match(url, /\/api\/loans\/loan-1\/charge$/);
+    forwarded = new Uint8Array(init.body as ArrayBuffer);
+    return Response.json({ ok: true });
+  };
+  const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x80, 0x00, 0xfe]);
+  const response = await proxyRequest(
+    new Request('https://app.vercel.app/api/loans/loan-1/charge', {
+      method: 'POST',
+      headers: { origin: 'https://app.vercel.app', 'content-type': 'image/jpeg' },
+      body: bytes,
+    }),
+    fetcher as typeof fetch,
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(forwarded, bytes);
+});

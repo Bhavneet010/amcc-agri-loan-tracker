@@ -2,10 +2,11 @@ import { AppError, validateLoanInput, publicChanges, adminChanges,validateDecisi
 import { isAdmin, sessionCookie, signSession, verifyPassword } from './auth.ts';
 import { handleLinkage, validateSharedCreate, type LinkStorage } from './linkage.ts';
 import { handleNotifications, type NotificationStorage } from './notifications.ts';
+import { chargeChoice, dropChargeImage, imageBody, imageType, missingChoice, needsCharge, type ChargeStorage } from './charge.ts';
 
 export type Config = { enabled: boolean; passwordSalt: string; passwordHash: string; sessionSecret: string; linkageEnabled?: boolean };
 export type RecordData = Record<string, any>;
-export interface Storage {
+export interface Storage extends Partial<ChargeStorage> {
   getConfig(): Promise<Config>;
   listBranches(): Promise<RecordData[]>;
   listLoans(filters: { branchId?: string; category?: string }): Promise<RecordData[]>;
@@ -24,7 +25,21 @@ export interface Storage {
   readNotifications?: NotificationStorage['readNotifications'];
 }
 const allowedOrigins = new Set(['https://amcc-agri-loan-tracker.vercel.app', 'https://amcc-agri-loans.bhavneet.chatgpt.site', 'https://loan-tracker-xi.vercel.app', 'https://xebnciawqwscifzgrkbu.supabase.co']);
-const publicLoan = (row: RecordData) => row.status === 'sanctioned' && !row.shareEligible ? { ...row, remarks: '', compliance: 'none' } : row;
+const publicLoan = (row: RecordData) => {
+  // The stored image path stays server-side; clients only learn whether an image is available.
+  const { charge, ...loan } = row;
+  const visible = loan.status === 'sanctioned' && !loan.shareEligible ? { ...loan, remarks: '', compliance: 'none' } : loan;
+  return charge ? { ...visible, chargeDetails: { choice: charge.choice, hasImage: !!charge.imagePath && visible.status !== 'sanctioned', uploadedAt: charge.uploadedAt } } : visible;
+};
+function chargeStore(db: Storage): ChargeStorage {
+  if (!db.setCharge || !db.clearChargeImage || !db.uploadChargeImage || !db.removeChargeObject || !db.signChargeImage) throw new AppError('Charge details are not available yet.', 503);
+  return db as ChargeStorage;
+}
+// Sanctioned loans no longer keep charge images; this also retries any cleanup that failed at sanction time.
+async function sweepCharge(db: Storage, row: RecordData) {
+  if (row.status === 'sanctioned' && row.charge?.imagePath && db.removeChargeObject) await dropChargeImage(chargeStore(db), row.id, row.charge.imagePath);
+  return row;
+}
 function version(value: unknown): asserts value is number {
   if (!Number.isSafeInteger(value) || Number(value) < 1) throw new AppError('A record version is required.');
 }
@@ -50,19 +65,20 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^.*\/amcc-api(?=\/)/, '');
+    const chargePath = /^\/api\/loans\/[^/]+\/charge$/.test(path);
     const origin = request.headers.get('origin') || '';
     const originAllowed = allowedOrigins.has(origin) || origin === url.origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
     const headers: Record<string, string> = { 'Cache-Control': 'no-store', 'Vary': 'Origin' };
     if (originAllowed) headers['Access-Control-Allow-Origin'] = origin;
     const json = (value: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(value, { status, headers: { ...headers, ...extra } });
     try {
-      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|notifications|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
+      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|loans\/[^/]+\/charge|notifications|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
       if (request.method === 'OPTIONS') {
         if (!originAllowed) throw new AppError('Request origin is not allowed.', 403);
         return new Response(null, { status: 204, headers: { ...headers, 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'apikey, authorization, content-type, x-region', 'Access-Control-Max-Age': '600' } });
       }
       if (!keys.some(key => key && key === request.headers.get('apikey'))) throw new AppError('An application API key is required.', 401);
-      const methods = path === '/api/notifications' ? ['GET','POST'] : path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
+      const methods = path === '/api/notifications' || chargePath ? ['GET','POST'] : path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
       if (!methods.includes(request.method)) throw new AppError('Method not allowed.', 405);
       if (request.method !== 'GET' && !originAllowed) throw new AppError('Request origin is not allowed.', 403);
       const config = await db.getConfig();
@@ -104,24 +120,54 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
           const branchId = url.searchParams.get('branchId') || undefined;
           const category = url.searchParams.get('category') || undefined;
           if (category && !['new', 'renewal'].includes(category)) throw new AppError('Choose New or Renewal.');
-          return json((await db.listLoans({ branchId, category })).map(publicLoan));
+          const rows = await db.listLoans({ branchId, category });
+          for (const row of rows) await sweepCharge(db, row);
+          return json(rows.map(publicLoan));
         }
         const input = await body(request);
-        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','nirnayMatchId','allowDistinct'].includes(k))) throw new AppError('Invalid loan fields.');
+        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','nirnayMatchId','allowDistinct','chargeChoice'].includes(k))) throw new AppError('Invalid loan fields.');
         if (!['new', 'renewal'].includes(input.category)) throw new AppError('Choose New or Renewal.');
         const branches = await db.listBranches();
         if (!branches.some(b => b.id === input.branchId)) throw new AppError('Choose a valid branch.');
         const validated=validateLoanInput(input);
+        const choice = chargeChoice(input.chargeChoice);
+        const askCharge = needsCharge(input.category, validated.amountPaise);
+        if (askCharge && !choice) throw missingChoice();
         if (input.category==='new' && config.linkageEnabled && db.createSharedLoan) {
           const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.nirnayMatchId?{nirnayMatchId:input.nirnayMatchId}:{}),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
           if(shared.nirnayMatchId&&!await isAdmin(request,config.sessionSecret))throw new AppError('Admin login is required to link an existing Nirnay decision.',401);
           const saved=await db.createSharedLoan(shared,'agri');
           return json(saved,saved.needsConfirmation?409:201);
         }
-        return json(publicLoan(await db.createLoan({ branchId: input.branchId, category: input.category, ...validated })), 201);
+        const created = await db.createLoan({ branchId: input.branchId, category: input.category, ...validated });
+        if (!askCharge) return json(publicLoan(created), 201);
+        await chargeStore(db).setCharge(created.id, choice!, null);
+        return json(publicLoan(await db.getLoan(created.id)), 201);
+      }
+      if (chargePath) {
+        const id = decodeURIComponent(path.slice('/api/loans/'.length, -'/charge'.length));
+        const charges = chargeStore(db);
+        const record = await db.getLoan(id);
+        const stored = record.charge?.imagePath as string | null | undefined;
+        if (request.method === 'GET') {
+          if (!await isAdmin(request, config.sessionSecret)) throw new AppError('Admin login is required to view charge details.', 401);
+          if (stored && record.status === 'sanctioned') { await dropChargeImage(charges, id, stored); throw new AppError('The charge details image was removed after sanction.', 410); }
+          if (!stored) throw new AppError('No charge details image has been uploaded.', 404);
+          return json({ url: await charges.signChargeImage(stored), uploadedAt: record.charge.uploadedAt });
+        }
+        if (record.status !== 'pending') throw new AppError('Charge details can only be added while the loan is pending.', 403);
+        if (!needsCharge(record.category, record.amountPaise)) throw new AppError('Charge details are only needed for renewals above ₹2,00,000.');
+        const bytes = await imageBody(request);
+        const { type, ext } = imageType(bytes);
+        const objectPath = `${id}/${crypto.randomUUID()}.${ext}`;
+        await charges.uploadChargeImage(objectPath, bytes, type);
+        try { await charges.setCharge(id, 'yes', { path: objectPath, bytes: bytes.length }); }
+        catch (error) { await charges.removeChargeObject(objectPath).catch(() => {}); throw error; }
+        await dropChargeImage(charges, id, stored, false);
+        return json(publicLoan(await db.getLoan(id)));
       }
       const id = decodeURIComponent(path.slice('/api/loans/'.length));
-      if (request.method === 'GET') return json(publicLoan(await db.getLoan(id)));
+      if (request.method === 'GET') return json(publicLoan(await sweepCharge(db, await db.getLoan(id))));
       const input = await body(request); version(input.version);
       const record = await db.getLoan(id);
       if (record.version !== input.version) throw new AppError('This loan was updated by someone else. Refresh and try again.', 409);
@@ -130,9 +176,11 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
         if (Object.keys(input).some(k => k !== 'version')) throw new AppError('Invalid loan fields.');
         if (record.status === 'sanctioned' && !admin) throw new AppError('Admin login is required to delete a sanctioned loan.', 401);
         await db.deleteLoan(id, input.version, admin);
+        if (record.charge?.imagePath) await dropChargeImage(chargeStore(db), id, record.charge.imagePath, false);
         return json({ deleted: true, id });
       }
-      const { version: expectedVersion, requestId, ...fields } = input;
+      const { version: expectedVersion, requestId, chargeChoice: rawChoice, ...fields } = input;
+      const choice = chargeChoice(rawChoice);
       if(requestId!==undefined&&(typeof requestId!=='string'||!/^[a-zA-Z0-9:_-]{8,180}$/.test(requestId)))throw new AppError('Invalid save request ID.');
       const adminUpdate = ['remarks','status','returnReason','returnedDate','sanctionDate'].some(key=>key in fields);
       if (adminUpdate && !admin) throw new AppError('Admin login is required.', 401);
@@ -143,7 +191,16 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
       else if (record.status === 'sanctioned' && changes.status === 'pending') { changes.remarks ??= ''; changes.compliance = changes.remarks ? 'awaiting' : 'none'; }
       else if ('remarks' in changes && changes.remarks !== record.remarks) changes.compliance = changes.remarks ? 'awaiting' : 'none';
       if((changes.status??record.status)==='returned')changes.compliance='none';
-      return json(publicLoan(await db.updateLoan(id, expectedVersion, {...changes,requestId:requestId||crypto.randomUUID()}, admin && adminUpdate ? 'admin' : 'branch')));
+      // Branch edits that leave a renewal above ₹2 lakh must answer the charge details question once.
+      const askCharge = !adminUpdate && !('compliance' in changes) && needsCharge(record.category, changes.amountPaise ?? record.amountPaise);
+      if (askCharge && !choice && !record.charge) throw missingChoice();
+      const saved = await db.updateLoan(id, expectedVersion, {...changes,requestId:requestId||crypto.randomUUID()}, admin && adminUpdate ? 'admin' : 'branch');
+      if (askCharge && choice) {
+        await chargeStore(db).setCharge(id, choice, choice === 'no' ? null : undefined);
+        if (choice === 'no') await dropChargeImage(chargeStore(db), id, record.charge?.imagePath, false);
+      }
+      if (saved.status === 'sanctioned' && record.charge?.imagePath) await dropChargeImage(chargeStore(db), id, record.charge.imagePath);
+      return json(publicLoan(record.category === 'renewal' && db.setCharge ? await db.getLoan(id) : saved));
     } catch (error) {
       if (error instanceof AppError) return json({ error: error.message }, error.status);
       if (error instanceof SyntaxError || error instanceof URIError) return json({ error: 'Invalid request data.' }, 400);

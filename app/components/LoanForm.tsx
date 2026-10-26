@@ -4,6 +4,8 @@ import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react
 import type { Branch, Loan } from '../../lib/types';
 import { atsDigits, request, rupees, shortDateLabel } from '../../lib/types';
 import Modal from './Modal';
+import { ChargePrompt, ChargeReview } from './ChargeDetails';
+import { amountToPaise, needsCharge } from '../../lib/charge-image';
 export default function LoanForm({
   branches,
   branchId,
@@ -51,6 +53,12 @@ export default function LoanForm({
   const [returnedDate, setReturnedDate] = useState(loan?.returnedDate || today());
   const [allowDistinct, setAllowDistinct] = useState(false);
   const reviewing = admin && !!loan;
+  const askCharge = !reviewing && needsCharge(loan?.category ?? category, amountToPaise(amount));
+  const [chargeChoice, setChargeChoice] = useState<'yes' | 'no' | ''>(loan?.chargeDetails?.choice ?? '');
+  const [chargeImage, setChargeImage] = useState<Blob | null>(null);
+  // Set when the loan saved but its charge image did not upload, so Save retries only the upload.
+  const [uploadPending, setUploadPending] = useState<Loan | null>(null);
+  const closeForm = uploadPending ? () => onSaved(uploadPending) : onClose;
   // Sanctioning a new loan asks for the sanctioned amount, which replaces the amount the branch entered.
   const askSanctioned = reviewing && loan.category === 'new' && loan.status === 'pending' && status === 'sanctioned';
   const [sanctionedAmount, setSanctionedAmount] = useState(loan ? String(loan.amountPaise / 100) : '');
@@ -128,12 +136,32 @@ export default function LoanForm({
       );
     return current.version;
   }
+  async function uploadCharge(saved: Loan) {
+    try {
+      return await request<Loan>(`/api/loans/${saved.id}/charge`, {
+        method: 'POST',
+        headers: { 'Content-Type': chargeImage!.type || 'image/jpeg' },
+        body: chargeImage,
+        signal: AbortSignal.timeout(60000),
+      });
+    } catch (e) {
+      setUploadPending(saved);
+      throw new Error(
+        `The loan was saved, but the charge details photo didn’t upload: ${(e as Error).message} Tap Retry upload, or Cancel to add it later by editing the loan.`,
+      );
+    }
+  }
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setError('');
     setSaving(true);
     try {
+      if (uploadPending) return onSaved(await uploadCharge(uploadPending));
       if (!reviewing && !borrowerName.trim()) throw new Error('Enter the borrower name.');
+      if (askCharge && !chargeChoice) throw new Error('Choose Yes or No for uploading charge details.');
+      if (askCharge && chargeChoice === 'yes' && !chargeImage && !loan?.chargeDetails?.hasImage)
+        throw new Error('Add the charge details photo, or choose No.');
+      const charge = askCharge ? { chargeChoice } : {};
       const version = askSanctioned ? await saveSanctionedAmount() : baseVersion;
       const payload = loan
         ? reviewing
@@ -144,13 +172,14 @@ export default function LoanForm({
               ...(status === 'returned' ? { returnReason: returnReason.trim(), returnedDate } : {}),
               ...(status === 'sanctioned' && loan.status !== 'sanctioned' ? { sanctionDate: today() } : {}),
             }
-          : { version, atsId, borrowerName: borrowerName.trim(), amount }
+          : { version, atsId, borrowerName: borrowerName.trim(), amount, ...charge }
         : {
             branchId: branch,
             category,
             atsId,
             borrowerName: borrowerName.trim(),
             amount,
+            ...charge,
             requestId,
             ...(nirnayMatchId ? { nirnayMatchId } : {}),
             ...(linkExistingId ? { linkExistingId } : {}),
@@ -160,7 +189,7 @@ export default function LoanForm({
         method: loan ? 'PATCH' : 'POST',
         body: JSON.stringify(loan ? { ...payload, requestId } : payload),
       });
-      onSaved(saved);
+      onSaved(askCharge && chargeChoice === 'yes' && chargeImage ? await uploadCharge(saved) : saved);
     } catch (e) {
       const failure = e as Error & { candidates?: Loan[] };
       setError(failure.message);
@@ -193,6 +222,7 @@ export default function LoanForm({
             <small>{loan.returnedDate}</small>
           </div>
         ) : null}
+        <ChargeReview loan={loan} />
         {loan.remarks ? (
           <div className="review-summary">
             <span>Remarks</span>
@@ -210,7 +240,7 @@ export default function LoanForm({
     <Modal
       {...head}
       eyebrow={reviewing ? `Admin review · ${kind}` : loan ? 'Edit application' : 'Add application'}
-      onClose={saving ? undefined : onClose}
+      onClose={saving ? undefined : closeForm}
     >
       <form onSubmit={save} className="form-stack">
         {reviewing ? (
@@ -313,6 +343,23 @@ export default function LoanForm({
             </label>
           </>
         )}
+        {askCharge ? (
+          <ChargePrompt
+            choice={chargeChoice}
+            image={chargeImage}
+            attached={!!loan?.chargeDetails?.hasImage}
+            disabled={saving || !!uploadPending}
+            onChoice={(choice) => {
+              setChargeChoice(choice);
+              setError('');
+            }}
+            onImage={(image) => {
+              setChargeImage(image);
+              setError('');
+            }}
+          />
+        ) : null}
+        {reviewing && loan.category === 'renewal' ? <ChargeReview loan={loan} /> : null}
         {reviewing && status === 'returned' ? (
           <>
             <label>
@@ -464,11 +511,19 @@ export default function LoanForm({
           </div>
         ) : null}
         <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={onClose} disabled={saving}>
+          <button type="button" className="button secondary" onClick={closeForm} disabled={saving}>
             Cancel
           </button>
           <button className="button primary" disabled={saving}>
-            {saving ? 'Saving…' : reviewing ? 'Save review' : loan ? 'Save changes' : 'Add loan'}
+            {saving
+              ? 'Saving…'
+              : uploadPending
+                ? 'Retry upload'
+                : reviewing
+                  ? 'Save review'
+                  : loan
+                    ? 'Save changes'
+                    : 'Add loan'}
           </button>
         </div>
         {loan && !confirmDelete ? (
