@@ -462,23 +462,26 @@ export default function Workspace() {
                     >
                       <ShieldCheck size={17} /> Admin overview
                     </button>
+                    {/* The KCC calculator is a beta, so it stays with the admin settings until it is ready for branches. */}
                     {activeAdmin ? (
-                      <button role="menuitem" onClick={() => setSettings(true)}>
-                        <Building2 size={17} /> Branch settings
-                      </button>
+                      <>
+                        <button role="menuitem" onClick={() => setSettings(true)}>
+                          <Building2 size={17} /> Branch settings
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => {
+                            setSettings(false);
+                            setCalculator(true);
+                          }}
+                        >
+                          <Calculator size={17} /> KCC calculator <span className="kcc-menu-beta">Beta</span>
+                        </button>
+                      </>
                     ) : null}
                     <div className="menu-divider" />
                   </>
                 ) : null}
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    setSettings(false);
-                    setCalculator(true);
-                  }}
-                >
-                  <Calculator size={17} /> KCC calculator <span className="kcc-menu-beta">Beta</span>
-                </button>
                 <button role="menuitem" onClick={() => setHelp(true)}>
                   <CircleHelp size={17} /> Help
                 </button>
@@ -707,7 +710,7 @@ export default function Workspace() {
           </div>
         </Modal>
       ) : null}
-      {calculator ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
+      {calculator && activeAdmin ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
       {ready && (settings || (!branchId && !activeAdmin)) && !login && !calculator ? (
         <Settings
           branches={branches}
