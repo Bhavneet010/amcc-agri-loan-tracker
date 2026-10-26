@@ -255,6 +255,54 @@ export function blankKccInput(): KccInput {
   return { district: 'Sirmour', cultivatedAcres: '', totalAcres: '', crops: [] };
 }
 
+/**
+ * Reads calculator inputs saved in the browser. Anything malformed falls back to a blank field, and a crop entry
+ * that is not shaped like one is dropped, so an old or edited saved copy can never break the calculator.
+ */
+export function parseSavedKccInput(text: string | null): KccInput | null {
+  let saved: unknown;
+  try {
+    saved = JSON.parse(text || '');
+  } catch {
+    return null;
+  }
+  if (!saved || typeof saved !== 'object') return null;
+  const value = saved as Record<string, unknown>;
+  const textOf = (field: unknown) => (typeof field === 'string' ? field : '');
+  const blank = blankKccInput();
+  const crops = (Array.isArray(value.crops) ? value.crops : []).flatMap((entry): KccRow[] => {
+    const row = (entry || {}) as Record<string, unknown>;
+    const area = (row.area || {}) as Record<string, unknown>;
+    const values = Array.isArray(area.values) ? area.values : [];
+    if (
+      typeof row.id !== 'string' ||
+      !kccSeasons.some((season) => season.value === row.season) ||
+      !kccAreaUnits.some((unit) => unit.value === area.unit)
+    )
+      return [];
+    return [
+      {
+        id: row.id,
+        season: row.season as KccSeasonName,
+        cropId: textOf(row.cropId),
+        area: {
+          unit: area.unit as AreaUnit,
+          values: [textOf(values[0]), textOf(values[1]), textOf(values[2])],
+          karam: area.karam === '66' || area.karam === '57.5' ? area.karam : '',
+        },
+      },
+    ];
+  });
+  return {
+    district: kccDistricts.some((district) => district === value.district)
+      ? (value.district as string)
+      : blank.district,
+    cultivatedAcres: textOf(value.cultivatedAcres),
+    totalAcres: textOf(value.totalAcres),
+    crops,
+  };
+}
+
 /** The workbook's saved example, including its zero-area Rabi row. */
 export function kccWorkbookExample(): KccInput {
   const row = (id: string, season: KccSeasonName, cropId: string, major = '20'): KccRow => ({

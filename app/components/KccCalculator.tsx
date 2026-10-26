@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Calculator, ChevronDown, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import {
   areaInAcres,
@@ -9,6 +9,7 @@ import {
   calculateKcc,
   kccRowError,
   kccSeasons,
+  parseSavedKccInput,
   seasonLabel,
   type AreaInput,
   type KccInput,
@@ -35,6 +36,16 @@ const acres = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 4 });
 const showAcres = (value: number | null) => (value === null ? '—' : acres.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
+// Inputs stay in this browser until Reset, so closing the calculator or the app does not lose them.
+const savedInputKey = 'kcc-calculator-input';
+
+function loadSavedInput(): KccInput {
+  try {
+    return parseSavedKccInput(localStorage.getItem(savedInputKey)) ?? blankKccInput();
+  } catch {
+    return blankKccInput();
+  }
+}
 /** The crop name before its condition, e.g. "Wheat" from "Wheat — Irrigated". Dashes inside brackets stay. */
 function cropName(label: string) {
   let depth = 0;
@@ -219,12 +230,13 @@ function CropTable({
 }
 
 export default function KccCalculator({ onClose }: { onClose: () => void }) {
-  const [input, setInput] = useState(blankKccInput);
+  const [input, setInput] = useState(loadSavedInput);
   const [showErrors, setShowErrors] = useState(false);
   const [editing, setEditing] = useState<{ row: KccRow; isNew: boolean } | null>(null);
   const [converter, setConverter] = useState<AreaInput>({ unit: 'bigha', values: ['', '', ''], karam: '' });
   const [converterVersion, setConverterVersion] = useState(0);
-  const nextRow = useRef(0);
+  // New crop ids continue after the saved ones.
+  const nextRow = useRef(Math.max(0, ...input.crops.map((row) => Number(/^crop-(\d+)$/.exec(row.id)?.[1] ?? 0))));
   const summary = useRef<HTMLElement>(null);
   const id = useId();
   const result = calculateKcc(input);
@@ -235,6 +247,13 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
   } catch (error) {
     conversionError = (error as Error).message;
   }
+  useEffect(() => {
+    try {
+      localStorage.setItem(savedInputKey, JSON.stringify(input));
+    } catch {
+      // Storage can be full or blocked; the calculator still works for this visit.
+    }
+  }, [input]);
   function update(changes: Partial<KccInput>) {
     setInput((current) => ({ ...current, ...changes }));
   }
@@ -414,8 +433,8 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 m². Use certified Jamabandi area and confirm the karam for kanal land.
               </p>
               <p>
-                Beta estimate for review. This calculator does not create a loan or save your inputs. Closing it clears
-                the calculation.
+                Beta estimate for review. This calculator does not create a loan. Your inputs stay on this device until
+                you press Reset.
               </p>
             </div>
           </details>

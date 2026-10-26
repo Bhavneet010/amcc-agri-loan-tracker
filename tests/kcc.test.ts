@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { areaInAcres, blankKccInput, calculateKcc, kccWorkbookExample, type AreaInput } from '../lib/kcc.ts';
+import {
+  areaInAcres,
+  blankKccInput,
+  calculateKcc,
+  kccWorkbookExample,
+  parseSavedKccInput,
+  type AreaInput,
+} from '../lib/kcc.ts';
 import { kccCrops, kccDistricts } from '../lib/kcc-sof.ts';
 
 const close = (actual: number, expected: number) =>
@@ -185,4 +192,27 @@ test('crop catalog keeps unique source-row identities and every district rate us
     assert.equal(crop.rates.length, 12);
     assert.ok(crop.rates.every((rate) => Number.isFinite(rate) && rate >= 0));
   }
+});
+
+test('saved calculator inputs round-trip and malformed copies fall back safely', () => {
+  const input = kccWorkbookExample();
+  assert.deepEqual(parseSavedKccInput(JSON.stringify(input)), input);
+  for (const text of [null, '', 'not json', '42', 'null']) assert.equal(parseSavedKccInput(text), null);
+  const damaged = parseSavedKccInput(
+    JSON.stringify({
+      district: 'Nowhere',
+      cultivatedAcres: 3,
+      crops: [
+        { id: 'ok', season: 'rabi', cropId: 'sof-2', area: { unit: 'acre', values: ['1'], karam: 'x' } },
+        { id: 'bad-season', season: 'summer', cropId: 'sof-2', area: { unit: 'acre', values: ['1', '', ''] } },
+        { season: 'rabi', cropId: 'sof-2', area: { unit: 'acre', values: ['1', '', ''] } },
+        null,
+      ],
+    }),
+  )!;
+  assert.equal(damaged.district, blankKccInput().district);
+  assert.equal(damaged.cultivatedAcres, '');
+  assert.deepEqual(damaged.crops, [
+    { id: 'ok', season: 'rabi', cropId: 'sof-2', area: { unit: 'acre', values: ['1', '', ''], karam: '' } },
+  ]);
 });
