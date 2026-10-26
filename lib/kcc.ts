@@ -247,6 +247,104 @@ export function calculateKcc(input: KccInput): KccResult {
   return { errors, rows, seasons, baseFinance, annualLimits };
 }
 
+/** Short decimal text for a stored area, without float noise or trailing zeros. */
+function decimalText(value: number, places: number): string {
+  const text = value.toFixed(places).replace(/\.?0+$/, '');
+  return text === '' || text === '-0' ? '0' : text;
+}
+
+/**
+ * Writes an acre figure back in the unit the crop card already uses. Positional units are rounded to their smallest
+ * part (biswansi, sarsahi or centiare), so the stored area stays a valid Jamabandi-style entry.
+ */
+export function acresToArea(acres: number, area: AreaInput): AreaInput {
+  if (!Number.isFinite(acres) || acres < 0) throw new Error('Acres must be a nonnegative number.');
+  const decimalOnly = (text: string): AreaInput => ({ ...area, values: [text, '', ''] });
+  if (area.unit === 'acre') return decimalOnly(decimalText(acres, 6));
+  if (area.unit === 'hectare') return decimalOnly(decimalText((acres * squareMetresPerAcre) / 10000, 6));
+  if (area.unit === 'sqm') return decimalOnly(decimalText(acres * squareMetresPerAcre, 2));
+  let smallest: number;
+  let middleBase: number;
+  let lowerBase: number;
+  if (area.unit === 'bigha') {
+    smallest = Math.round(acres * 2000);
+    [middleBase, lowerBase] = [20, 20];
+  } else if (area.unit === 'metric') {
+    smallest = Math.round(acres * squareMetresPerAcre);
+    [middleBase, lowerBase] = [100, 100];
+  } else {
+    if (area.karam !== '66' && area.karam !== '57.5')
+      throw new Error('Confirm the karam standard on this crop before changing its acres.');
+    smallest = Math.round((acres * 43560) / (Number(area.karam) / 12) ** 2);
+    [middleBase, lowerBase] = [20, 9];
+  }
+  const lower = smallest % lowerBase;
+  const middle = Math.floor(smallest / lowerBase) % middleBase;
+  const major = Math.floor(smallest / (lowerBase * middleBase));
+  return { ...area, values: [String(major), String(middle), String(lower)] };
+}
+
+/**
+ * Sets one Kharif or Rabi crop to a chosen number of borrower acres. The other crops of that season share what is
+ * left of the cultivated land in their existing proportion; long-term crops in the season keep their acres. Every
+ * crop of the season whose area changes is written back in its own unit.
+ *
+ * When the season has no long-term crop, the season's areas are rewritten as the borrower's acres themselves, so a
+ * crop card shows the acres entered. With a long-term crop, that crop also sits in the other season's pool, so the
+ * season keeps its recorded-area scale and the long-term crop and the other season stay untouched.
+ */
+export function setCropAcres(input: KccInput, rowId: string, acres: number): KccInput {
+  const target = input.crops.find((row) => row.id === rowId);
+  if (!target) throw new Error('That crop is no longer in the list.');
+  if (target.season === 'longTerm')
+    throw new Error('Long-term crops sit in both seasons; change their area in the crop card.');
+  if (!Number.isFinite(acres) || acres < 0) throw new Error('Enter acres as a nonnegative number.');
+  const result = calculateKcc(input);
+  const cultivated = Number(input.cultivatedAcres.trim());
+  if (!Number.isFinite(cultivated) || cultivated <= 0 || result.rows.some((row) => row.recordedAcres === null))
+    throw new Error('Complete the cultivated land and every crop card before changing acres here.');
+  const season = target.season;
+  const byId = new Map(result.rows.map((row) => [row.id, row]));
+  const longTerm = result.rows.filter((row) => row.season === 'longTerm');
+  const others = input.crops.filter((row) => row.season === season && row.id !== rowId);
+  const longTermAcres = longTerm.reduce((sum, row) => sum + (row.seasonAcres?.[season] ?? 0), 0);
+  const available = cultivated - longTermAcres;
+  const label = seasonLabel(season);
+  if (acres > available + 1e-9)
+    throw new Error(
+      `${label} crops can share at most ${available.toFixed(2)} acres${longTerm.length ? ' after long-term crops' : ''}.`,
+    );
+  if (!others.length && !longTerm.length && Math.abs(acres - cultivated) > 1e-9)
+    throw new Error(
+      `This is the only ${label} crop, so it takes all cultivated land. Change the cultivated land instead.`,
+    );
+  const remaining = Math.max(0, available - acres);
+  const otherRecorded = others.reduce((sum, row) => sum + byId.get(row.id)!.recordedAcres!, 0);
+  if (!others.length && remaining > 1e-9)
+    throw new Error(`Another ${label} crop or the long-term crops must take the other ${remaining.toFixed(2)} acres.`);
+  const otherAcres = new Map(
+    others.map((row) => [
+      row.id,
+      otherRecorded > 0 ? (byId.get(row.id)!.recordedAcres! / otherRecorded) * remaining : remaining / others.length,
+    ]),
+  );
+  // Recorded-area units per borrower acre for this season: 1 when it can be rewritten in acres, otherwise the
+  // season's existing recorded total over cultivated land, which leaves long-term crops' shares unchanged.
+  const scale = longTerm.length
+    ? result.rows
+        .filter((row) => row.season === season || row.season === 'longTerm')
+        .reduce((sum, row) => sum + row.recordedAcres!, 0) / cultivated
+    : 1;
+  return {
+    ...input,
+    crops: input.crops.map((row) => {
+      if (row.id === rowId) return { ...row, area: acresToArea(acres * scale, row.area) };
+      const share = otherAcres.get(row.id);
+      return share === undefined ? row : { ...row, area: acresToArea(share * scale, row.area) };
+    }),
+  };
+}
+
 export function blankKccRow(id: string, season: KccSeasonName): KccRow {
   return { id, season, cropId: '', area: { unit: 'bigha', values: ['', '', ''], karam: '' } };
 }

@@ -5,8 +5,11 @@ import {
   blankKccInput,
   calculateKcc,
   kccWorkbookExample,
+  acresToArea,
   parseSavedKccInput,
+  setCropAcres,
   type AreaInput,
+  type KccInput,
 } from '../lib/kcc.ts';
 import { kccCrops, kccDistricts } from '../lib/kcc-sof.ts';
 
@@ -215,4 +218,82 @@ test('saved calculator inputs round-trip and malformed copies fall back safely',
   assert.deepEqual(damaged.crops, [
     { id: 'ok', season: 'rabi', cropId: 'sof-2', area: { unit: 'acre', values: ['1', '', ''], karam: '' } },
   ]);
+});
+
+test('writes acres back in the crop card unit', () => {
+  assert.deepEqual(acresToArea(0.535, area('bigha', ['', '', ''])).values, ['2', '13', '10']);
+  assert.deepEqual(acresToArea(0.125, area('kanal', ['', '', ''], '66')).values, ['1', '0', '0']);
+  assert.deepEqual(acresToArea(1.5, area('acre', ['', '', ''])).values, ['1.5', '', '']);
+  assert.deepEqual(acresToArea(1, area('metric', ['', '', ''])).values, ['0', '40', '47']);
+  assert.throws(() => acresToArea(1, area('kanal', ['', '', ''])), /karam/);
+});
+
+const pattern = (crops: KccInput['crops'], cultivated = '2'): KccInput => ({
+  district: 'Sirmour',
+  cultivatedAcres: cultivated,
+  totalAcres: '',
+  crops,
+});
+const crop = (id: string, season: KccInput['crops'][number]['season'], a: AreaInput) => ({
+  id,
+  season,
+  cropId: kccCrops[0].id,
+  area: a,
+});
+
+test('typing acres for a crop rescales the rest of its season and converts each card to its own unit', () => {
+  const input = pattern([
+    crop('k1', 'kharif', area('bigha', ['1', '0', '0'])),
+    crop('k2', 'kharif', area('acre', ['0.6', '', ''])),
+    crop('k3', 'kharif', area('kanal', ['1', '12', '0'], '66')),
+    crop('r1', 'rabi', area('bigha', ['3', '0', '0'])),
+  ]);
+  const next = setCropAcres(input, 'k1', 0.8);
+  const result = calculateKcc(next);
+  assert.deepEqual(result.errors, []);
+  const acres = Object.fromEntries(result.rows.map((row) => [row.id, row.borrowerAcres!]));
+  close(acres.k1, 0.8);
+  // k2 (0.6) and k3 (0.2) keep a 3:1 split of the remaining 1.2 acres.
+  close(acres.k2, 0.9);
+  close(acres.k3, 0.3);
+  assert.deepEqual(next.crops[0].area.values, ['4', '0', '0']);
+  assert.deepEqual(next.crops[1].area.values, ['0.9', '', '']);
+  assert.deepEqual(next.crops[2].area.values, ['2', '8', '0']);
+  assert.deepEqual(next.crops[3], input.crops[3]);
+});
+
+test('long-term crops keep their acres and the other season stays untouched', () => {
+  const input = pattern([
+    crop('k1', 'kharif', area('acre', ['1', '', ''])),
+    crop('k2', 'kharif', area('acre', ['1', '', ''])),
+    crop('l1', 'longTerm', area('acre', ['2', '', ''])),
+    crop('r1', 'rabi', area('acre', ['2', '', ''])),
+  ]);
+  const before = calculateKcc(input);
+  const next = setCropAcres(input, 'k1', 0.25);
+  const after = calculateKcc(next);
+  assert.deepEqual(after.errors, []);
+  const get = (r: typeof after, id: string) => r.rows.find((row) => row.id === id)!;
+  close(get(after, 'k1').borrowerAcres!, 0.25);
+  close(get(after, 'k2').borrowerAcres!, 0.75);
+  close(get(after, 'l1').seasonAcres!.kharif, get(before, 'l1').seasonAcres!.kharif);
+  close(get(after, 'l1').seasonAcres!.rabi, get(before, 'l1').seasonAcres!.rabi);
+  assert.deepEqual(next.crops[2], input.crops[2]);
+  assert.deepEqual(next.crops[3], input.crops[3]);
+});
+
+test('rejects acre changes that cannot fit the season', () => {
+  const input = pattern([
+    crop('k1', 'kharif', area('acre', ['1', '', ''])),
+    crop('k2', 'kharif', area('acre', ['1', '', ''])),
+    crop('r1', 'rabi', area('acre', ['1', '', ''])),
+    crop('l1', 'longTerm', area('acre', ['1', '', ''])),
+  ]);
+  assert.throws(() => setCropAcres(input, 'k1', 3), /at most/);
+  assert.throws(() => setCropAcres(input, 'l1', 1), /crop card/);
+  const single = pattern([
+    crop('k1', 'kharif', area('acre', ['1', '', ''])),
+    crop('r1', 'rabi', area('acre', ['1', '', ''])),
+  ]);
+  assert.throws(() => setCropAcres(single, 'k1', 1), /only Kharif crop/);
 });

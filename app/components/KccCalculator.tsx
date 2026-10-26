@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Calculator, ChevronDown, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Calculator, ChartNoAxesColumn, ChevronDown, FileText, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import {
   areaInAcres,
   blankKccInput,
@@ -11,6 +11,7 @@ import {
   kccSeasons,
   parseSavedKccInput,
   seasonLabel,
+  setCropAcres,
   type AreaInput,
   type KccInput,
   type KccRow,
@@ -152,18 +153,77 @@ function CropEditor({
   );
 }
 
+/** Borrower acres for one crop, typed over in place. The change is applied when the field is left or Enter is pressed. */
+function AcreCell({
+  label,
+  value,
+  editable,
+  onCommit,
+}: {
+  label: string;
+  value: number | null;
+  editable: boolean;
+  onCommit: (acres: number) => string;
+}) {
+  const shown = value === null ? '' : acres.format(value).replace(/,/g, '');
+  const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  if (!editable || value === null) return <>{showAcres(value)}</>;
+  function commit(text: string) {
+    setDraft(null);
+    const trimmed = text.trim();
+    if (trimmed === shown || !trimmed) return setError('');
+    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) return setError('Enter acres as a number.');
+    setError(onCommit(Number(trimmed)));
+  }
+  return (
+    <>
+      <input
+        className={styles.acreInput}
+        type="text"
+        inputMode="decimal"
+        aria-label={`Acres for ${label}`}
+        aria-invalid={error ? true : undefined}
+        title={error || 'Type new acres; the other crops of this season adjust'}
+        value={draft ?? shown}
+        onFocus={(event) => {
+          setDraft(shown);
+          event.currentTarget.select();
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={(event) => commit(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+          if (event.key === 'Escape') {
+            setDraft(null);
+            setError('');
+            event.currentTarget.blur();
+          }
+        }}
+      />
+      {error ? (
+        <small className={styles.acreError} role="alert">
+          {error}
+        </small>
+      ) : null}
+    </>
+  );
+}
+
 function CropTable({
   rows,
   results,
   total,
   onEdit,
   onRemove,
+  onAcres,
 }: {
   rows: KccRow[];
   results: KccRowResult[];
   total: number | null;
   onEdit: (row: KccRow) => void;
   onRemove: (row: KccRow) => void;
+  onAcres: (row: KccRow, acres: number) => string;
 }) {
   return (
     <div className={styles.cropTable} role="table" aria-label="Crop pattern">
@@ -194,8 +254,13 @@ function CropTable({
                 {result ? cropName(result.label) : null}
               </button>
             </span>
-            <span role="cell" className={styles.num}>
-              {showAcres(result?.borrowerAcres ?? null)}
+            <span role="cell" className={styles.acres}>
+              <AcreCell
+                label={result?.label ?? 'crop'}
+                value={result?.borrowerAcres ?? null}
+                editable={row.season !== 'longTerm'}
+                onCommit={(value) => onAcres(row, value)}
+              />
               {row.season === 'longTerm' && result?.finance !== null && result?.seasonAcres ? (
                 <>
                   <small>K {showAcres(result.seasonAcres.kharif)}</small>
@@ -368,6 +433,14 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 total={result.baseFinance}
                 onEdit={(row) => setEditing({ row, isNew: false })}
                 onRemove={(row) => update({ crops: input.crops.filter((current) => current.id !== row.id) })}
+                onAcres={(row, value) => {
+                  try {
+                    setInput(setCropAcres(input, row.id, value));
+                    return '';
+                  } catch (error) {
+                    return (error as Error).message;
+                  }
+                }}
               />
             ) : (
               <p className={styles.intro}>No crops added yet.</p>
@@ -395,52 +468,20 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               <p className={styles.error}>Add at least one Kharif, Rabi or long-term crop.</p>
             ) : null}
           </section>
+        </div>
+        <aside className={styles.results} ref={summary} tabIndex={-1} aria-label="KCC calculation results">
           <button
             type="button"
-            className="button primary"
+            className={styles.checkButton}
             onClick={() => {
               setShowErrors(true);
               summary.current?.focus();
               summary.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }}
           >
+            <Calculator size={20} />
             Check calculation
           </button>
-          <details className={styles.method}>
-            <summary>Calculation & source notes</summary>
-            <div>
-              <p>
-                As in the workbook, recorded areas only set the crop pattern. Kharif share = recorded crop area ÷ total
-                recorded Kharif area; Rabi share is worked out the same way. Borrower crop acres = crop share ×
-                cultivated acres. Crop finance = borrower crop acres × district Scale of Finance.
-              </p>
-              <p>
-                Long-term crops (orchards and other crops that take more than a season) occupy their land in both
-                seasons, so each is listed in the Kharif and the Rabi pool at its full recorded area. Their Scale of
-                Finance is annual, so half of it is counted in each season: long-term finance = (Kharif acres + Rabi
-                acres) ÷ 2 × Scale of Finance.
-              </p>
-              <p>
-                Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full
-                precision during calculation.
-              </p>
-              <p>
-                Rates: your “KCC CALCULATION - SOF FY 2026-27 UPDATED.xlsx”, FINAL AGRICULTURE sheet, all 175
-                crop/condition rows and 12 districts. Rates are treated as ₹/acre as confirmed for this workbook. Source
-                labels and district differences are retained.
-              </p>
-              <p>
-                Conversions: supplied HP desk reference, revised 26 October 2026. 1 acre = 43,560 sq ft = 4,046.8564224
-                m². Use certified Jamabandi area and confirm the karam for kanal land.
-              </p>
-              <p>
-                Beta estimate for review. This calculator does not create a loan. Your inputs stay on this device until
-                you press Reset.
-              </p>
-            </div>
-          </details>
-        </div>
-        <aside className={styles.results} ref={summary} tabIndex={-1} aria-label="KCC calculation results">
           {result.annualLimits ? (
             <div className={styles.firstYear} role="status">
               <div>
@@ -461,50 +502,6 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               <p>Your five-year limits will update as you enter valid inputs.</p>
             </div>
           )}
-          <dl className={styles.breakdown}>
-            {kccSeasons.slice(0, 2).map((season) => (
-              <div key={season.value}>
-                <dt>
-                  {season.label} finance{!result.seasons[season.value].used ? ' (no crops)' : ''}
-                </dt>
-                <dd>{showMoney(result.seasons[season.value].finance)}</dd>
-              </div>
-            ))}
-            {result.seasons.longTerm.used ? (
-              <div>
-                <dt>Of which long-term (half in each season)</dt>
-                <dd>{showMoney(result.seasons.longTerm.finance)}</dd>
-              </div>
-            ) : null}
-            <div>
-              <dt>Total crop finance</dt>
-              <dd>{showMoney(result.baseFinance)}</dd>
-            </div>
-            <div>
-              <dt>30% addition</dt>
-              <dd>{showMoney(result.baseFinance === null ? null : result.baseFinance * 0.3)}</dd>
-            </div>
-          </dl>
-          <table className={styles.yearTable}>
-            <caption>Annual limits (₹)</caption>
-            <thead>
-              <tr>
-                <th scope="col">Year</th>
-                <th scope="col">Calculated limit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((year) => (
-                <tr key={year}>
-                  <th scope="row">Year {year}</th>
-                  <td>{showMoney(result.annualLimits?.[year - 1] ?? null)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className={styles.resultNote}>
-            Years 2–5 include a compounded 10% annual increase, using FY 2026–27 rates.
-          </p>
           {showErrors && result.errors.length ? (
             <div className={styles.validation} role="alert">
               <strong>Check these inputs</strong>
@@ -515,8 +512,103 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </ul>
             </div>
           ) : null}
+          <details className={styles.panel} open>
+            <summary>
+              <ChartNoAxesColumn size={20} />
+              <span>5-year schedule & calculation details</span>
+              <ChevronDown size={18} className={styles.chevron} />
+            </summary>
+            <div className={styles.panelBody}>
+              <table className={styles.yearTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">Year</th>
+                    <th scope="col">Calculated limit (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((year) => (
+                    <tr key={year}>
+                      <th scope="row">{year === 5 ? 'Year 5 (MPL)' : `Year ${year}`}</th>
+                      <td>{showMoney(result.annualLimits?.[year - 1] ?? null)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <dl className={styles.breakdown}>
+                {kccSeasons.slice(0, 2).map((season) => (
+                  <div key={season.value}>
+                    <dt>
+                      {season.label} finance{!result.seasons[season.value].used ? ' (no crops)' : ''}
+                    </dt>
+                    <dd>{showMoney(result.seasons[season.value].finance)}</dd>
+                  </div>
+                ))}
+                {result.seasons.longTerm.used ? (
+                  <div>
+                    <dt>Of which long-term (half in each season)</dt>
+                    <dd>{showMoney(result.seasons.longTerm.finance)}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Total crop finance</dt>
+                  <dd>{showMoney(result.baseFinance)}</dd>
+                </div>
+                <div>
+                  <dt>30% addition</dt>
+                  <dd>{showMoney(result.baseFinance === null ? null : result.baseFinance * 0.3)}</dd>
+                </div>
+              </dl>
+              <p className={styles.resultNote}>
+                Years 2–5 include a compounded 10% annual increase, using FY 2026–27 rates.
+              </p>
+            </div>
+          </details>
+          <details className={styles.panel}>
+            <summary>
+              <FileText size={20} />
+              <span>Calculation method & source notes</span>
+              <ChevronDown size={18} className={styles.chevron} />
+            </summary>
+            <div className={styles.panelBody}>
+              <p>
+                As in the workbook, recorded areas only set the crop pattern. Kharif share = recorded crop area ÷ total
+                recorded Kharif area; Rabi share is worked out the same way. Borrower crop acres = crop share ×
+                cultivated acres. Crop finance = borrower crop acres × district Scale of Finance.
+              </p>
+              <p>
+                Long-term crops (orchards and other crops that take more than a season) occupy their land in both
+                seasons, so each is listed in the Kharif and the Rabi pool at its full recorded area. Their Scale of
+                Finance is annual, so half of it is counted in each season: long-term finance = (Kharif acres + Rabi
+                acres) ÷ 2 × Scale of Finance.
+              </p>
+              <p>
+                Acres in the crop table can be typed over for Kharif and Rabi crops. The other crops of that season
+                share the rest of the cultivated land in their existing proportion, and each changed crop card is
+                rewritten in its own unit (bigha–biswa–biswansi to the nearest biswansi, and so on). Long-term crops are
+                changed in their crop card.
+              </p>
+              <p>
+                Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full
+                precision during calculation.
+              </p>
+              <p>
+                Rates: your “KCC CALCULATION - SOF FY 2026-27 UPDATED.xlsx”, FINAL AGRICULTURE sheet, all 175
+                crop/condition rows and 12 districts. Rates are treated as ₹/acre as confirmed for this workbook. Source
+                labels and district differences are retained.
+              </p>
+              <p>
+                Conversions: supplied HP desk reference, revised 26 October 2026. 1 acre = 43,560 sq ft = 4,046.8564224
+                m². Use certified Jamabandi area and confirm the karam for kanal land.
+              </p>
+              <p>
+                Beta estimate for review. This calculator does not create a loan. Your inputs stay on this device until
+                you press Reset.
+              </p>
+            </div>
+          </details>
           <div className={styles.betaNote}>
-            <span className={styles.beta}>Beta</span>
+            <span className={styles.betaPill}>Beta</span>
             <p>Review inputs and source rates before using the estimate.</p>
           </div>
         </aside>
