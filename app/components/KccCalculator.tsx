@@ -145,8 +145,8 @@ function CropTable({
   return (
     <div className={styles.cropTable} role="table" aria-label="Crop pattern">
       <div className={styles.cropHeader} role="row">
-        <span role="columnheader">Crop</span>
         <span role="columnheader">Season</span>
+        <span role="columnheader">Crop</span>
         <span role="columnheader">Acres</span>
         <span role="columnheader">Finance</span>
         <span role="columnheader">
@@ -158,6 +158,9 @@ function CropTable({
         return (
           <div key={row.id} className={styles.cropRow} role="row" data-season={row.season}>
             <span role="cell">
+              <span className={styles.seasonTag}>{seasonLabel(row.season)}</span>
+            </span>
+            <span role="cell">
               <button
                 type="button"
                 className={styles.cropName}
@@ -166,9 +169,6 @@ function CropTable({
               >
                 {result?.label}
               </button>
-            </span>
-            <span role="cell">
-              <span className={styles.seasonTag}>{seasonLabel(row.season)}</span>
             </span>
             <span role="cell" className={styles.num}>
               {showAcres(result?.borrowerAcres ?? null)}
@@ -200,6 +200,7 @@ function CropTable({
         <span role="cell" className={styles.num}>
           {showMoney(total)}
         </span>
+        <span role="cell" />
       </div>
     </div>
   );
