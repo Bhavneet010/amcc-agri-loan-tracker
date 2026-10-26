@@ -2,17 +2,17 @@ import { kccCrops, kccDistricts } from './kcc-sof.ts';
 
 export type AreaUnit = 'bigha' | 'kanal' | 'metric' | 'acre' | 'hectare' | 'sqm';
 export type AreaInput = { unit: AreaUnit; values: [string, string, string]; karam: '' | '66' | '57.5' };
-export type KccRow = { id: string; cropId: string; area: AreaInput };
-export type KccSeason = { enabled: boolean; rows: KccRow[] };
+export type KccSeasonName = 'kharif' | 'rabi' | 'longTerm';
+export type KccRow = { id: string; season: KccSeasonName; cropId: string; area: AreaInput };
 export type KccInput = {
   district: string;
   cultivatedAcres: string;
   totalAcres: string;
-  kharif: KccSeason;
-  rabi: KccSeason;
+  crops: KccRow[];
 };
 export type KccRowResult = {
   id: string;
+  season: KccSeasonName;
   label: string;
   recordedAcres: number | null;
   share: number | null;
@@ -22,7 +22,7 @@ export type KccRowResult = {
   error: string;
 };
 export type KccSeasonResult = {
-  enabled: boolean;
+  used: boolean;
   rows: KccRowResult[];
   recordedAcres: number | null;
   finance: number | null;
@@ -30,11 +30,17 @@ export type KccSeasonResult = {
 };
 export type KccResult = {
   errors: string[];
-  kharif: KccSeasonResult;
-  rabi: KccSeasonResult;
+  rows: KccRowResult[];
+  seasons: Record<KccSeasonName, KccSeasonResult>;
   baseFinance: number | null;
   annualLimits: number[] | null;
 };
+
+export const kccSeasons: { value: KccSeasonName; label: string }[] = [
+  { value: 'kharif', label: 'Kharif' },
+  { value: 'rabi', label: 'Rabi' },
+  { value: 'longTerm', label: 'Long-term' },
+];
 
 export const kccAreaUnits: { value: AreaUnit; label: string; parts: string[] }[] = [
   { value: 'bigha', label: 'HP Bigha–Biswa–Biswansi', parts: ['Bigha', 'Biswa', 'Biswansi'] },
@@ -91,18 +97,20 @@ export function areaInAcres(area: AreaInput): number {
   return bounded((sarsahi * (Number(area.karam) / 12) ** 2) / 43560, 'Converted area');
 }
 
+/** Crops in one season share the borrower's cultivated acres in proportion to their recorded areas. */
 function seasonResult(
-  season: KccSeason,
+  entries: { row: KccRow; number: number }[],
   name: string,
   cultivated: number | null,
   districtIndex: number,
 ): KccSeasonResult {
-  if (!season.enabled) return { enabled: false, rows: [], recordedAcres: 0, finance: 0, errors: [] };
+  if (!entries.length) return { used: false, rows: [], recordedAcres: 0, finance: 0, errors: [] };
   const errors: string[] = [];
-  const rows: KccRowResult[] = season.rows.map((row, index) => {
+  const rows: KccRowResult[] = entries.map(({ row, number }) => {
     const crop = cropsById.get(row.cropId);
     const result: KccRowResult = {
       id: row.id,
+      season: row.season,
       label: crop?.label || 'Select a crop',
       recordedAcres: null,
       share: null,
@@ -112,7 +120,7 @@ function seasonResult(
       error: '',
     };
     const rowErrors: string[] = [];
-    if (!crop) rowErrors.push('Select a crop and condition.');
+    if (!crop) rowErrors.push('Select a crop and condition from the suggestions.');
     try {
       result.recordedAcres = areaInAcres(row.area);
     } catch (error) {
@@ -125,10 +133,9 @@ function seasonResult(
       else result.rate = rate;
     }
     result.error = rowErrors.join(' ');
-    if (result.error) errors.push(`${name} crop ${index + 1}: ${result.error}`);
+    if (result.error) errors.push(`Crop ${number} (${name}): ${result.error}`);
     return result;
   });
-  if (!rows.length) errors.push(`${name}: add a crop, or switch this season off.`);
   let recordedAcres: number | null = null;
   let finance: number | null = null;
   if (!errors.length) {
@@ -137,7 +144,7 @@ function seasonResult(
         rows.reduce((sum, row) => sum + row.recordedAcres!, 0),
         `${name} recorded area`,
       );
-      if (recordedAcres <= 0) throw new Error(`${name}: total recorded crop area must be greater than zero.`);
+      if (recordedAcres <= 0) throw new Error(`${name} crops: total recorded crop area must be greater than zero.`);
       if (cultivated !== null && districtIndex >= 0) {
         for (const row of rows) {
           row.share = row.recordedAcres! / recordedAcres;
@@ -153,7 +160,7 @@ function seasonResult(
       errors.push((error as Error).message);
     }
   }
-  return { enabled: true, rows, recordedAcres, finance: errors.length ? null : finance, errors };
+  return { used: true, rows, recordedAcres, finance: errors.length ? null : finance, errors };
 }
 
 export function calculateKcc(input: KccInput): KccResult {
@@ -178,15 +185,30 @@ export function calculateKcc(input: KccInput): KccResult {
       errors.push((error as Error).message);
     }
   }
-  if (!input.kharif.enabled && !input.rabi.enabled) errors.push('Enable at least one cropping season.');
-  const kharif = seasonResult(input.kharif, 'Kharif', cultivated, districtIndex);
-  const rabi = seasonResult(input.rabi, 'Rabi', cultivated, districtIndex);
-  errors.push(...kharif.errors, ...rabi.errors);
+  if (!input.crops.length) errors.push('Add at least one Kharif, Rabi or long-term crop.');
+  const numbered = input.crops.map((row, index) => ({ row, number: index + 1 }));
+  const seasons = Object.fromEntries(
+    kccSeasons.map(({ value, label }) => [
+      value,
+      seasonResult(
+        numbered.filter(({ row }) => row.season === value),
+        label,
+        cultivated,
+        districtIndex,
+      ),
+    ]),
+  ) as Record<KccSeasonName, KccSeasonResult>;
+  for (const { value } of kccSeasons) errors.push(...seasons[value].errors);
+  const byId = new Map(kccSeasons.flatMap(({ value }) => seasons[value].rows.map((row) => [row.id, row])));
+  const rows = input.crops.map((row) => byId.get(row.id)!);
   let baseFinance: number | null = null;
   let annualLimits: number[] | null = null;
-  if (!errors.length && kharif.finance !== null && rabi.finance !== null) {
+  if (!errors.length && kccSeasons.every(({ value }) => seasons[value].finance !== null)) {
     try {
-      baseFinance = bounded(kharif.finance + rabi.finance, 'Total crop finance');
+      baseFinance = bounded(
+        kccSeasons.reduce((sum, { value }) => sum + seasons[value].finance!, 0),
+        'Total crop finance',
+      );
       const limits = [bounded(baseFinance * 1.3, 'Year 1 limit')];
       for (let year = 1; year < 5; year++) limits.push(bounded(limits[year - 1] * 1.1, `Year ${year + 1} limit`));
       annualLimits = limits;
@@ -194,27 +216,22 @@ export function calculateKcc(input: KccInput): KccResult {
       errors.push((error as Error).message);
     }
   }
-  return { errors, kharif, rabi, baseFinance, annualLimits };
+  return { errors, rows, seasons, baseFinance, annualLimits };
 }
 
-export function blankKccRow(id: string): KccRow {
-  return { id, cropId: '', area: { unit: 'bigha', values: ['', '', ''], karam: '' } };
+export function blankKccRow(id: string, season: KccSeasonName): KccRow {
+  return { id, season, cropId: '', area: { unit: 'bigha', values: ['', '', ''], karam: '' } };
 }
 
 export function blankKccInput(): KccInput {
-  return {
-    district: 'Sirmour',
-    cultivatedAcres: '',
-    totalAcres: '',
-    kharif: { enabled: true, rows: [blankKccRow('kharif-1')] },
-    rabi: { enabled: true, rows: [blankKccRow('rabi-1')] },
-  };
+  return { district: 'Sirmour', cultivatedAcres: '', totalAcres: '', crops: [] };
 }
 
 /** The workbook's saved example, including its zero-area Rabi row. */
 export function kccWorkbookExample(): KccInput {
-  const row = (id: string, cropId: string, major = '20'): KccRow => ({
+  const row = (id: string, season: KccSeasonName, cropId: string, major = '20'): KccRow => ({
     id,
+    season,
     cropId,
     area: { unit: 'bigha', values: major === '0' ? ['0', '0', '0'] : [major, '12', '15'], karam: '' },
   });
@@ -222,29 +239,21 @@ export function kccWorkbookExample(): KccInput {
     district: 'Sirmour',
     cultivatedAcres: '0.12',
     totalAcres: '',
-    kharif: {
-      enabled: true,
-      rows: [
-        row('k-1', 'sof-105'),
-        row('k-2', 'sof-92'),
-        row('k-3', 'sof-13'),
-        row('k-4', 'sof-13', '24'),
-        row('k-5', 'sof-13'),
-        row('k-6', 'sof-13'),
-        row('k-7', 'sof-13'),
-      ],
-    },
-    rabi: {
-      enabled: true,
-      rows: [
-        row('r-1', 'sof-13'),
-        row('r-2', 'sof-13'),
-        row('r-3', 'sof-13'),
-        row('r-4', 'sof-13', '0'),
-        row('r-5', 'sof-13'),
-        row('r-6', 'sof-13'),
-        row('r-7', 'sof-13'),
-      ],
-    },
+    crops: [
+      row('k-1', 'kharif', 'sof-105'),
+      row('k-2', 'kharif', 'sof-92'),
+      row('k-3', 'kharif', 'sof-13'),
+      row('k-4', 'kharif', 'sof-13', '24'),
+      row('k-5', 'kharif', 'sof-13'),
+      row('k-6', 'kharif', 'sof-13'),
+      row('k-7', 'kharif', 'sof-13'),
+      row('r-1', 'rabi', 'sof-13'),
+      row('r-2', 'rabi', 'sof-13'),
+      row('r-3', 'rabi', 'sof-13'),
+      row('r-4', 'rabi', 'sof-13', '0'),
+      row('r-5', 'rabi', 'sof-13'),
+      row('r-6', 'rabi', 'sof-13'),
+      row('r-7', 'rabi', 'sof-13'),
+    ],
   };
 }

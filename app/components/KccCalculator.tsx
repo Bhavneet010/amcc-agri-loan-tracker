@@ -7,14 +7,17 @@ import {
   blankKccInput,
   blankKccRow,
   calculateKcc,
+  kccSeasons,
   type AreaInput,
   type KccInput,
   type KccRow,
-  type KccSeasonResult,
+  type KccRowResult,
+  type KccSeasonName,
 } from '../../lib/kcc';
-import { kccCrops, kccDistricts } from '../../lib/kcc-sof';
+import { kccDistricts } from '../../lib/kcc-sof';
 import Modal from './Modal';
 import KccAreaInput from './KccAreaInput';
+import KccCropPicker from './KccCropPicker';
 import styles from './KccCalculator.module.css';
 
 const money = new Intl.NumberFormat('en-IN', {
@@ -27,158 +30,95 @@ const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 const showMoney = (value: number | null) => (value === null ? '—' : money.format(value));
 const showArea = (value: number | null) => (value === null ? '—' : number.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
-const cropGroups = [
-  { label: 'Field crops & vegetables', crops: kccCrops.filter((crop) => crop.sourceRow < 87) },
-  { label: 'Horticulture & other activities', crops: kccCrops.filter((crop) => crop.sourceRow >= 87) },
-];
-type SeasonName = 'kharif' | 'rabi';
+const seasonLabel = (season: KccSeasonName) => kccSeasons.find((option) => option.value === season)!.label;
 
-function SeasonSection({
-  name,
-  season,
-  result,
+function CropCard({
+  row,
+  index,
+  calculated,
   onChange,
+  onRemove,
   showErrors,
-  newId,
 }: {
-  name: SeasonName;
-  season: KccInput[SeasonName];
-  result: KccSeasonResult;
-  onChange: (season: KccInput[SeasonName]) => void;
+  row: KccRow;
+  index: number;
+  calculated: KccRowResult | undefined;
+  onChange: (row: KccRow) => void;
+  onRemove: () => void;
   showErrors: boolean;
-  newId: () => string;
 }) {
-  const title = name === 'kharif' ? 'Kharif' : 'Rabi';
-  function updateRow(index: number, row: KccRow) {
-    onChange({ ...season, rows: season.rows.map((current, i) => (i === index ? row : current)) });
-  }
+  const touched = !!row.cropId || row.area.values.some((value) => value.trim());
+  const id = `crop-${row.id}`;
   return (
-    <section className={styles.section} data-season={name} aria-labelledby={`${name}-heading`}>
-      <div className={styles.sectionHead}>
-        <div>
-          <span className={styles.eyebrow}>{name === 'kharif' ? '02' : '03'} / Crop pattern</span>
-          <h3 id={`${name}-heading`}>{title} crops</h3>
-        </div>
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={season.enabled}
-            onChange={(event) => onChange({ ...season, enabled: event.target.checked })}
-          />
-          Include {title}
+    <article className={styles.cropCard} data-season={row.season} aria-label={`Crop ${index + 1}`}>
+      <div className={styles.cropHead}>
+        <span>Crop {String(index + 1).padStart(2, '0')}</span>
+        <label htmlFor={`${id}-season`} className={styles.seasonPick}>
+          <span className="sr-only">Season</span>
+          <select
+            id={`${id}-season`}
+            value={row.season}
+            onChange={(event) => onChange({ ...row, season: event.target.value as KccSeasonName })}
+          >
+            {kccSeasons.map((season) => (
+              <option key={season.value} value={season.value}>
+                {season.label}
+              </option>
+            ))}
+          </select>
         </label>
+        <button type="button" className={styles.remove} aria-label={`Remove crop ${index + 1}`} onClick={onRemove}>
+          <Trash2 size={15} />
+          Remove
+        </button>
       </div>
-      {season.enabled ? (
-        <>
-          <p className={styles.intro}>Recorded crop areas determine each crop’s share of cultivated acres.</p>
-          <div className={styles.cropList}>
-            {season.rows.map((row, index) => {
-              const calculated = result.rows[index];
-              const touched = !!row.cropId || row.area.values.some((value) => value.trim());
-              const id = `${name}-${row.id}`;
-              return (
-                <article key={row.id} className={styles.cropCard} aria-label={`${title} crop ${index + 1}`}>
-                  <div className={styles.cropHead}>
-                    <span>Crop {String(index + 1).padStart(2, '0')}</span>
-                    <button
-                      type="button"
-                      className={styles.remove}
-                      aria-label={`Remove ${title} crop ${index + 1}`}
-                      onClick={() =>
-                        onChange({ ...season, rows: season.rows.filter((current) => current.id !== row.id) })
-                      }
-                    >
-                      <Trash2 size={15} />
-                      Remove
-                    </button>
-                  </div>
-                  <label htmlFor={`${id}-crop`}>
-                    Crop & condition
-                    <select
-                      id={`${id}-crop`}
-                      value={row.cropId}
-                      onChange={(event) => updateRow(index, { ...row, cropId: event.target.value })}
-                    >
-                      <option value="">Select a crop and condition</option>
-                      {cropGroups.map((group) => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.crops.map((crop) => (
-                            <option key={crop.id} value={crop.id}>
-                              {crop.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </label>
-                  <div className={styles.rateLine}>
-                    <span>Scale of Finance</span>
-                    <strong>
-                      {showMoney(calculated?.rate ?? null)} <span>/ acre</span>
-                    </strong>
-                  </div>
-                  {calculated && specialBasis.test(calculated.label) ? (
-                    <p className={styles.basisNote}>
-                      The source label specifies a cultivation/activity size. This beta follows the workbook’s confirmed
-                      per-acre calculation; review this entry’s basis before use.
-                    </p>
-                  ) : null}
-                  <KccAreaInput id={id} value={row.area} onChange={(area) => updateRow(index, { ...row, area })} />
-                  {calculated?.error && (touched || showErrors) ? (
-                    <p className={styles.error} role="status">
-                      {calculated.error}
-                    </p>
-                  ) : null}
-                  <dl className={styles.rowResults}>
-                    <div>
-                      <dt>Recorded acres</dt>
-                      <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
-                    </div>
-                    <div>
-                      <dt>Crop share</dt>
-                      <dd>
-                        {calculated?.share === null || calculated?.share === undefined
-                          ? '—'
-                          : `${(calculated.share * 100).toFixed(2)}%`}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Borrower acres</dt>
-                      <dd>{showArea(calculated?.borrowerAcres ?? null)}</dd>
-                    </div>
-                    <div>
-                      <dt>Crop finance</dt>
-                      <dd>{showMoney(calculated?.finance ?? null)}</dd>
-                    </div>
-                  </dl>
-                </article>
-              );
-            })}
-          </div>
-          <div className={styles.seasonFooter}>
-            <button
-              type="button"
-              className="button"
-              onClick={() => onChange({ ...season, rows: [...season.rows, blankKccRow(newId())] })}
-            >
-              <Plus size={16} />
-              Add {title} crop
-            </button>
-            <div>
-              <span>{title} finance</span>
-              <strong>{showMoney(result.finance)}</strong>
-            </div>
-          </div>
-          {!season.rows.length ? (
-            <p className={styles.error}>Add a crop, or turn this season off if it is unused.</p>
-          ) : null}
-        </>
-      ) : (
-        <p className={styles.intro}>
-          This season is excluded. Its entries are kept until you reset or close the calculator.
+      <KccCropPicker
+        id={`${id}-crop`}
+        cropId={row.cropId}
+        season={row.season}
+        onChange={(cropId) => onChange({ ...row, cropId })}
+      />
+      <div className={styles.rateLine}>
+        <span>Scale of Finance</span>
+        <strong>
+          {showMoney(calculated?.rate ?? null)} <span>/ acre</span>
+        </strong>
+      </div>
+      {calculated && specialBasis.test(calculated.label) ? (
+        <p className={styles.basisNote}>
+          The source label specifies a cultivation/activity size. This beta follows the workbook’s confirmed per-acre
+          calculation; review this entry’s basis before use.
         </p>
-      )}
-    </section>
+      ) : null}
+      <KccAreaInput id={id} value={row.area} onChange={(area) => onChange({ ...row, area })} />
+      {calculated?.error && (touched || showErrors) ? (
+        <p className={styles.error} role="status">
+          {calculated.error}
+        </p>
+      ) : null}
+      <dl className={styles.rowResults}>
+        <div>
+          <dt>Recorded acres</dt>
+          <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
+        </div>
+        <div>
+          <dt>{seasonLabel(row.season)} share</dt>
+          <dd>
+            {calculated?.share === null || calculated?.share === undefined
+              ? '—'
+              : `${(calculated.share * 100).toFixed(2)}%`}
+          </dd>
+        </div>
+        <div>
+          <dt>Borrower acres</dt>
+          <dd>{showArea(calculated?.borrowerAcres ?? null)}</dd>
+        </div>
+        <div>
+          <dt>Crop finance</dt>
+          <dd>{showMoney(calculated?.finance ?? null)}</dd>
+        </div>
+      </dl>
+    </article>
   );
 }
 
@@ -270,7 +210,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 />
               </label>
             </div>
-            <p className={styles.intro}>Cultivated acres apply to each included season. Total land is optional.</p>
+            <p className={styles.intro}>Cultivated acres apply to each crop group. Total land is optional.</p>
             <details key={converterVersion} className={styles.converter}>
               <summary>
                 Convert borrower’s land to acres <ChevronDown size={15} />
@@ -296,17 +236,57 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </div>
             </details>
           </section>
-          {(['kharif', 'rabi'] as const).map((name) => (
-            <SeasonSection
-              key={name}
-              name={name}
-              season={input[name]}
-              result={result[name]}
-              showErrors={showErrors}
-              newId={() => `added-${++nextRow.current}`}
-              onChange={(season) => update({ [name]: season })}
-            />
-          ))}
+          <section className={styles.section} aria-labelledby="kcc-crops-heading">
+            <div className={styles.sectionHead}>
+              <div>
+                <span className={styles.eyebrow}>02 / Crop pattern</span>
+                <h3 id="kcc-crops-heading">Crops</h3>
+              </div>
+            </div>
+            <p className={styles.intro}>
+              Add each crop under Kharif, Rabi or Long-term. Within each, recorded crop areas set each crop’s share of
+              the cultivated acres.
+            </p>
+            {input.crops.length ? (
+              <div className={styles.cropList}>
+                {input.crops.map((row, index) => (
+                  <CropCard
+                    key={row.id}
+                    row={row}
+                    index={index}
+                    calculated={result.rows[index]}
+                    showErrors={showErrors}
+                    onChange={(changed) =>
+                      update({ crops: input.crops.map((current) => (current.id === row.id ? changed : current)) })
+                    }
+                    onRemove={() => update({ crops: input.crops.filter((current) => current.id !== row.id) })}
+                  />
+                ))}
+              </div>
+            ) : null}
+            <div className={styles.addCrop}>
+              <span>Add crop</span>
+              <div>
+                {kccSeasons.map((season) => (
+                  <button
+                    key={season.value}
+                    type="button"
+                    className="button"
+                    data-season={season.value}
+                    onClick={() =>
+                      update({ crops: [...input.crops, blankKccRow(`crop-${++nextRow.current}`, season.value)] })
+                    }
+                  >
+                    <Plus size={16} />
+                    {season.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {!input.crops.length && showErrors ? (
+              <p className={styles.error}>Add at least one Kharif, Rabi or long-term crop.</p>
+            ) : null}
+          </section>
           <button
             type="button"
             className="button primary"
@@ -322,8 +302,9 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             <summary>Calculation & source notes</summary>
             <div>
               <p>
-                For each season: crop share = recorded crop area ÷ total recorded crop area. Borrower crop acres = crop
-                share × cultivated acres. Crop finance = borrower crop acres × district Scale of Finance.
+                Crops are grouped as Kharif, Rabi or Long-term. Within each group: crop share = recorded crop area ÷ the
+                group’s total recorded crop area. Borrower crop acres = crop share × cultivated acres. Crop finance =
+                borrower crop acres × district Scale of Finance. Groups without crops are left out.
               </p>
               <p>
                 Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full
@@ -365,14 +346,14 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             </div>
           )}
           <dl className={styles.breakdown}>
-            <div>
-              <dt>Kharif finance{!input.kharif.enabled ? ' (excluded)' : ''}</dt>
-              <dd>{showMoney(result.kharif.finance)}</dd>
-            </div>
-            <div>
-              <dt>Rabi finance{!input.rabi.enabled ? ' (excluded)' : ''}</dt>
-              <dd>{showMoney(result.rabi.finance)}</dd>
-            </div>
+            {kccSeasons.map((season) => (
+              <div key={season.value}>
+                <dt>
+                  {season.label} finance{!result.seasons[season.value].used ? ' (no crops)' : ''}
+                </dt>
+                <dd>{showMoney(result.seasons[season.value].finance)}</dd>
+              </div>
+            ))}
             <div>
               <dt>Total crop finance</dt>
               <dd>{showMoney(result.baseFinance)}</dd>

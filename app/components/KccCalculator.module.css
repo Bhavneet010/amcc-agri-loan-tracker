@@ -100,17 +100,21 @@
   border-radius: 9px;
   background: #fff;
   min-width: 0;
-  overflow: hidden;
 }
-.section[data-season='kharif'] {
+.dialog [data-season='kharif'] {
   --section-accent: #8b6019;
   --section-soft: #fff6e5;
-  border-color: #eadbbf;
+  --section-border: #eadbbf;
 }
-.section[data-season='rabi'] {
+.dialog [data-season='rabi'] {
   --section-accent: #256d87;
   --section-soft: #ebf5fa;
-  border-color: #cee1eb;
+  --section-border: #cee1eb;
+}
+.dialog [data-season='longTerm'] {
+  --section-accent: #6a4a86;
+  --section-soft: #f4effa;
+  --section-border: #ddd0ea;
 }
 .sectionHead {
   display: flex;
@@ -122,6 +126,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--section-accent) 16%, white);
   background: var(--section-soft);
+  border-radius: 8px 8px 0 0;
 }
 .eyebrow {
   display: block;
@@ -143,7 +148,7 @@
   grid-template-columns: 1.15fr 1fr 1fr;
   gap: 10px;
 }
-.dialog label:not(.toggle) {
+.dialog label {
   display: grid;
   gap: 5px;
   font-size: 11px;
@@ -176,28 +181,14 @@
   line-height: 1.5;
   font-size: 11px;
 }
-.toggle {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 11px;
-  cursor: pointer;
-  min-height: 32px;
-  color: var(--section-accent);
-}
-.toggle input {
-  accent-color: var(--section-accent);
-  width: 16px;
-  height: 16px;
-  margin: 0;
-}
 .cropList {
   display: grid;
   gap: 9px;
   margin-top: 10px;
 }
 .cropCard {
-  border: 1px solid #dce7df;
+  border: 1px solid var(--section-border, #dce7df);
+  border-left: 3px solid var(--section-accent);
   border-radius: 7px;
   padding: 10px;
   min-width: 0;
@@ -211,6 +202,7 @@
   margin-bottom: 5px;
 }
 .cropHead > span {
+  flex: 1;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -315,15 +307,36 @@
   color: #07624b;
   font-weight: 700;
 }
-.seasonFooter {
+.seasonPick select {
+  width: auto;
+  min-height: 30px;
+  padding: 4px 26px 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--section-accent);
+  background-color: var(--section-soft);
+  border-color: color-mix(in srgb, var(--section-accent) 25%, white);
+}
+.addCrop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px 10px;
   margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #d4e3d9;
 }
-.seasonFooter :global(.button) {
+.addCrop > span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #344c40;
+}
+.addCrop > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.addCrop :global(.button) {
   border-color: color-mix(in srgb, var(--section-accent) 25%, white);
   background: var(--section-soft);
   color: var(--section-accent);
@@ -331,18 +344,40 @@
   min-height: 36px;
   font-size: 11px;
 }
-.seasonFooter > div {
-  display: grid;
-  gap: 3px;
-  text-align: right;
+.cropPicker {
+  position: relative;
 }
-.seasonFooter > div > span {
-  font-size: 10px;
-  color: #607167;
+.suggestions {
+  position: absolute;
+  z-index: 4;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 3px 0 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #c7dcd0;
+  border-radius: 6px;
+  box-shadow: 0 8px 20px #174e3524;
 }
-.seasonFooter strong {
-  font-size: 15px;
+.suggestions li {
+  padding: 8px 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #294c3c;
+  cursor: pointer;
+}
+.suggestions .activeSuggestion {
+  background: var(--section-soft);
   color: var(--section-accent);
+}
+.suggestions .noSuggestion {
+  color: #607167;
+  cursor: default;
 }
 .converter,
 .method {

@@ -14,20 +14,25 @@ const area = (unit: AreaInput['unit'], values: AreaInput['values'], karam: AreaI
 test('reproduces the workbook allocation and all five cached annual limits', () => {
   const result = calculateKcc(kccWorkbookExample());
   assert.deepEqual(result.errors, []);
-  close(result.kharif.finance!, 13164.557837837836);
-  close(result.rabi.finance!, 5871.6);
+  close(result.seasons.kharif.finance!, 13164.557837837836);
+  close(result.seasons.rabi.finance!, 5871.6);
+  assert.equal(result.seasons.longTerm.used, false);
   [24747.005189189182, 27221.705708108104, 29943.876278918917, 32938.263906810811, 36232.090297491894].forEach((v, i) =>
     close(result.annualLimits![i], v),
   );
   close(
-    result.kharif.rows.reduce((sum, row) => sum + row.borrowerAcres!, 0),
+    result.seasons.kharif.rows.reduce((sum, row) => sum + row.borrowerAcres!, 0),
     0.12,
   );
   close(
-    result.rabi.rows.reduce((sum, row) => sum + row.borrowerAcres!, 0),
+    result.seasons.rabi.rows.reduce((sum, row) => sum + row.borrowerAcres!, 0),
     0.12,
   );
-  close(result.kharif.rows[0].recordedAcres!, 4.1275);
+  close(result.rows[0].recordedAcres!, 4.1275);
+  assert.deepEqual(
+    result.rows.map((row) => row.id),
+    kccWorkbookExample().crops.map((row) => row.id),
+  );
 });
 
 test('converts HP positional areas without treating them as decimal notation', () => {
@@ -67,7 +72,7 @@ test('rejects unconfirmed karam and invalid positional components', () => {
 test('missing, negative, malformed and overflowing areas never produce finance', () => {
   for (const value of ['', '-1', 'Infinity', 'NaN', '1e309', '1,000', 'abc', '9'.repeat(310)]) {
     const input = kccWorkbookExample();
-    input.kharif.rows[0].area = area('acre', [value, '', '']);
+    input.crops[0].area = area('acre', [value, '', '']);
     const result = calculateKcc(input);
     assert.ok(result.errors.length > 0, value);
     assert.equal(result.annualLimits, null);
@@ -77,8 +82,7 @@ test('missing, negative, malformed and overflowing areas never produce finance',
 test('uses district-specific finance rates and rejects unknown crop or district', () => {
   const input = kccWorkbookExample();
   input.cultivatedAcres = '1';
-  input.kharif.rows = [{ id: 'horse', cropId: 'sof-22', area: area('acre', ['1', '', '']) }];
-  input.rabi.enabled = false;
+  input.crops = [{ id: 'horse', season: 'kharif', cropId: 'sof-22', area: area('acre', ['1', '', '']) }];
   input.district = 'Bilaspur';
   close(calculateKcc(input).annualLimits![0], 10539.1);
   input.district = 'Sirmour';
@@ -86,28 +90,42 @@ test('uses district-specific finance rates and rejects unknown crop or district'
   input.district = 'Invalid district';
   assert.equal(calculateKcc(input).annualLimits, null);
   input.district = 'Sirmour';
-  input.kharif.rows[0].cropId = 'unknown';
+  input.crops[0].cropId = 'unknown';
   assert.equal(calculateKcc(input).annualLimits, null);
 });
 
-test('disabled seasons exclude drafts and restoring them exposes errors again', () => {
+test('seasons without crops are excluded and draft crops block the limit', () => {
   const input = kccWorkbookExample();
-  input.rabi.rows[0].cropId = '';
+  input.crops.find((row) => row.season === 'rabi')!.cropId = '';
   assert.equal(calculateKcc(input).annualLimits, null);
-  input.rabi.enabled = false;
-  close(calculateKcc(input).annualLimits![0], 17113.925189189188);
-  input.rabi.enabled = true;
-  assert.equal(calculateKcc(input).annualLimits, null);
-  input.rabi.enabled = false;
-  input.kharif.enabled = false;
+  input.crops = input.crops.filter((row) => row.season !== 'rabi');
+  const result = calculateKcc(input);
+  assert.equal(result.seasons.rabi.used, false);
+  close(result.annualLimits![0], 17113.925189189188);
+  input.crops = [];
   assert.equal(calculateKcc(input).annualLimits, null);
 });
 
-test('empty or zero-area active seasons cannot silently show a zero limit', () => {
+test('long-term crops share cultivated acres among themselves and add to seasonal finance', () => {
   const input = kccWorkbookExample();
-  input.kharif.rows = [];
-  assert.equal(calculateKcc(input).annualLimits, null);
-  input.kharif.rows = [{ id: 'zero', cropId: 'sof-13', area: area('acre', ['0', '', '']) }];
+  input.cultivatedAcres = '1';
+  input.crops = [
+    { id: 'k', season: 'kharif', cropId: 'sof-22', area: area('acre', ['1', '', '']) },
+    { id: 'a', season: 'longTerm', cropId: 'sof-87', area: area('acre', ['3', '', '']) },
+    { id: 'b', season: 'longTerm', cropId: 'sof-89', area: area('acre', ['1', '', '']) },
+  ];
+  const result = calculateKcc(input);
+  assert.deepEqual(result.errors, []);
+  const sirmour = kccDistricts.indexOf('Sirmour');
+  const rate = (id: string) => kccCrops.find((crop) => crop.id === id)!.rates[sirmour];
+  close(result.rows[1].borrowerAcres!, 0.75);
+  close(result.seasons.longTerm.finance!, 0.75 * rate('sof-87') + 0.25 * rate('sof-89'));
+  close(result.baseFinance!, rate('sof-22') + result.seasons.longTerm.finance!);
+});
+
+test('empty or zero-area crop lists cannot silently show a zero limit', () => {
+  const input = kccWorkbookExample();
+  input.crops = [{ id: 'zero', season: 'kharif', cropId: 'sof-13', area: area('acre', ['0', '', '']) }];
   assert.equal(calculateKcc(input).annualLimits, null);
   assert.equal(calculateKcc(blankKccInput()).annualLimits, null);
 });
