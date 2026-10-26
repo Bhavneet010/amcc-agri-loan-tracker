@@ -32,7 +32,7 @@ const money = new Intl.NumberFormat('en-IN', {
 const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 const showMoney = (value: number | null) => (value === null ? '—' : money.format(value));
 const showArea = (value: number | null) => (value === null ? '—' : number.format(value));
-const acres = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 4 });
+const acres = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const showAcres = (value: number | null) => (value === null ? '—' : acres.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
@@ -114,6 +114,7 @@ function CropEditor({
           cropId={row.cropId}
           season={row.season}
           onChange={(cropId) => setRow({ ...row, cropId })}
+          onPick={() => document.getElementById(`${id}-part-0`)?.focus()}
         />
         <div className={styles.rateLine}>
           <span>Scale of Finance</span>

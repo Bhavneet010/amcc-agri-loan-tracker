@@ -27,11 +27,14 @@ export default function KccCropPicker({
   cropId,
   season,
   onChange,
+  onPick,
 }: {
   id: string;
   cropId: string;
   season: KccSeasonName;
   onChange: (cropId: string) => void;
+  /** Called after a crop is chosen from the suggestions, e.g. to move on to the area. */
+  onPick?: () => void;
 }) {
   const [query, setQuery] = useState(() => cropsById.get(cropId)?.label ?? '');
   const [open, setOpen] = useState(false);
@@ -47,6 +50,7 @@ export default function KccCropPicker({
     setQuery(crop.label);
     setOpen(false);
     onChange(crop.id);
+    onPick?.();
   }
   return (
     <div className={styles.cropPicker}>

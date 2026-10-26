@@ -616,7 +616,7 @@
 .cropRow,
 .cropTotal {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 72px 96px 30px;
+  grid-template-columns: 72px minmax(0, 1fr) 64px 112px 30px;
 }
 .cropHeader > span,
 .cropRow > span,
@@ -681,6 +681,7 @@
   background: var(--section-soft);
 }
 .cropTable .num {
+  white-space: nowrap;
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
@@ -723,7 +724,7 @@
   .cropHeader,
   .cropRow,
   .cropTotal {
-    grid-template-columns: 66px minmax(0, 1fr) 56px 80px 26px;
+    grid-template-columns: 58px minmax(0, 1fr) 46px 96px 24px;
     font-size: 11px;
   }
   .cropHeader {
@@ -734,8 +735,12 @@
   .cropTotal > span {
     padding: 4px;
   }
+  .cropHeader > span:first-child,
+  .cropRow > span:first-child {
+    padding-inline: 2px;
+  }
   .seasonTag {
-    padding: 1px 4px;
+    padding: 1px 3px;
     font-size: 9px;
   }
   .dialog :global(.modal-head) {
