@@ -14,6 +14,9 @@ export default function KccAreaInput({
 }) {
   const definition = kccAreaUnits.find((unit) => unit.value === value.unit)!;
   const positional = definition.parts.length === 3;
+  // Bigha and biswa jump to the next box when their second digit is typed. Going back to bigha to type more
+  // digits does not jump again, because the box already held two.
+  const autoAdvance = value.unit === 'bigha';
   return (
     <div className={styles.areaInput}>
       <label htmlFor={`${id}-unit`}>
@@ -45,9 +48,12 @@ export default function KccAreaInput({
               placeholder={positional ? '0' : 'Enter area'}
               autoComplete="off"
               onChange={(event) => {
+                const text = event.target.value;
                 const values: AreaInput['values'] = [...value.values];
-                values[index] = event.target.value;
+                values[index] = text;
                 onChange({ ...value, values });
+                if (autoAdvance && index < 2 && /^\d{2}$/.test(text) && value.values[index].length < 2)
+                  document.getElementById(`${id}-part-${index + 1}`)?.focus();
               }}
             />
           </label>
