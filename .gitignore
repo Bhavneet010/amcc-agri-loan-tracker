@@ -7,6 +7,3 @@
 *.tsbuildinfo
 *.log
 outputs/
-
-# Written by `next dev`; not part of the app.
-AGENTS.md
