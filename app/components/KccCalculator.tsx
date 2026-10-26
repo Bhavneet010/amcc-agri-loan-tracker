@@ -112,17 +112,17 @@ function CropEditor({
           </p>
         ) : null}
         <div className={styles.editorActions}>
-          <button type="submit" className="button primary" value="close">
-            Save and Close
-          </button>
-          {isNew ? (
-            <button type="submit" className="button" value="next">
-              Save and Next
-            </button>
-          ) : null}
           <button type="button" className="button" onClick={onClose}>
             Cancel
           </button>
+          <button type="submit" className={isNew ? 'button' : 'button primary'} value="close">
+            Save and Close
+          </button>
+          {isNew ? (
+            <button type="submit" className="button primary" value="next">
+              Save and Next
+            </button>
+          ) : null}
         </div>
       </form>
     </Modal>
