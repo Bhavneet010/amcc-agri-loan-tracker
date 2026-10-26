@@ -8,6 +8,7 @@ import {
   blankKccRow,
   calculateKcc,
   kccSeasons,
+  seasonLabel,
   type AreaInput,
   type KccInput,
   type KccRow,
@@ -30,7 +31,7 @@ const number = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 8 });
 const showMoney = (value: number | null) => (value === null ? '—' : money.format(value));
 const showArea = (value: number | null) => (value === null ? '—' : number.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
-const seasonLabel = (season: KccSeasonName) => kccSeasons.find((option) => option.value === season)!.label;
+const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
 
 function CropCard({
   row,
@@ -102,11 +103,13 @@ function CropCard({
           <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
         </div>
         <div>
-          <dt>{seasonLabel(row.season)} share</dt>
+          <dt>{row.season === 'longTerm' ? 'Kharif / Rabi share' : `${seasonLabel(row.season)} share`}</dt>
           <dd>
-            {calculated?.share === null || calculated?.share === undefined
-              ? '—'
-              : `${(calculated.share * 100).toFixed(2)}%`}
+            {calculated?.seasonShares
+              ? `${percent(calculated.seasonShares.kharif)} / ${percent(calculated.seasonShares.rabi)}`
+              : calculated?.share === null || calculated?.share === undefined
+                ? '—'
+                : percent(calculated.share)}
           </dd>
         </div>
         <div>
@@ -210,7 +213,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 />
               </label>
             </div>
-            <p className={styles.intro}>Cultivated acres apply to each crop group. Total land is optional.</p>
+            <p className={styles.intro}>Cultivated acres apply to each season. Total land is optional.</p>
             <details key={converterVersion} className={styles.converter}>
               <summary>
                 Convert borrower’s land to acres <ChevronDown size={15} />
@@ -244,8 +247,8 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <p className={styles.intro}>
-              Add each crop under Kharif, Rabi or Long-term. Within each, recorded crop areas set each crop’s share of
-              the cultivated acres.
+              Add each crop under Kharif, Rabi or Long-term. Recorded crop areas set each crop’s share of the cultivated
+              acres; long-term crops share the land in both Kharif and Rabi.
             </p>
             {input.crops.length ? (
               <div className={styles.cropList}>
@@ -302,9 +305,14 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             <summary>Calculation & source notes</summary>
             <div>
               <p>
-                Crops are grouped as Kharif, Rabi or Long-term. Within each group: crop share = recorded crop area ÷ the
-                group’s total recorded crop area. Borrower crop acres = crop share × cultivated acres. Crop finance =
-                borrower crop acres × district Scale of Finance. Groups without crops are left out.
+                Kharif share = recorded crop area ÷ total recorded area of Kharif and long-term crops; Rabi share is
+                worked out the same way with Rabi and long-term crops. Borrower crop acres = crop share × cultivated
+                acres. Crop finance = borrower crop acres × district Scale of Finance.
+              </p>
+              <p>
+                Long-term crops hold their land through both seasons, so they take a share in both Kharif and Rabi.
+                Their finance is counted once, on the average of their Kharif and Rabi acres (the same figure when the
+                recorded seasonal areas match).
               </p>
               <p>
                 Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full

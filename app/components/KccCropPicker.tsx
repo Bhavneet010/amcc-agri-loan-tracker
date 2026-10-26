@@ -115,7 +115,7 @@ export default function KccCropPicker({
                 aria-selected={index === active}
                 className={index === active ? styles.activeSuggestion : undefined}
                 onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActive(index)}
+                onMouseMove={() => setActive(index)}
                 onClick={() => choose(crop)}
               >
                 {crop.label}

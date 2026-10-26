@@ -106,21 +106,38 @@ test('seasons without crops are excluded and draft crops block the limit', () =>
   assert.equal(calculateKcc(input).annualLimits, null);
 });
 
-test('long-term crops share cultivated acres among themselves and add to seasonal finance', () => {
+test('long-term crops take a share of both Kharif and Rabi land and are financed once', () => {
   const input = kccWorkbookExample();
-  input.cultivatedAcres = '1';
+  input.cultivatedAcres = '2';
   input.crops = [
     { id: 'k', season: 'kharif', cropId: 'sof-22', area: area('acre', ['1', '', '']) },
-    { id: 'a', season: 'longTerm', cropId: 'sof-87', area: area('acre', ['3', '', '']) },
-    { id: 'b', season: 'longTerm', cropId: 'sof-89', area: area('acre', ['1', '', '']) },
+    { id: 'r1', season: 'rabi', cropId: 'sof-2', area: area('acre', ['2', '', '']) },
+    { id: 'r2', season: 'rabi', cropId: 'sof-3', area: area('acre', ['1', '', '']) },
+    { id: 'a', season: 'longTerm', cropId: 'sof-87', area: area('acre', ['1', '', '']) },
   ];
   const result = calculateKcc(input);
   assert.deepEqual(result.errors, []);
   const sirmour = kccDistricts.indexOf('Sirmour');
   const rate = (id: string) => kccCrops.find((crop) => crop.id === id)!.rates[sirmour];
-  close(result.rows[1].borrowerAcres!, 0.75);
-  close(result.seasons.longTerm.finance!, 0.75 * rate('sof-87') + 0.25 * rate('sof-89'));
-  close(result.baseFinance!, rate('sof-22') + result.seasons.longTerm.finance!);
+  const [kharif, wheat, wheatUn, apple] = result.rows;
+  close(kharif.borrowerAcres!, 1);
+  close(wheat.borrowerAcres!, 1);
+  close(wheatUn.borrowerAcres!, 0.5);
+  assert.deepEqual(apple.seasonShares, { kharif: 0.5, rabi: 0.25 });
+  close(apple.borrowerAcres!, 0.75);
+  close(result.seasons.longTerm.finance!, 0.75 * rate('sof-87'));
+  close(result.seasons.kharif.finance!, rate('sof-22'));
+  close(result.baseFinance!, rate('sof-22') + rate('sof-2') + 0.5 * rate('sof-3') + 0.75 * rate('sof-87'));
+});
+
+test('long-term crops alone use all the cultivated land', () => {
+  const input = kccWorkbookExample();
+  input.cultivatedAcres = '1';
+  input.crops = [{ id: 'a', season: 'longTerm', cropId: 'sof-87', area: area('bigha', ['3', '', '']) }];
+  const result = calculateKcc(input);
+  assert.deepEqual(result.errors, []);
+  close(result.rows[0].borrowerAcres!, 1);
+  assert.equal(result.seasons.kharif.used, false);
 });
 
 test('empty or zero-area crop lists cannot silently show a zero limit', () => {
