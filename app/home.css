@@ -12,8 +12,8 @@
   z-index: -1;
   inset: auto 0 0;
   height: 300px;
-  /* Keep the river valley and small hillside fields visible together. */
-  background: url('/home-river-valley-v3.webp') center/cover no-repeat;
+  /* Keep the river valley and small hillside fields visible together. v4 is graded toward the app's greens. */
+  background: url('/home-river-valley-v4.webp') center/cover no-repeat;
   -webkit-mask-image: linear-gradient(transparent, #000 35%);
   mask-image: linear-gradient(transparent, #000 35%);
   opacity: 0.6;

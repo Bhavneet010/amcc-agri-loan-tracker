@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-const imageUrl = '/home-river-valley-v3.webp';
+const imageUrl = '/home-river-valley-v4.webp';
 const vertex = `
   attribute vec2 position;
   varying vec2 uv;
@@ -33,9 +33,10 @@ const fragment = `
     vec2 p = vec2(source.x, 1.0 - source.y);
     vec3 original = texture2D(landscape, source).rgb;
     // Colour masks keep moving water inside the illustrated channel, off the banks.
+    // Thresholds are tuned to the sea-green river of the v4 image.
     float water = smoothstep(0.025, 0.075, original.g - original.r)
       * smoothstep(0.025, 0.075, original.b - original.r)
-      * (1.0 - smoothstep(0.08, 0.2, abs(original.g - original.b)))
+      * (1.0 - smoothstep(0.11, 0.24, abs(original.g - original.b)))
       * smoothstep(0.50, 0.57, p.y);
     float depth = smoothstep(0.50, 1.0, p.y);
     vec2 flow = vec2(
@@ -43,7 +44,7 @@ const fragment = `
       sin(p.x * 96.0 + p.y * 65.0 - time * 2.7) * 0.0026
     ) * water * depth;
     // Small, softly bounded canopy regions bend near their tops; trunks stay rooted.
-    float foliage = smoothstep(0.06, 0.14, original.g - original.b);
+    float foliage = smoothstep(0.10, 0.18, original.g - original.b);
     float breeze = tree(p, vec2(0.10, 0.51), vec2(0.035, 0.085), 0.0)
       + tree(p, vec2(0.27, 0.58), vec2(0.035, 0.065), 0.8)
       + tree(p, vec2(0.85, 0.63), vec2(0.035, 0.070), 1.6)
