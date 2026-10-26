@@ -3030,6 +3030,11 @@ main > .message {
   background: var(--tone, var(--green));
   color: #fff;
 }
+.charge-sources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 .charge-file {
   position: relative;
   display: flex;

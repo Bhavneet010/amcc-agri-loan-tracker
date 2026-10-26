@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Camera, ImageIcon, Receipt } from 'lucide-react';
+import { Camera, ImageIcon, Receipt, Upload } from 'lucide-react';
 import type { Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import { compressChargeImage } from '../../lib/charge-image';
@@ -51,7 +51,6 @@ export function ChargePrompt({
       <legend>
         <Receipt size={16} aria-hidden="true" /> Upload charge details?
       </legend>
-      <p>Renewals above ₹2,00,000 need the charge noted in revenue records. Choose Yes or No to continue.</p>
       <div className="charge-choice">
         {(['yes', 'no'] as const).map((option) => (
           <button
@@ -67,11 +66,20 @@ export function ChargePrompt({
       </div>
       {choice === 'yes' ? (
         <>
-          <label className="charge-file">
-            <input type="file" accept="image/*" onChange={pick} />
-            <Camera size={17} aria-hidden="true" />
-            {busy ? 'Compressing…' : image || attached ? 'Replace photo' : 'Take or choose photo'}
-          </label>
+          {/* Separate inputs: some Android browsers drop the camera from a combined picker. */}
+          <div className="charge-sources">
+            <label className="charge-file">
+              <input type="file" accept="image/*" capture="environment" onChange={pick} />
+              <Camera size={17} aria-hidden="true" />
+              Take photo
+            </label>
+            <label className="charge-file">
+              <input type="file" accept="image/*" onChange={pick} />
+              <Upload size={17} aria-hidden="true" />
+              Upload
+            </label>
+          </div>
+          {busy ? <small>Compressing photo…</small> : null}
           {preview && image ? (
             <figure className="charge-preview">
               <img src={preview} alt="Charge details to upload" />
