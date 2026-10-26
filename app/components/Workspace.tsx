@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Building2,
+  Calculator,
   CheckCheck,
   ChevronDown,
   ChevronRight,
@@ -29,6 +31,8 @@ import InstallPrompt from './InstallPrompt';
 import SummaryCarousel from './SummaryCarousel';
 import HomeLandscape from './HomeLandscape';
 import BranchNotifications from './BranchNotifications';
+
+const KccCalculator = dynamic(() => import('./KccCalculator'), { ssr: false });
 
 const preferenceKey = 'amcc.branch.v1';
 const adminModeKey = 'amcc.adminMode.v1';
@@ -76,6 +80,7 @@ export default function Workspace() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false);
+  const [calculator, setCalculator] = useState(false);
   const [login, setLogin] = useState(false);
   const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [addChoice, setAddChoice] = useState(false);
@@ -465,6 +470,15 @@ export default function Workspace() {
                     <div className="menu-divider" />
                   </>
                 ) : null}
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setSettings(false);
+                    setCalculator(true);
+                  }}
+                >
+                  <Calculator size={17} /> KCC calculator <span className="kcc-menu-beta">Beta</span>
+                </button>
                 <button role="menuitem" onClick={() => setHelp(true)}>
                   <CircleHelp size={17} /> Help
                 </button>
@@ -693,7 +707,8 @@ export default function Workspace() {
           </div>
         </Modal>
       ) : null}
-      {ready && (settings || (!branchId && !activeAdmin)) && !login ? (
+      {calculator ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
+      {ready && (settings || (!branchId && !activeAdmin)) && !login && !calculator ? (
         <Settings
           branches={branches}
           selected={activeAdmin ? adminFilter : branchId}
@@ -772,11 +787,13 @@ export default function Workspace() {
           key={branchId}
           branchId={branchId}
           refreshKey={refreshKey}
-          blocked={!!(settings || login || form || help || addChoice || menu || filters || installOpen)}
+          blocked={!!(settings || calculator || login || form || help || addChoice || menu || filters || installOpen)}
         />
       ) : null}
       <InstallPrompt
-        canShow={ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !login && !form && !help}
+        canShow={
+          ready && sessionChecked && (!!branchId || activeAdmin) && !settings && !calculator && !login && !form && !help
+        }
         onOpenChange={setInstallOpen}
       />
     </div>

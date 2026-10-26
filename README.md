@@ -8,6 +8,14 @@ When a branch opens or returns to the app, **Updates to your loans** shows unrea
 
 Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No before they can be saved; the API enforces this for new renewals and for edits that leave a renewal above the limit. Choosing Yes lets the branch take or choose a photo, which the phone compresses (1600px long side, JPEG, usually under 450 KB) before upload. Images sit in the private `amcc-charge-details` Supabase Storage bucket and the admin and branch view them through five-minute signed links. When the loan is sanctioned or deleted, the API deletes the image file; the Yes/No answer stays in `amcc_charge_details`. Any cleanup that fails is retried the next time the loan is read.
 
+## KCC calculator beta
+
+Open the Settings gear menu and choose **KCC calculator · Beta**. This entry is available in branch and admin views; the calculator has no separate route or homepage shortcut. Inputs stay in memory and are cleared when the calculator closes. It does not create loan records or call the data service.
+
+The FY 2026–27 rates are extracted verbatim from the supplied `KCC CALCULATION - SOF FY 2026-27 UPDATED.xlsx`, `FINAL AGRICULTURE!B1:N176`, with all 175 crop/condition rows and 12 districts retained. The source SHA256 is recorded in `lib/kcc-sof.ts`. Both borrower cultivated land and Scale of Finance use **acres**, as confirmed for this workbook. For each included season, recorded crop areas determine crop shares; those shares allocate the borrower's cultivated acreage. Year 1 is combined Kharif/Rabi crop finance × 1.30; years 2–5 compound at 10% annually. Automated tests reproduce the saved workbook results, including ₹24,747.01 in year 1 and ₹36,232.09 in year 5. The user interface starts with blank inputs.
+
+Crop areas and the borrower land converter accept HP Bigha–Biswa–Biswansi, Kanal–Marla–Sarsahi, Hectare–Are–Centiare, decimal acres/hectares, and square metres. Kanal entries require a confirmed 66-inch or 57.5-inch karam; unknown standards block conversion. The supplied HP desk reference dated 26 October 2026 supplies the conversion relationships. Fixed-size/protected/activity labels are preserved and flagged for review; the beta follows the workbook's confirmed per-acre interpretation rather than silently redefining those rates.
+
 ## Where the data lives
 
 Loan records, branch names, audit history, and admin login attempt counters live in **Supabase**, in dedicated `amcc_` tables in project `xebnciawqwscifzgrkbu`. Vercel hosts the interface. Public lists load directly from the `amcc-api` Supabase Edge Function; writes and admin session requests pass through same-origin Vercel routes. The older [Sites service](https://amcc-agri-loans.bhavneet.chatgpt.site) now forwards its API to the same Supabase service, so older installed clients also use the new database. GitHub stores source code only.
