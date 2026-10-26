@@ -106,7 +106,8 @@ export function ChargeReview({ loan }: { loan: Loan }) {
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
-  if (!details) return null;
+  // Sanctioned loans show no charge details, the same as loans that never had any.
+  if (!details || loan.status === 'sanctioned') return null;
   async function view() {
     setBusy(true);
     setProblem('');
@@ -134,8 +135,6 @@ export function ChargeReview({ loan }: { loan: Loan }) {
             <ImageIcon size={16} aria-hidden="true" /> {busy ? 'Loading…' : 'View charge details'}
           </button>
         )
-      ) : loan.status === 'sanctioned' ? (
-        <strong>Image removed after sanction</strong>
       ) : (
         <strong>Branch chose to upload · image not added yet</strong>
       )}
