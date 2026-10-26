@@ -744,11 +744,11 @@
     transform: translateX(-50%);
     height: 360px;
     background-size: cover;
-    -webkit-mask-image:
-      linear-gradient(transparent, #000 35%), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-image: linear-gradient(transparent, #000 35%),
+      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(transparent, #000 35%), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(transparent, #000 35%),
+      linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
     mask-composite: intersect;
   }
   .landscape-home .appbar {
@@ -1330,5 +1330,44 @@
   }
   .landscape-home .loan-list {
     margin-top: 8px;
+  }
+}
+
+/* Filter button sits inside the search field so search spans the tab width. */
+.landscape-home .table-toolbar {
+  position: relative;
+}
+.landscape-home .filter-anchor {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+.landscape-home .filter-button {
+  border-color: transparent;
+  border-left-color: #e1e7e3;
+  border-radius: 0 9px 9px 0;
+  background: transparent;
+}
+.landscape-home .filter-button.has-filters {
+  border-color: transparent;
+  border-left-color: #e1e7e3;
+}
+.landscape-home .table-toolbar .search-field input {
+  padding-right: 52px;
+}
+@media (min-width: 681px) {
+  .landscape-home .filter-button {
+    border-radius: 0 calc(9 * var(--home-unit)) calc(9 * var(--home-unit)) 0;
+  }
+  .landscape-home .table-toolbar .search-field input {
+    padding-right: calc(52 * var(--home-unit));
+  }
+}
+@media (max-width: 680px) {
+  .landscape-home .filter-button {
+    border-radius: 0 8px 8px 0;
+  }
+  .landscape-home .table-toolbar .search-field input {
+    padding-right: 46px;
   }
 }
