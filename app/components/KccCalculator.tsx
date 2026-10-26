@@ -35,6 +35,17 @@ const acres = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 4 });
 const showAcres = (value: number | null) => (value === null ? '—' : acres.format(value));
 const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
+/** The crop name before its condition, e.g. "Wheat" from "Wheat — Irrigated". Dashes inside brackets stay. */
+function cropName(label: string) {
+  let depth = 0;
+  for (let index = 0; index < label.length; index++) {
+    const char = label[index];
+    if (char === '(') depth++;
+    else if (char === ')') depth = Math.max(0, depth - 1);
+    else if (!depth && /\s[—–-]\s/.test(label.slice(index - 1, index + 2))) return label.slice(0, index).trim();
+  }
+  return label;
+}
 
 function CropEditor({
   initial,
@@ -165,9 +176,10 @@ function CropTable({
                 type="button"
                 className={styles.cropName}
                 onClick={() => onEdit(row)}
+                title={result?.label}
                 aria-label={`Edit ${result?.label}`}
               >
-                {result?.label}
+                {result ? cropName(result.label) : null}
               </button>
             </span>
             <span role="cell" className={styles.num}>
