@@ -6,7 +6,7 @@ When a branch opens or returns to the app, **Updates to your loans** shows unrea
 
 ## Renewal charge details
 
-Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No before they can be saved; the API enforces this for new renewals and for edits that leave a renewal above the limit. Choosing Yes lets the branch take or choose a photo, which the phone compresses (1600px long side, JPEG, usually under 450 KB) before upload. Images sit in the private `amcc-charge-details` Supabase Storage bucket and only an admin can view them, through five-minute signed links. When the loan is sanctioned or deleted, the API deletes the image file; the Yes/No answer stays in `amcc_charge_details`. Any cleanup that fails is retried the next time the loan is read.
+Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No before they can be saved; the API enforces this for new renewals and for edits that leave a renewal above the limit. Choosing Yes lets the branch take or choose a photo, which the phone compresses (1600px long side, JPEG, usually under 450 KB) before upload. Images sit in the private `amcc-charge-details` Supabase Storage bucket and the admin and branch view them through five-minute signed links. When the loan is sanctioned or deleted, the API deletes the image file; the Yes/No answer stays in `amcc_charge_details`. Any cleanup that fails is retried the next time the loan is read.
 
 ## Where the data lives
 

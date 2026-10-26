@@ -360,6 +360,7 @@ export default function LoanForm({
           />
         ) : null}
         {reviewing && loan.category === 'renewal' ? <ChargeReview loan={loan} /> : null}
+        {!reviewing && loan?.chargeDetails?.hasImage ? <ChargeReview loan={loan} /> : null}
         {reviewing && status === 'returned' ? (
           <>
             <label>

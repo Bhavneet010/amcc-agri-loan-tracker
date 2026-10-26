@@ -92,7 +92,7 @@ export function ChargePrompt({
   );
 }
 
-// Admin review of the branch's answer; the image link is short-lived and fetched on request.
+// Shows the branch's answer to the admin, and the saved image to the branch; links are short-lived and fetched on request.
 export function ChargeReview({ loan }: { loan: Loan }) {
   const details = loan.chargeDetails;
   const [url, setUrl] = useState('');

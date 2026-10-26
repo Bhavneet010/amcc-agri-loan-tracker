@@ -150,7 +150,6 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
         const record = await db.getLoan(id);
         const stored = record.charge?.imagePath as string | null | undefined;
         if (request.method === 'GET') {
-          if (!await isAdmin(request, config.sessionSecret)) throw new AppError('Admin login is required to view charge details.', 401);
           if (stored && record.status === 'sanctioned') { await dropChargeImage(charges, id, stored); throw new AppError('The charge details image was removed after sanction.', 410); }
           if (!stored) throw new AppError('No charge details image has been uploaded.', 404);
           return json({ url: await charges.signChargeImage(stored), uploadedAt: record.charge.uploadedAt });

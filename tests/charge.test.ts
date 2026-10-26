@@ -96,7 +96,7 @@ test('a declined answer is recorded and returned with the loan', async () => {
   assert.deepEqual((await response.json()).chargeDetails, { choice: 'no', hasImage: false, uploadedAt: null });
 });
 
-test('uploaded image is admin-only to view and deleted once sanctioned', async () => {
+test('uploaded image can be viewed and is deleted once sanctioned', async () => {
   const f = fixture();
   await f.call('/api/loans', 'POST', { ...renewal, chargeChoice: 'yes' });
   assert.equal(
@@ -110,11 +110,10 @@ test('uploaded image is admin-only to view and deleted once sanctioned', async (
   assert.equal(loan.charge, undefined, 'storage path stays server-side');
   assert.equal(f.objects.size, 1);
 
-  assert.equal((await f.call('/api/loans/loan-1/charge')).status, 401);
-  const cookie = await admin();
-  const view = await f.call('/api/loans/loan-1/charge', 'GET', undefined, cookie);
+  const view = await f.call('/api/loans/loan-1/charge');
   assert.match((await view.json()).url, /^https:\/\/signed\.example\/loan-1\//);
 
+  const cookie = await admin();
   const sanctioned = await f.call(
     '/api/loans/loan-1',
     'PATCH',
