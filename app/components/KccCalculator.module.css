@@ -307,6 +307,18 @@
   color: #07624b;
   font-weight: 700;
 }
+.landSplit {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: #f4effa;
+  color: #6a4a86;
+}
 .seasonPick select {
   width: auto;
   min-height: 30px;

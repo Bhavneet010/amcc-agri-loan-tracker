@@ -16,8 +16,6 @@ export type KccRowResult = {
   label: string;
   recordedAcres: number | null;
   share: number | null;
-  /** A long-term crop's share of the Kharif and of the Rabi land; its `share` is their average. */
-  seasonShares: { kharif: number; rabi: number } | null;
   borrowerAcres: number | null;
   rate: number | null;
   finance: number | null;
@@ -34,6 +32,8 @@ export type KccResult = {
   seasons: Record<KccSeasonName, KccSeasonResult>;
   baseFinance: number | null;
   annualLimits: number[] | null;
+  /** Cultivated acres left for Kharif and for Rabi crops after long-term crops. */
+  seasonalAcres: number | null;
 };
 
 export const kccSeasons: { value: KccSeasonName; label: string }[] = [
@@ -51,6 +51,7 @@ export const kccAreaUnits: { value: AreaUnit; label: string; parts: string[] }[]
   { value: 'hectare', label: 'Hectares', parts: ['Hectares'] },
   { value: 'sqm', label: 'Square metres', parts: ['Square metres'] },
 ];
+const showAcres = (value: number) => Number(value.toFixed(4)).toString();
 const squareMetresPerAcre = 4046.8564224;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
 
@@ -106,7 +107,6 @@ function rowResult(row: KccRow, districtIndex: number): KccRowResult {
     label: crop?.label || 'Select a crop',
     recordedAcres: null,
     share: null,
-    seasonShares: null,
     borrowerAcres: null,
     rate: null,
     finance: null,
@@ -129,44 +129,45 @@ function rowResult(row: KccRow, districtIndex: number): KccRowResult {
 }
 
 /**
- * Kharif and Rabi crops each share the cultivated acres in proportion to recorded areas. Long-term crops hold
- * their land through both seasons, so they take part in both shares; their finance is counted once, on the
- * average of their Kharif and Rabi acres.
+ * Long-term crops hold their recorded land all year, so it comes off the cultivated acres first. Kharif crops,
+ * and separately Rabi crops, share what is left in proportion to their recorded areas.
  */
-function allocate(rows: KccRowResult[], cultivated: number | null, districtIndex: number): string[] {
+function allocate(rows: KccRowResult[], cultivated: number | null, districtIndex: number) {
   const errors: string[] = [];
   const longTerm = rows.filter((row) => row.season === 'longTerm');
-  const shares = new Map<string, { kharif: number; rabi: number }>();
+  const longTermAcres = bounded(
+    longTerm.reduce((sum, row) => sum + row.recordedAcres!, 0),
+    'Long-term crop area',
+  );
+  if (longTerm.length && longTermAcres <= 0) errors.push('Long-term crops: recorded area must be greater than zero.');
+  let seasonalAcres: number | null = null;
+  if (cultivated !== null) {
+    seasonalAcres = cultivated - longTermAcres;
+    if (seasonalAcres < 0) {
+      errors.push(
+        `Long-term crops cover ${showAcres(longTermAcres)} acres, more than the ${showAcres(cultivated)} cultivated acres.`,
+      );
+      seasonalAcres = null;
+    }
+    for (const row of longTerm) row.share = row.recordedAcres! / cultivated;
+  }
   for (const { value, label } of kccSeasons.slice(0, 2)) {
-    const season = value as 'kharif' | 'rabi';
-    const pool = [...rows.filter((row) => row.season === season), ...longTerm];
+    const pool = rows.filter((row) => row.season === value);
     if (!pool.length) continue;
     const total = bounded(
       pool.reduce((sum, row) => sum + row.recordedAcres!, 0),
       `${label} recorded area`,
     );
-    if (total <= 0) {
-      errors.push(
-        `${label}: total recorded crop area${longTerm.length ? ', with long-term crops,' : ''} must be greater than zero.`,
-      );
-      continue;
-    }
-    for (const row of pool) {
-      const share = row.recordedAcres! / total;
-      if (row.season === season) row.share = share;
-      else shares.set(row.id, { ...(shares.get(row.id) ?? { kharif: 0, rabi: 0 }), [season]: share });
-    }
+    if (total <= 0) errors.push(`${label}: total recorded crop area must be greater than zero.`);
+    else if (seasonalAcres === 0) errors.push(`${label}: no cultivated land is left after long-term crops.`);
+    else for (const row of pool) row.share = row.recordedAcres! / total;
   }
-  if (errors.length || cultivated === null || districtIndex < 0) return errors;
+  if (errors.length || seasonalAcres === null || districtIndex < 0) return { errors, seasonalAcres };
   for (const row of rows) {
-    if (row.season === 'longTerm') {
-      row.seasonShares = shares.get(row.id)!;
-      row.share = (row.seasonShares.kharif + row.seasonShares.rabi) / 2;
-    }
-    row.borrowerAcres = row.share! * cultivated;
+    row.borrowerAcres = row.season === 'longTerm' ? row.recordedAcres! : row.share! * seasonalAcres;
     row.finance = bounded(row.borrowerAcres * row.rate!, 'Crop finance');
   }
-  return errors;
+  return { errors, seasonalAcres };
 }
 
 export function calculateKcc(input: KccInput): KccResult {
@@ -193,12 +194,15 @@ export function calculateKcc(input: KccInput): KccResult {
   }
   if (!input.crops.length) errors.push('Add at least one Kharif, Rabi or long-term crop.');
   const rows = input.crops.map((row) => rowResult(row, districtIndex));
+  let seasonalAcres: number | null = null;
   rows.forEach((row, index) => {
     if (row.error) errors.push(`Crop ${index + 1} (${seasonLabel(row.season)}): ${row.error}`);
   });
   if (!errors.length) {
     try {
-      errors.push(...allocate(rows, cultivated, districtIndex));
+      const allocation = allocate(rows, cultivated, districtIndex);
+      errors.push(...allocation.errors);
+      seasonalAcres = allocation.seasonalAcres;
     } catch (error) {
       errors.push((error as Error).message);
     }
@@ -231,7 +235,7 @@ export function calculateKcc(input: KccInput): KccResult {
       errors.push((error as Error).message);
     }
   }
-  return { errors, rows, seasons, baseFinance, annualLimits };
+  return { errors, rows, seasons, baseFinance, annualLimits, seasonalAcres };
 }
 
 export function blankKccRow(id: string, season: KccSeasonName): KccRow {

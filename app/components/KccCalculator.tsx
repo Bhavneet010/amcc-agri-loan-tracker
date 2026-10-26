@@ -103,14 +103,8 @@ function CropCard({
           <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
         </div>
         <div>
-          <dt>{row.season === 'longTerm' ? 'Kharif / Rabi share' : `${seasonLabel(row.season)} share`}</dt>
-          <dd>
-            {calculated?.seasonShares
-              ? `${percent(calculated.seasonShares.kharif)} / ${percent(calculated.seasonShares.rabi)}`
-              : calculated?.share === null || calculated?.share === undefined
-                ? '—'
-                : percent(calculated.share)}
-          </dd>
+          <dt>{row.season === 'longTerm' ? 'Share of cultivated land' : `${seasonLabel(row.season)} share`}</dt>
+          <dd>{calculated?.share === null || calculated?.share === undefined ? '—' : percent(calculated.share)}</dd>
         </div>
         <div>
           <dt>Borrower acres</dt>
@@ -247,9 +241,16 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <p className={styles.intro}>
-              Add each crop under Kharif, Rabi or Long-term. Recorded crop areas set each crop’s share of the cultivated
-              acres; long-term crops share the land in both Kharif and Rabi.
+              Add each crop under Kharif, Rabi or Long-term. Long-term crops use their recorded area as actual land,
+              which comes out of both Kharif and Rabi. Kharif crops, and separately Rabi crops, share the rest of the
+              cultivated land in proportion to their recorded areas.
             </p>
+            {result.seasons.longTerm.used ? (
+              <div className={styles.landSplit}>
+                <span>Land left for Kharif and Rabi crops</span>
+                <strong>{showArea(result.seasonalAcres)} acres</strong>
+              </div>
+            ) : null}
             {input.crops.length ? (
               <div className={styles.cropList}>
                 {input.crops.map((row, index) => (
@@ -305,14 +306,13 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             <summary>Calculation & source notes</summary>
             <div>
               <p>
-                Kharif share = recorded crop area ÷ total recorded area of Kharif and long-term crops; Rabi share is
-                worked out the same way with Rabi and long-term crops. Borrower crop acres = crop share × cultivated
-                acres. Crop finance = borrower crop acres × district Scale of Finance.
+                Long-term crops hold their land all year: their borrower acres are their recorded area (converted to
+                acres), and that land is taken out of the cultivated acres for both Kharif and Rabi.
               </p>
               <p>
-                Long-term crops hold their land through both seasons, so they take a share in both Kharif and Rabi.
-                Their finance is counted once, on the average of their Kharif and Rabi acres (the same figure when the
-                recorded seasonal areas match).
+                Land left = cultivated acres − long-term acres. Kharif share = recorded crop area ÷ total recorded
+                Kharif area; Rabi share is worked out the same way. Borrower crop acres = crop share × land left. Crop
+                finance = borrower crop acres × district Scale of Finance.
               </p>
               <p>
                 Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full
