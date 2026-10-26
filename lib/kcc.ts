@@ -19,11 +19,15 @@ export type KccRowResult = {
   borrowerAcres: number | null;
   rate: number | null;
   finance: number | null;
+  /** Long-term crops only: their share and acres in each season's pool. */
+  seasonShares: Record<'kharif' | 'rabi', number> | null;
+  seasonAcres: Record<'kharif' | 'rabi', number> | null;
   error: string;
 };
 export type KccSeasonResult = {
   used: boolean;
   rows: KccRowResult[];
+  /** Kharif and Rabi include half of each long-term crop's finance; long-term shows the crops' full total. */
   finance: number | null;
 };
 export type KccResult = {
@@ -32,8 +36,6 @@ export type KccResult = {
   seasons: Record<KccSeasonName, KccSeasonResult>;
   baseFinance: number | null;
   annualLimits: number[] | null;
-  /** Cultivated acres left for Kharif and for Rabi crops after long-term crops. */
-  seasonalAcres: number | null;
 };
 
 export const kccSeasons: { value: KccSeasonName; label: string }[] = [
@@ -51,7 +53,6 @@ export const kccAreaUnits: { value: AreaUnit; label: string; parts: string[] }[]
   { value: 'hectare', label: 'Hectares', parts: ['Hectares'] },
   { value: 'sqm', label: 'Square metres', parts: ['Square metres'] },
 ];
-const showAcres = (value: number) => Number(value.toFixed(4)).toString();
 const squareMetresPerAcre = 4046.8564224;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
 
@@ -110,6 +111,8 @@ function rowResult(row: KccRow, districtIndex: number): KccRowResult {
     borrowerAcres: null,
     rate: null,
     finance: null,
+    seasonShares: row.season === 'longTerm' ? { kharif: 0, rabi: 0 } : null,
+    seasonAcres: row.season === 'longTerm' ? { kharif: 0, rabi: 0 } : null,
     error: '',
   };
   const rowErrors: string[] = [];
@@ -129,45 +132,45 @@ function rowResult(row: KccRow, districtIndex: number): KccRowResult {
 }
 
 /**
- * Long-term crops hold their recorded land all year, so it comes off the cultivated acres first. Kharif crops,
- * and separately Rabi crops, share what is left in proportion to their recorded areas.
+ * Mirrors the workbook: within a season, recorded areas only set each crop's share, and the shares split the
+ * borrower's cultivated acres. A long-term crop stands on its land all year, so it joins both the Kharif and the
+ * Rabi pool at its full recorded area, and half of its annual Scale of Finance is counted in each season.
  */
 function allocate(rows: KccRowResult[], cultivated: number | null, districtIndex: number) {
   const errors: string[] = [];
-  const longTerm = rows.filter((row) => row.season === 'longTerm');
-  const longTermAcres = bounded(
-    longTerm.reduce((sum, row) => sum + row.recordedAcres!, 0),
-    'Long-term crop area',
-  );
-  if (longTerm.length && longTermAcres <= 0) errors.push('Long-term crops: recorded area must be greater than zero.');
-  let seasonalAcres: number | null = null;
-  if (cultivated !== null) {
-    seasonalAcres = cultivated - longTermAcres;
-    if (seasonalAcres < 0) {
-      errors.push(
-        `Long-term crops cover ${showAcres(longTermAcres)} acres, more than the ${showAcres(cultivated)} cultivated acres.`,
-      );
-      seasonalAcres = null;
-    }
-    for (const row of longTerm) row.share = row.recordedAcres! / cultivated;
-  }
-  for (const { value, label } of kccSeasons.slice(0, 2)) {
-    const pool = rows.filter((row) => row.season === value);
-    if (!pool.length) continue;
+  const pools = kccSeasons.slice(0, 2).map(({ value, label }) => {
+    const pool = rows.filter((row) => row.season === value || row.season === 'longTerm');
     const total = bounded(
       pool.reduce((sum, row) => sum + row.recordedAcres!, 0),
       `${label} recorded area`,
     );
-    if (total <= 0) errors.push(`${label}: total recorded crop area must be greater than zero.`);
-    else if (seasonalAcres === 0) errors.push(`${label}: no cultivated land is left after long-term crops.`);
-    else for (const row of pool) row.share = row.recordedAcres! / total;
+    if (pool.length && total <= 0) errors.push(`${label}: total recorded crop area must be greater than zero.`);
+    return { season: value as 'kharif' | 'rabi', pool, total };
+  });
+  if (errors.length || cultivated === null) return errors;
+  for (const { season, pool, total } of pools) {
+    for (const row of pool) {
+      const share = row.recordedAcres! / total;
+      const acres = share * cultivated;
+      if (row.season !== 'longTerm') {
+        row.share = share;
+        row.borrowerAcres = acres;
+      } else {
+        row.seasonShares = { ...row.seasonShares!, [season]: share };
+        row.seasonAcres = { ...row.seasonAcres!, [season]: acres };
+      }
+    }
   }
-  if (errors.length || seasonalAcres === null || districtIndex < 0) return { errors, seasonalAcres };
+  if (districtIndex < 0) return errors;
   for (const row of rows) {
-    row.borrowerAcres = row.season === 'longTerm' ? row.recordedAcres! : row.share! * seasonalAcres;
-    row.finance = bounded(row.borrowerAcres * row.rate!, 'Crop finance');
+    if (row.season === 'longTerm') {
+      // An average of the two seasons' acres, so acres × annual rate equals the two half-rate season amounts.
+      row.borrowerAcres = (row.seasonAcres!.kharif + row.seasonAcres!.rabi) / 2;
+      row.share = (row.seasonShares!.kharif + row.seasonShares!.rabi) / 2;
+    }
+    row.finance = bounded(row.borrowerAcres! * row.rate!, 'Crop finance');
   }
-  return { errors, seasonalAcres };
+  return errors;
 }
 
 export function calculateKcc(input: KccInput): KccResult {
@@ -194,40 +197,38 @@ export function calculateKcc(input: KccInput): KccResult {
   }
   if (!input.crops.length) errors.push('Add at least one Kharif, Rabi or long-term crop.');
   const rows = input.crops.map((row) => rowResult(row, districtIndex));
-  let seasonalAcres: number | null = null;
   rows.forEach((row, index) => {
     if (row.error) errors.push(`Crop ${index + 1} (${seasonLabel(row.season)}): ${row.error}`);
   });
   if (!errors.length) {
     try {
-      const allocation = allocate(rows, cultivated, districtIndex);
-      errors.push(...allocation.errors);
-      seasonalAcres = allocation.seasonalAcres;
+      errors.push(...allocate(rows, cultivated, districtIndex));
     } catch (error) {
       errors.push((error as Error).message);
     }
   }
+  const longTerm = rows.filter((row) => row.season === 'longTerm');
   const seasons = Object.fromEntries(
     kccSeasons.map(({ value, label }) => {
       const own = rows.filter((row) => row.season === value);
-      let finance: number | null = 0;
-      if (own.some((row) => row.finance === null)) finance = null;
-      else
+      const counted = value === 'longTerm' ? own : [...own, ...longTerm];
+      let finance: number | null = null;
+      if (counted.every((row) => row.finance !== null))
         finance = bounded(
-          own.reduce((sum, row) => sum + row.finance!, 0),
+          own.reduce((sum, row) => sum + row.finance!, 0) +
+            (value === 'longTerm'
+              ? 0
+              : longTerm.reduce((sum, row) => sum + (row.seasonAcres![value] * row.rate!) / 2, 0)),
           `${label} finance`,
         );
-      return [value, { used: own.length > 0, rows: own, finance }];
+      return [value, { used: counted.length > 0, rows: own, finance }];
     }),
   ) as Record<KccSeasonName, KccSeasonResult>;
   let baseFinance: number | null = null;
   let annualLimits: number[] | null = null;
-  if (!errors.length && kccSeasons.every(({ value }) => seasons[value].finance !== null)) {
+  if (!errors.length && seasons.kharif.finance !== null && seasons.rabi.finance !== null) {
     try {
-      baseFinance = bounded(
-        kccSeasons.reduce((sum, { value }) => sum + seasons[value].finance!, 0),
-        'Total crop finance',
-      );
+      baseFinance = bounded(seasons.kharif.finance + seasons.rabi.finance, 'Total crop finance');
       const limits = [bounded(baseFinance * 1.3, 'Year 1 limit')];
       for (let year = 1; year < 5; year++) limits.push(bounded(limits[year - 1] * 1.1, `Year ${year + 1} limit`));
       annualLimits = limits;
@@ -235,7 +236,7 @@ export function calculateKcc(input: KccInput): KccResult {
       errors.push((error as Error).message);
     }
   }
-  return { errors, rows, seasons, baseFinance, annualLimits, seasonalAcres };
+  return { errors, rows, seasons, baseFinance, annualLimits };
 }
 
 export function blankKccRow(id: string, season: KccSeasonName): KccRow {

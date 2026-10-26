@@ -102,14 +102,37 @@ function CropCard({
           <dt>Recorded acres</dt>
           <dd>{showArea(calculated?.recordedAcres ?? null)}</dd>
         </div>
-        <div>
-          <dt>{row.season === 'longTerm' ? 'Share of cultivated land' : `${seasonLabel(row.season)} share`}</dt>
-          <dd>{calculated?.share === null || calculated?.share === undefined ? '—' : percent(calculated.share)}</dd>
-        </div>
-        <div>
-          <dt>Borrower acres</dt>
-          <dd>{showArea(calculated?.borrowerAcres ?? null)}</dd>
-        </div>
+        {row.season === 'longTerm' ? (
+          <>
+            <div>
+              <dt>Kharif / Rabi share</dt>
+              <dd>
+                {calculated?.finance === null || calculated?.finance === undefined
+                  ? '—'
+                  : `${percent(calculated.seasonShares!.kharif)} / ${percent(calculated.seasonShares!.rabi)}`}
+              </dd>
+            </div>
+            <div>
+              <dt>Kharif / Rabi acres</dt>
+              <dd>
+                {calculated?.finance === null || calculated?.finance === undefined
+                  ? '—'
+                  : `${showArea(calculated.seasonAcres!.kharif)} / ${showArea(calculated.seasonAcres!.rabi)}`}
+              </dd>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <dt>{seasonLabel(row.season)} share</dt>
+              <dd>{calculated?.share === null || calculated?.share === undefined ? '—' : percent(calculated.share)}</dd>
+            </div>
+            <div>
+              <dt>Borrower acres</dt>
+              <dd>{showArea(calculated?.borrowerAcres ?? null)}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>Crop finance</dt>
           <dd>{showMoney(calculated?.finance ?? null)}</dd>
@@ -241,16 +264,10 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <p className={styles.intro}>
-              Add each crop under Kharif, Rabi or Long-term. Long-term crops use their recorded area as actual land,
-              which comes out of both Kharif and Rabi. Kharif crops, and separately Rabi crops, share the rest of the
-              cultivated land in proportion to their recorded areas.
+              Add each crop under Kharif, Rabi or Long-term. Kharif crops, and separately Rabi crops, share the
+              cultivated land in proportion to their recorded areas. Long-term crops stand in both seasons, with half of
+              their finance counted in each.
             </p>
-            {result.seasons.longTerm.used ? (
-              <div className={styles.landSplit}>
-                <span>Land left for Kharif and Rabi crops</span>
-                <strong>{showArea(result.seasonalAcres)} acres</strong>
-              </div>
-            ) : null}
             {input.crops.length ? (
               <div className={styles.cropList}>
                 {input.crops.map((row, index) => (
@@ -306,13 +323,15 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             <summary>Calculation & source notes</summary>
             <div>
               <p>
-                Long-term crops hold their land all year: their borrower acres are their recorded area (converted to
-                acres), and that land is taken out of the cultivated acres for both Kharif and Rabi.
+                As in the workbook, recorded areas only set the crop pattern. Kharif share = recorded crop area ÷ total
+                recorded Kharif area; Rabi share is worked out the same way. Borrower crop acres = crop share ×
+                cultivated acres. Crop finance = borrower crop acres × district Scale of Finance.
               </p>
               <p>
-                Land left = cultivated acres − long-term acres. Kharif share = recorded crop area ÷ total recorded
-                Kharif area; Rabi share is worked out the same way. Borrower crop acres = crop share × land left. Crop
-                finance = borrower crop acres × district Scale of Finance.
+                Long-term crops (orchards and other crops that take more than a season) occupy their land in both
+                seasons, so each is listed in the Kharif and the Rabi pool at its full recorded area. Their Scale of
+                Finance is annual, so half of it is counted in each season: long-term finance = (Kharif acres + Rabi
+                acres) ÷ 2 × Scale of Finance.
               </p>
               <p>
                 Year 1 = total crop finance × 1.30. Each later year = the previous year × 1.10. Values retain full
@@ -354,7 +373,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
             </div>
           )}
           <dl className={styles.breakdown}>
-            {kccSeasons.map((season) => (
+            {kccSeasons.slice(0, 2).map((season) => (
               <div key={season.value}>
                 <dt>
                   {season.label} finance{!result.seasons[season.value].used ? ' (no crops)' : ''}
@@ -362,6 +381,12 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 <dd>{showMoney(result.seasons[season.value].finance)}</dd>
               </div>
             ))}
+            {result.seasons.longTerm.used ? (
+              <div>
+                <dt>Of which long-term (half in each season)</dt>
+                <dd>{showMoney(result.seasons.longTerm.finance)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Total crop finance</dt>
               <dd>{showMoney(result.baseFinance)}</dd>
