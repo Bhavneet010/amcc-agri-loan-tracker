@@ -300,7 +300,7 @@ main > .message {
   left: 18%;
   width: 64%;
   height: 128px;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-2);
   background-color: var(--green);
   box-shadow: 0 5px 9px #124a2938;
   color: #fff;
@@ -428,9 +428,9 @@ main > .message {
   flex: 1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  column-gap: var(--space-1);
 }
 .featured .summary-count {
+  position: relative;
   align-items: center;
   gap: var(--space-1);
   width: 100%;
@@ -450,9 +450,16 @@ main > .message {
 .featured .summary-number strong[data-digits='4'] {
   font-size: var(--text-2xl);
 }
-.featured .sanctioned-count,
-.featured .returned-count {
-  border-left: 1px solid #ffffff33;
+/* Dividers sit exactly on the column boundaries, so each label is centred between its two lines. */
+.featured .sanctioned-count::before,
+.featured .returned-count::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: #ffffff33;
 }
 .featured .summary-number svg {
   width: 20px;
