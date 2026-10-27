@@ -26,6 +26,13 @@
   --complied-ink: #3f7a55;
   --danger-ink: #a04e43;
   --danger-soft: #fff1ee;
+  --bg-tint: #f4f8f5;
+  /* Beta badges and source notes. */
+  --amber-soft: #fbf3e2;
+  --amber-line: #dcc58f;
+  --amber-ink: #78541d;
+  --green-line: #d3e7da;
+  --label: #4f5f55;
 
   /* Type scale. 11px is the smallest text; form fields use 16px so iOS does not zoom on focus. */
   --text-2xs: 11px;
@@ -244,44 +251,6 @@ svg {
   color: #957740;
   justify-content: flex-start;
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  table-layout: auto;
-  font-size: 12px;
-}
-thead {
-  background: #fafcfb;
-}
-th {
-  font-weight: 500;
-  font-size: 10px;
-  color: #909b93;
-  white-space: nowrap;
-  padding: 15px 20px;
-  border-block: 1px solid var(--line);
-}
-th:first-child,
-td:first-child {
-  padding-left: 24px;
-}
-th:last-child,
-td:last-child {
-  padding-right: 24px;
-}
-td {
-  padding: 20px 20px;
-  border-bottom: 1px solid #f0f3f1;
-  vertical-align: middle;
-  white-space: normal;
-}
-tbody tr:last-child td {
-  border-bottom: 0;
-}
-tbody tr:hover {
-  background: #fcfdfc;
-}
 .toast {
   position: fixed;
   bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
@@ -318,53 +287,6 @@ tbody tr:hover {
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-@media (max-width: 1180px) {
-  th,
-  td {
-    padding-inline: 15px;
-  }
-}
-@media (max-width: 680px) {
-  table,
-  tbody {
-    display: block;
-  }
-  thead {
-    display: none;
-  }
-  tbody tr {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 17px 16px;
-    gap: 13px 12px;
-    border-top: 1px solid var(--line);
-    position: relative;
-  }
-  tbody tr:first-child {
-    border-top: 0;
-  }
-  td {
-    padding: 0 !important;
-    border: 0 !important;
-    min-width: 0;
-    font-size: 11px;
-  }
-  td:before {
-    content: attr(data-label);
-    display: block;
-    font-size: 9px;
-    color: #a4ada7;
-    font-weight: 400;
-    margin-bottom: 7px;
-  }
-  td:first-child {
-    grid-column: 1/-1;
-    padding-right: 45px !important;
-  }
-  td:first-child:before {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

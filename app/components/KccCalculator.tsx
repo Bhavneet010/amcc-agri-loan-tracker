@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Calculator, ChartNoAxesColumn, ChevronDown, FileText, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Calculator, ChartNoAxesColumn, ChevronDown, FileText, Plus, RotateCcw, Sprout, Trash2 } from 'lucide-react';
 import {
   areaInAcres,
   blankKccInput,
@@ -83,6 +83,8 @@ function CropEditor({
     <Modal
       title={isNew ? `Add ${seasonLabel(row.season)} crop` : 'Edit crop'}
       titleId={`${id}-title`}
+      tone="new"
+      icon={<Sprout size={20} />}
       className={styles.editor}
       onClose={onClose}
     >
@@ -136,10 +138,10 @@ function CropEditor({
           </p>
         ) : null}
         <div className={styles.editorActions}>
-          <button type="button" className="button" onClick={onClose}>
+          <button type="button" className="button secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className={isNew ? 'button' : 'button primary'} value="close">
+          <button type="submit" className={isNew ? 'button secondary' : 'button primary'} value="close">
             Save and Close
           </button>
           {isNew ? (
@@ -338,7 +340,8 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
         </span>
       }
       subtitle="FY 2026–27 · Himachal Pradesh"
-      icon={<Calculator size={23} />}
+      icon={<Calculator size={22} />}
+      tone="new"
       className={styles.dialog}
       onClose={onClose}
     >
@@ -404,7 +407,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                   <strong>{showArea(converted)} acres</strong>
                   <button
                     type="button"
-                    className="button"
+                    className="button secondary"
                     disabled={converted === null || converted <= 0}
                     onClick={() => {
                       if (converted !== null) update({ cultivatedAcres: String(converted) });
