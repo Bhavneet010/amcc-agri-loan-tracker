@@ -7,6 +7,8 @@ import { summarizeLoans, type SummaryPeriod } from '../../lib/loan-summary';
 const periods: SummaryPeriod[] = ['today', 'all', 'month'];
 const labels = { today: 'Today', month: 'This Month', all: 'All Time' };
 
+// Long counts step down a size so they stay inside their third of the card.
+const digits = (count: number) => Math.min(String(count).length, 4);
 export default function SummaryCarousel({
   loans,
   loading,
@@ -113,7 +115,7 @@ export default function SummaryCarousel({
                   >
                     <span className="summary-number">
                       <Clock aria-hidden="true" />
-                      <strong>{loading ? '—' : counts.pending}</strong>
+                      <strong data-digits={digits(counts.pending)}>{loading ? '—' : counts.pending}</strong>
                     </span>
                     <span>Pending</span>
                   </button>
@@ -125,7 +127,7 @@ export default function SummaryCarousel({
                   >
                     <span className="summary-number">
                       <CircleCheck aria-hidden="true" />
-                      <strong>{loading ? '—' : counts.sanctioned}</strong>
+                      <strong data-digits={digits(counts.sanctioned)}>{loading ? '—' : counts.sanctioned}</strong>
                     </span>
                     <span>Sanctioned</span>
                   </button>
@@ -137,7 +139,7 @@ export default function SummaryCarousel({
                   >
                     <span className="summary-number">
                       <Undo2 aria-hidden="true" />
-                      <strong>{loading ? '—' : counts.returned}</strong>
+                      <strong data-digits={digits(counts.returned)}>{loading ? '—' : counts.returned}</strong>
                     </span>
                     <span>Returned</span>
                   </button>

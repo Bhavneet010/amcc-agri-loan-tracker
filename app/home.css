@@ -418,26 +418,45 @@ main > .message {
 .returned-count svg {
   color: #ffbca1;
 }
+/* The counts fill the space under the heading and sit in its vertical middle. */
+.featured .summary-card-body {
+  display: flex;
+  flex-direction: column;
+}
 .featured .summary-counts {
   display: grid;
+  flex: 1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
   column-gap: var(--space-1);
-  margin-top: var(--space-3);
 }
 .featured .summary-count {
   align-items: center;
   gap: var(--space-1);
   width: 100%;
-  min-height: 40px;
+  font-size: var(--text-md);
   text-align: center;
+}
+/* A fixed row height keeps the labels level when the counts have different lengths. */
+.featured .summary-number {
+  height: var(--text-4xl);
+}
+.featured .summary-number strong {
+  font-size: var(--text-4xl);
+}
+.featured .summary-number strong[data-digits='3'] {
+  font-size: var(--text-3xl);
+}
+.featured .summary-number strong[data-digits='4'] {
+  font-size: var(--text-2xl);
 }
 .featured .sanctioned-count,
 .featured .returned-count {
   border-left: 1px solid #ffffff33;
 }
 .featured .summary-number svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   stroke-width: 2.1;
 }
 /* Side cards list the three counts in a column; on phones only the icon and number fit. */
@@ -447,13 +466,14 @@ main > .message {
   row-gap: var(--space-1);
 }
 .compact .summary-card-heading button {
+  align-items: flex-start;
   gap: var(--space-1);
   font-size: var(--text-2xs);
   white-space: normal;
 }
-.position-2.compact .summary-card-heading button span {
+/* Both side headings wrap one word per line ("This / Month", "All / Time"). */
+.compact .summary-card-heading button span {
   width: min-content;
-  white-space: normal;
 }
 .compact .summary-card-heading svg {
   width: 12px;
@@ -462,15 +482,17 @@ main > .message {
 }
 .compact .summary-counts {
   display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 1px;
+  align-content: center;
 }
 .compact .summary-count {
   justify-content: center;
-  min-height: 0;
   max-width: 100%;
+  padding-block: var(--space-1);
   font-size: var(--text-xs);
   line-height: 1.1;
+}
+.compact .summary-count + .summary-count {
+  border-top: 1px solid #b6d9c5;
 }
 .compact .summary-count > span:last-child {
   position: absolute;
@@ -480,15 +502,18 @@ main > .message {
   clip: rect(0, 0, 0, 0);
 }
 .compact .summary-number strong {
+  font-size: var(--text-xl);
+}
+.compact .summary-number strong[data-digits='3'] {
+  font-size: var(--text-lg);
+}
+.compact .summary-number strong[data-digits='4'] {
   font-size: var(--text-md);
 }
 .compact .summary-number svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   stroke-width: 2;
-}
-.compact .sanctioned-count {
-  border-top: 1px solid #b6d9c5;
 }
 .compact .sanctioned-count svg {
   color: #08744e;
@@ -1104,22 +1129,26 @@ main > .message {
     padding: 4px var(--space-2);
     font-size: var(--text-md);
   }
-  .featured .summary-counts {
-    margin-top: var(--space-8);
-  }
   .featured .summary-count {
     gap: var(--space-2);
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
   }
   .featured .summary-number {
     gap: var(--space-2);
+    height: var(--text-5xl);
   }
   .featured .summary-number strong {
+    font-size: var(--text-5xl);
+  }
+  .featured .summary-number strong[data-digits='3'] {
     font-size: var(--text-4xl);
   }
+  .featured .summary-number strong[data-digits='4'] {
+    font-size: var(--text-3xl);
+  }
   .featured .summary-number svg {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
   .compact .summary-card-heading button {
     gap: 4px;
@@ -1138,6 +1167,15 @@ main > .message {
   }
   .compact .summary-number strong {
     font-size: var(--text-2xl);
+  }
+  .compact .summary-number strong[data-digits='3'] {
+    font-size: var(--text-xl);
+  }
+  .compact .summary-number strong[data-digits='4'] {
+    font-size: var(--text-lg);
+  }
+  .compact .summary-count {
+    padding-block: var(--space-2);
   }
   .compact .summary-number svg {
     width: 16px;
