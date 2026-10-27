@@ -538,33 +538,6 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                   ))}
                 </tbody>
               </table>
-              <dl className={styles.breakdown}>
-                {kccSeasons.slice(0, 2).map((season) => (
-                  <div key={season.value}>
-                    <dt>
-                      {season.label} finance{!result.seasons[season.value].used ? ' (no crops)' : ''}
-                    </dt>
-                    <dd>{showMoney(result.seasons[season.value].finance)}</dd>
-                  </div>
-                ))}
-                {result.seasons.longTerm.used ? (
-                  <div>
-                    <dt>Of which long-term (half in each season)</dt>
-                    <dd>{showMoney(result.seasons.longTerm.finance)}</dd>
-                  </div>
-                ) : null}
-                <div>
-                  <dt>Total crop finance</dt>
-                  <dd>{showMoney(result.baseFinance)}</dd>
-                </div>
-                <div>
-                  <dt>30% addition</dt>
-                  <dd>{showMoney(result.baseFinance === null ? null : result.baseFinance * 0.3)}</dd>
-                </div>
-              </dl>
-              <p className={styles.resultNote}>
-                Years 2–5 include a compounded 10% annual increase, using FY 2026–27 rates.
-              </p>
             </div>
           </details>
           <details className={styles.panel}>

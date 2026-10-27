@@ -623,28 +623,6 @@
   color: var(--amber-ink);
   font-weight: var(--weight-bold);
 }
-.breakdown {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-}
-.breakdown > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.breakdown dd {
-  margin: 0;
-  color: var(--ink);
-  font-weight: var(--weight-semibold);
-  text-align: right;
-  white-space: nowrap;
-}
-.resultNote {
-  font-size: var(--text-xs);
-  line-height: 1.5;
-}
 .betaNote {
   display: flex;
   align-items: center;
