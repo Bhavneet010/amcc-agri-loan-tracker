@@ -21,6 +21,13 @@
   max-width: 1180px;
   margin-inline: auto;
 }
+/* Keep the calculator's own spacing until it moves onto the shared dialog layout. */
+.layout {
+  margin-block: 0;
+}
+.editorBody {
+  margin: 0;
+}
 .editor:global(.modal) {
   width: min(520px, calc(100vw - 24px));
   padding: 12px;
@@ -58,21 +65,25 @@
   background: linear-gradient(110deg, #07553f, #16705c);
   border-bottom: 1px solid #064b3b;
   gap: 10px;
+  align-items: flex-start;
 }
 .dialog :global(.modal-head h2) {
   color: #fff;
   font-size: 19px;
+  line-height: 1.4;
 }
 .dialog :global(.modal-head p) {
   color: #d4eee1;
   margin-top: 0;
   font-size: 11px;
+  line-height: 1.7;
 }
 .dialog :global(.modal-icon) {
   width: 30px;
   height: 30px;
   border-radius: 8px;
   background: #ffffff1a;
+  color: #fff;
 }
 .dialog :global(.modal-close) {
   color: #fff;
@@ -80,6 +91,8 @@
   border-radius: 8px;
   width: 30px;
   height: 30px;
+  min-width: 32px;
+  min-height: 32px;
 }
 .dialog :global(.modal-close:hover) {
   background: #ffffff2d;

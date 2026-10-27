@@ -766,7 +766,12 @@ export default function Workspace() {
         />
       ) : null}
       {help ? (
-        <Modal title="Your workspace, anywhere" subtitle="AMCC loan sourcing & renewals" onClose={() => setHelp(false)}>
+        <Modal
+          title="Your workspace, anywhere"
+          subtitle="AMCC loan sourcing & renewals"
+          icon={<CircleHelp size={22} />}
+          onClose={() => setHelp(false)}
+        >
           <div className="help-content">
             <h3>Working with loans</h3>
             <p>

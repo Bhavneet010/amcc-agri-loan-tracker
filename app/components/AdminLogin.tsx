@@ -24,12 +24,10 @@ export default function AdminLogin({ onClose, onLogin }: { onClose: () => void; 
     <Modal
       title="AMCC admin access"
       subtitle="Review applications across all thirteen branches."
+      icon={<LockKeyhole size={22} />}
       onClose={busy ? undefined : onClose}
     >
       <form className="form-stack" onSubmit={login}>
-        <div className="login-icon">
-          <LockKeyhole size={24} />
-        </div>
         <label>
           Admin password
           <input

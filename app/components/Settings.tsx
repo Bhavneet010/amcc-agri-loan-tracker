@@ -55,6 +55,7 @@ export default function Settings({
           ? 'Select your branch to get started. We’ll remember it on this device.'
           : 'Choose the branch you want to work with.'
       }
+      icon={<Building2 size={22} />}
       onClose={busy ? undefined : onClose}
     >
       <div className="branch-grid">

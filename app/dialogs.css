@@ -1,0 +1,916 @@
+/*
+ * Dialogs, forms and sheets. Every dialog shares one layout: a header (icon, eyebrow, title,
+ * subtitle, close) and a body inset by --dialog-pad. Toned dialogs colour the header band;
+ * the chooser and plain dialogs keep it white.
+ */
+.modal {
+  --dialog-pad: var(--space-4);
+  width: 440px;
+  max-width: calc(100vw - 2 * var(--page-x));
+  max-height: calc(100dvh - 2 * var(--space-6));
+  padding: 0;
+  overflow: hidden auto;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 70px #0d2a1c38;
+  color: var(--ink);
+}
+@media (min-width: 681px) {
+  .modal {
+    --dialog-pad: var(--space-5);
+  }
+}
+.modal::backdrop {
+  background: #0f2a1d59;
+  backdrop-filter: blur(6px);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--dialog-pad);
+}
+.modal-heading {
+  flex: 1;
+  min-width: 0;
+}
+.modal-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--control-lg);
+  height: var(--control-lg);
+  border-radius: var(--radius-md);
+  background: var(--green-light);
+  color: var(--green);
+}
+.modal-eyebrow {
+  display: block;
+  margin-bottom: 2px;
+  font: var(--weight-bold) var(--text-2xs) var(--sans);
+  letter-spacing: 1.2px;
+  opacity: 0.82;
+  text-transform: uppercase;
+}
+.modal h2 {
+  font: var(--weight-bold) var(--text-2xl) / 1.2 var(--serif);
+  letter-spacing: -0.3px;
+}
+.modal-head p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.modal-close {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: #f2f5f3;
+  color: #6d7b72;
+}
+/* Body blocks share the dialog's side padding and stack 12px apart. Zero specificity, so components can override. */
+:where(.modal > :not(.modal-head, dialog)) {
+  margin-inline: var(--dialog-pad);
+}
+:where(.modal > :not(.modal-head, dialog) ~ :not(.modal-head, dialog)) {
+  margin-top: var(--space-3);
+}
+:where(.modal > :not(.modal-head, dialog):last-child) {
+  margin-bottom: var(--dialog-pad);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 680px) {
+  .modal-actions .button {
+    flex: 1;
+  }
+}
+
+/* Toned dialogs: loan forms and alerts. New loans are green, renewals amber. */
+.modal.toned {
+  --tone: var(--green);
+  --tone-2: #2a7a55;
+  --tone-soft: #e9f2ec;
+  --tone-ring: #00543f22;
+}
+.modal.tone-renewal {
+  --tone: #8a4b12;
+  --tone-2: #bd7a2a;
+  --tone-soft: #fbf1e3;
+  --tone-ring: #8a4b1222;
+}
+.modal.toned .modal-head {
+  position: relative;
+  margin-bottom: var(--dialog-pad);
+  overflow: hidden;
+  background: linear-gradient(120deg, var(--tone), var(--tone-2));
+  color: #fff;
+}
+.modal.toned .modal-head:after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -40px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: #ffffff14;
+  pointer-events: none;
+}
+.modal.toned .modal-icon {
+  background: #ffffff26;
+  box-shadow: inset 0 0 0 1px #ffffff30;
+  color: #fff;
+}
+.modal.toned h2 {
+  color: #fff;
+}
+.modal.toned .modal-head p {
+  color: #ffffffd9;
+  font-weight: var(--weight-medium);
+}
+.modal.toned .modal-close {
+  background: #ffffff1f;
+  color: #fff;
+}
+.modal.toned .modal-close:hover {
+  background: #ffffff38;
+  color: #fff;
+}
+.modal.toned .modal-close:focus-visible {
+  outline: 2px solid #ffffffb0;
+  outline-offset: 2px;
+}
+.modal.toned input:focus,
+.modal.toned select:focus,
+.modal.toned textarea:focus,
+.modal.toned .ats-input:focus-within {
+  border-color: var(--tone-2);
+  box-shadow: 0 0 0 3px var(--tone-ring);
+}
+.modal.toned .ats-input input:focus {
+  box-shadow: none;
+}
+.modal.toned .button.primary {
+  background: var(--tone);
+}
+.modal.toned .button.primary:hover {
+  background: var(--tone-2);
+}
+/* An existing loan's header shows its ATS number as the title. */
+.modal-ats {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+.modal-ats-tag {
+  padding: var(--space-1) 6px;
+  border-radius: var(--radius-sm);
+  background: #ffffff2e;
+  box-shadow: inset 0 0 0 1px #ffffff40;
+  font: var(--weight-bold) var(--text-2xs) / 1 var(--sans);
+  letter-spacing: 1px;
+}
+
+/* Forms */
+.form-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.form-row > label {
+  min-width: 0;
+}
+label,
+.form-field {
+  display: grid;
+  gap: var(--space-1);
+  color: #4f5f55;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+.form-field-label {
+  font: inherit;
+}
+label input,
+label select,
+label textarea {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+}
+textarea {
+  min-height: 72px;
+}
+small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+}
+.field-static {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 11px var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, #f6f8f6);
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.field-static svg {
+  color: var(--tone, var(--green));
+}
+.form-error {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+/* ATS field: fixed "ATS" prefix, the user types only the 8–9 digit number. */
+.ats-input {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.ats-input:focus-within {
+  border-color: #72a48b;
+  box-shadow: 0 0 0 3px #215c4410;
+}
+.ats-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border-right: 1px solid var(--line-strong);
+  background: var(--tone-soft, var(--green-light));
+  color: var(--tone, var(--green));
+  font: var(--weight-bold) var(--text-sm) var(--sans);
+  letter-spacing: 0.6px;
+}
+.ats-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+.ats-input input:focus {
+  box-shadow: none;
+}
+
+/* Loan summaries and admin review */
+.review-summary {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, #f4f8f5);
+}
+.review-summary span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.review-summary strong {
+  color: var(--tone, var(--green));
+  font: var(--weight-bold) var(--text-2xl) var(--serif);
+}
+.review-summary p {
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+/* Admin review: borrower and status share one row to keep the dialog short. */
+.review-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.review-top .review-summary {
+  align-content: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+}
+.review-borrower {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Long names wrap to a second line instead of being cut off. */
+.review-top .review-borrower-card strong {
+  display: -webkit-box;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  white-space: normal;
+}
+.review-top .review-amount {
+  color: var(--tone);
+  font: var(--weight-bold) var(--text-lg) / 1.3 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.review-top .review-amount:first-child {
+  font-size: var(--text-xl);
+}
+/* Status reads as a pill matching the borrower card; the whole pill opens the native picker. */
+.review-status {
+  position: relative;
+  align-content: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--pending-soft);
+  color: var(--pending-ink);
+  cursor: pointer;
+}
+.review-status.sanctioned {
+  background: #eaf4ee;
+  color: var(--complied-ink);
+}
+.review-status.returned {
+  background: #fff0e8;
+  color: var(--returned-ink);
+}
+.review-status > span {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-regular);
+}
+.modal .review-status select {
+  width: 100%;
+  padding: 0 22px 0 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: var(--weight-bold) var(--text-lg) / 1.3 var(--sans);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.modal .review-status select:focus {
+  box-shadow: none;
+}
+.review-status:focus-within {
+  box-shadow: 0 0 0 3px var(--tone-ring);
+}
+.review-status svg {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Delete application */
+.delete-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  color: var(--danger-ink);
+  font-size: var(--text-sm);
+}
+.delete-link:hover {
+  text-decoration: underline;
+}
+.delete-confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: #7d3a31;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.delete-confirm > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Charge details for renewals above ₹2 lakh: a required Yes/No answer and an optional photo. */
+.charge-prompt {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--tone-ring, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--tone-soft, var(--green-light));
+}
+.charge-prompt legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-1);
+  color: var(--tone, var(--green));
+  font: var(--weight-semibold) var(--text-md) var(--sans);
+}
+.charge-prompt p {
+  color: var(--muted);
+  font: var(--weight-regular) var(--text-sm) / 1.4 var(--sans);
+}
+.charge-choice,
+.charge-sources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.charge-choice button {
+  height: var(--control-md);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--weight-semibold) var(--text-md) var(--sans);
+}
+.charge-choice button.selected {
+  border-color: var(--tone, var(--green));
+  background: var(--tone, var(--green));
+  color: #fff;
+}
+.charge-file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-md);
+  border: 1px dashed var(--tone-2, var(--green));
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--tone, var(--green));
+  font: var(--weight-semibold) var(--text-md) var(--sans);
+  cursor: pointer;
+}
+.charge-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.charge-preview {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  text-decoration: none;
+}
+.charge-preview img {
+  width: 100%;
+  max-height: 220px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  object-fit: contain;
+}
+.charge-preview figcaption,
+.charge-preview small,
+.charge-prompt small,
+.charge-review small {
+  color: var(--muted);
+  font: var(--weight-regular) var(--text-xs) var(--sans);
+}
+.charge-review .button {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+}
+
+/* Branch settings, admin sign-in and help */
+.branch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.branch-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--control-lg);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-align: left;
+}
+.branch-option > span:nth-child(2) {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.branch-option:hover,
+.branch-option.selected {
+  border-color: #95b59f;
+  background: #f3f8f4;
+  color: var(--green);
+}
+.branch-number {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.settings-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.rename-form,
+.onboarding-footer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.rename-form {
+  display: grid;
+  gap: var(--space-3);
+}
+.rename-form h3 {
+  font: var(--weight-bold) var(--text-lg) var(--serif);
+}
+.rename-form .button {
+  justify-self: end;
+}
+.onboarding-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.wide {
+  width: 100%;
+}
+.help-content {
+  display: grid;
+  gap: var(--space-2);
+}
+.help-content h3 {
+  margin-top: var(--space-2);
+  font: var(--weight-bold) var(--text-lg) var(--serif);
+}
+.help-content h3:first-child {
+  margin-top: 0;
+}
+.help-content p {
+  color: var(--muted);
+  font-size: var(--text-md);
+  line-height: 1.6;
+}
+
+/* Add Loan chooser: centred card that pops in, with the two loan types as large choices. */
+.modal.chooser {
+  animation: chooser-pop 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.modal.chooser:focus,
+.modal.chooser .modal-close:focus-visible {
+  outline: none;
+}
+.modal.chooser::backdrop {
+  animation: chooser-fade 0.3s ease;
+}
+.loan-type-choices {
+  display: grid;
+  gap: var(--space-3);
+}
+.loan-type-choice {
+  --tone: var(--green);
+  --tone-soft: #e9f2ec;
+  --tone-line: #d3e5d9;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--tone-line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #fff 40%, var(--tone-soft));
+  color: var(--tone);
+  text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  animation: choice-in 0.45s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.loan-type-choice.renewal {
+  --tone: #8a4b12;
+  --tone-soft: #fbf1e3;
+  --tone-line: #f0dfc6;
+  animation-delay: 0.06s;
+}
+.loan-type-choice:hover {
+  border-color: var(--tone);
+  box-shadow: 0 6px 18px #18382718;
+}
+.loan-type-choice:active {
+  transform: scale(0.98);
+}
+.choice-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--tone);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--tone) 30%, transparent);
+  color: #fff;
+}
+.choice-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.choice-text strong {
+  color: var(--tone);
+  font: var(--weight-bold) var(--text-xl) / 1.2 var(--serif);
+}
+.choice-text span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+.choice-arrow {
+  color: var(--tone);
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+.loan-type-choice:hover .choice-arrow {
+  transform: translateX(3px);
+}
+@keyframes chooser-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+@keyframes chooser-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes choice-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal.chooser,
+  .modal.chooser::backdrop,
+  .loan-type-choice {
+    animation: none;
+  }
+}
+
+/* Loan alerts for branch users */
+.notification-list {
+  display: grid;
+  gap: var(--space-3);
+  max-height: 55dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.notification-loan {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid #dbe8df;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #f7fbf8, #fff 60%);
+  box-shadow: 0 2px 8px #00543f0d;
+  overflow-wrap: anywhere;
+}
+.notification-loan-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.notification-loan h3 {
+  min-width: 0;
+  color: var(--ink);
+  font: var(--weight-bold) var(--text-lg) / 1.3 var(--serif);
+}
+.notification-ats {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--tone-soft);
+  color: var(--tone);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.notification-event {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.notification-event + .notification-event {
+  padding-top: var(--space-2);
+  border-top: 1px dashed #dce8df;
+}
+.notification-meta {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+.notification-decision {
+  display: grid;
+  gap: 2px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.notification-decision strong {
+  color: var(--ink);
+}
+.status-word.pending {
+  color: var(--pending-ink);
+}
+.status-word.sanctioned {
+  color: var(--green);
+}
+.status-word.returned {
+  color: var(--returned-ink);
+}
+.notification-remarks {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--pending-soft);
+}
+.notification-remarks span {
+  display: block;
+  margin-bottom: 2px;
+  color: #9a7232;
+  font: var(--weight-bold) var(--text-2xs) var(--sans);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.notification-remarks p {
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: 1.5;
+}
+.notification-remarks.cleared {
+  border-left-color: #c2ccc5;
+  background: #f6f8f7;
+}
+.notification-remarks.cleared span {
+  margin: 0;
+  color: var(--muted);
+}
+.notification-remarks p,
+.notification-decision p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.notification-footer > p {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  text-align: center;
+}
+.notification-footer .modal-actions {
+  margin-top: var(--space-3);
+}
+.notification-storage-note {
+  position: fixed;
+  right: var(--page-x);
+  bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  left: var(--page-x);
+  z-index: 4;
+  padding: var(--space-3);
+  border: 1px solid #e6d8b9;
+  border-radius: var(--radius-md);
+  background: #fff8ea;
+  color: #755f35;
+  font-size: var(--text-sm);
+}
+
+/* Install prompt: a bottom sheet rather than a dialog, with the same card style. */
+.install-sheet {
+  position: fixed;
+  bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 9;
+  width: min(420px, calc(100vw - 2 * var(--page-x)));
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+  animation: install-in 0.25s ease-out;
+}
+.install-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.install-sheet-head img {
+  flex: none;
+  border-radius: var(--radius-md);
+}
+.install-sheet-head div {
+  flex: 1;
+  min-width: 0;
+}
+.install-sheet-head strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-lg);
+}
+.install-sheet-head p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.install-note,
+.install-steps {
+  margin: var(--space-3) 0 0;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.install-note {
+  padding: var(--space-2) var(--space-3);
+  background: #fbf4e7;
+  color: #7a5a20;
+}
+.install-steps {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-8);
+  background: var(--green-light);
+}
+.install-steps svg {
+  margin-left: 2px;
+  color: var(--green);
+  vertical-align: -3px;
+}
+.install-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+@keyframes install-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@media (max-width: 680px) {
+  .install-sheet {
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  }
+  .install-actions .button {
+    flex: 1;
+  }
+}
