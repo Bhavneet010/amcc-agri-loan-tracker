@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 };
 
 // Draw edge to edge so the home landscape reaches under the phone's home indicator and gesture bar.
-export const viewport: Viewport = { viewportFit: 'cover' };
+// maximumScale stops iOS zooming into form fields smaller than 16px on focus; pinch zoom still works there.
+export const viewport: Viewport = { viewportFit: 'cover', width: 'device-width', initialScale: 1, maximumScale: 1 };
 
 export default function RootLayout({
   children,

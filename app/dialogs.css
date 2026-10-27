@@ -47,7 +47,7 @@
 }
 .modal-eyebrow {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   font: var(--weight-bold) var(--text-2xs) var(--sans);
   letter-spacing: 1.2px;
   opacity: 0.82;
@@ -58,7 +58,7 @@
   letter-spacing: -0.3px;
 }
 .modal-head p {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.4;
@@ -177,7 +177,7 @@
   letter-spacing: 0.3px;
 }
 .modal-ats-tag {
-  padding: var(--space-1) 6px;
+  padding: var(--space-1) 4px;
   border-radius: var(--radius-sm);
   background: #ffffff2e;
   box-shadow: inset 0 0 0 1px #ffffff40;
@@ -228,7 +228,7 @@ small {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 11px var(--space-3);
+  padding: 8px var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--tone-soft, #f6f8f6);
@@ -311,7 +311,7 @@ small {
 }
 .review-top .review-summary {
   align-content: center;
-  gap: 2px;
+  gap: 1px;
   padding: var(--space-2) var(--space-3);
 }
 .review-borrower {
@@ -341,7 +341,7 @@ small {
 .review-status {
   position: relative;
   align-content: center;
-  gap: 2px;
+  gap: 1px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: var(--pending-soft);
@@ -363,7 +363,7 @@ small {
 }
 .modal .review-status select {
   width: 100%;
-  padding: 0 22px 0 0;
+  padding: 0 15px 0 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -391,7 +391,7 @@ small {
   display: inline-flex;
   align-items: center;
   justify-self: start;
-  gap: 6px;
+  gap: 4px;
   color: var(--danger-ink);
   font-size: var(--text-sm);
 }
@@ -428,7 +428,7 @@ small {
 .charge-prompt legend {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 0 var(--space-1);
   color: var(--tone, var(--green));
   font: var(--weight-semibold) var(--text-md) var(--sans);
@@ -501,7 +501,7 @@ small {
   display: inline-flex;
   align-items: center;
   justify-self: start;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* Branch settings, admin sign-in and help */
@@ -654,7 +654,7 @@ small {
 .choice-text {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 .choice-text strong {
@@ -729,7 +729,7 @@ small {
 }
 .notification-ats {
   flex-shrink: 0;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border-radius: var(--radius-sm);
   background: var(--tone-soft);
   color: var(--tone);
@@ -755,7 +755,7 @@ small {
 }
 .notification-decision {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   font-size: var(--text-sm);
   line-height: 1.5;
 }
@@ -780,7 +780,7 @@ small {
 }
 .notification-remarks span {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   color: #9a7232;
   font: var(--weight-bold) var(--text-2xs) var(--sans);
   letter-spacing: 1px;
@@ -862,7 +862,7 @@ small {
   font-size: var(--text-lg);
 }
 .install-sheet-head p {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--muted);
   font-size: var(--text-sm);
   line-height: 1.45;
@@ -886,7 +886,7 @@ small {
   background: var(--green-light);
 }
 .install-steps svg {
-  margin-left: 2px;
+  margin-left: 1px;
   color: var(--green);
   vertical-align: -3px;
 }

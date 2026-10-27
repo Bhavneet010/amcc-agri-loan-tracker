@@ -58,7 +58,7 @@
   text-transform: uppercase;
 }
 .beta {
-  padding: 2px 6px;
+  padding: 1px 4px;
 }
 .betaPill {
   padding: var(--space-1) var(--space-3);
@@ -126,7 +126,7 @@
 }
 .eyebrow {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   color: var(--section-accent);
   font: var(--weight-bold) var(--text-2xs) var(--sans);
   letter-spacing: 1px;
@@ -282,7 +282,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  padding: var(--space-1) 6px;
+  padding: var(--space-1) 4px;
 }
 .cropHeader > span + span,
 .cropRow > span + span,
@@ -330,7 +330,7 @@
 }
 .seasonTag {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 1px 4px;
   border-radius: var(--radius-pill);
   background: var(--section-soft);
   color: var(--section-accent);
@@ -363,7 +363,7 @@
 .cropTable .acreInput {
   width: 100%;
   min-height: 28px;
-  padding: 2px var(--space-1);
+  padding: 1px var(--space-1);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -713,10 +713,6 @@
   .cropRow > span,
   .cropTotal > span {
     padding: var(--space-1);
-  }
-  /* iOS zooms into fields under 16px, so the in-place acres field is larger on phones. */
-  .cropTable .acreInput {
-    font-size: var(--text-lg);
   }
   .editorActions :global(.button) {
     flex: 1 1 auto;

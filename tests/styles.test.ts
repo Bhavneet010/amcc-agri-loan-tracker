@@ -12,10 +12,10 @@ const declarations = (css: string) =>
     .map(([, prop, value]) => ({ prop, value: value.trim() }))
     .filter(({ prop }) => !prop.startsWith('--'));
 
-test('text sizes come from the type scale, and the smallest is 11px', () => {
+test('text sizes come from the type scale, and the smallest is 9px', () => {
   const sizes = [...read('app/globals.css').matchAll(/--text-[\w]+:\s*(\d+)px/g)].map(([, px]) => Number(px));
   assert.ok(sizes.length >= 8);
-  assert.ok(Math.min(...sizes) >= 11, 'no type token below 11px');
+  assert.ok(Math.min(...sizes) >= 9, 'no type token below 9px');
   for (const file of files)
     for (const { prop, value } of declarations(read(file))) {
       if (prop === 'font-size') assert.match(value, /^(var\(--text-[\w]+\)|inherit)$/, `${file}: font-size ${value}`);

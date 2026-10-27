@@ -34,38 +34,38 @@
   --green-line: #d3e7da;
   --label: #4f5f55;
 
-  /* Type scale. 11px is the smallest text; form fields use 16px so iOS does not zoom on focus. */
-  --text-2xs: 11px;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-md: 14px;
-  --text-lg: 16px;
-  --text-xl: 18px;
-  --text-2xl: 22px;
-  --text-3xl: 28px;
-  --text-4xl: 40px;
+  /* Type scale, sized for phones. 9px is the smallest text. */
+  --text-2xs: 9px;
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-md: 12px;
+  --text-lg: 14px;
+  --text-xl: 16px;
+  --text-2xl: 20px;
+  --text-3xl: 26px;
+  --text-4xl: 38px;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
   /* Spacing, corners and control heights. */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+  --space-1: 3px;
+  --space-2: 5px;
+  --space-3: 8px;
+  --space-4: 11px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-8: 22px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-pill: 999px;
-  --control-sm: 32px;
-  --control-md: 40px;
-  --control-lg: 44px;
+  --control-sm: 28px;
+  --control-md: 34px;
+  --control-lg: 38px;
 
-  /* Page gutter: phones use 16px, wider screens 24px (see the 681px query below). */
+  /* Page gutter: phones use 11px, wider screens 16px (see the 681px query below). */
   --page-x: var(--space-4);
   --page-max: 760px;
 
@@ -135,7 +135,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
-  padding: 11px var(--space-3);
+  padding: 8px var(--space-3);
   outline: none;
   color: var(--ink);
   font-size: var(--text-lg);
