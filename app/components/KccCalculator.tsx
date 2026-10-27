@@ -518,7 +518,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
           <details className={styles.panel} open>
             <summary>
               <ChartNoAxesColumn size={20} />
-              <span>5-year schedule & calculation details</span>
+              <span>5-year schedule</span>
               <ChevronDown size={18} className={styles.chevron} />
             </summary>
             <div className={styles.panelBody}>
