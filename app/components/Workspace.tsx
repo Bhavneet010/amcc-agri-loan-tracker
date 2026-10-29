@@ -31,6 +31,7 @@ import InstallPrompt from './InstallPrompt';
 import SummaryCarousel from './SummaryCarousel';
 import HomeLandscape from './HomeLandscape';
 import BranchNotifications from './BranchNotifications';
+import { disablePushAlerts, syncPushAlerts } from '../../lib/push';
 
 const KccCalculator = dynamic(() => import('./KccCalculator'), { ssr: false });
 
@@ -133,6 +134,7 @@ export default function Workspace() {
         setBranches(list);
         rememberBranches(list);
         setAdmin(session.admin);
+        if (session.admin) syncPushAlerts().catch(() => {});
         const validBranch = list.some((b) => b.id === stored);
         if (!validBranch) setBranch('');
         if (!session.admin) {
@@ -320,6 +322,8 @@ export default function Workspace() {
   }
   async function logout() {
     try {
+      // Signing out stops new-loan alerts on this phone; an offline phone is cleared by the push service later.
+      await disablePushAlerts().catch(() => {});
       await request('/api/admin/session', { method: 'DELETE' });
       setAdmin(false);
       setViewAdmin(false);

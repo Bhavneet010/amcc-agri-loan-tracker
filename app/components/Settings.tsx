@@ -4,6 +4,7 @@ import { Check, Building2 } from 'lucide-react';
 import type { Branch } from '../../lib/types';
 import { request } from '../../lib/types';
 import Modal from './Modal';
+import PushAlerts from './PushAlerts';
 export default function Settings({
   branches,
   selected,
@@ -74,6 +75,7 @@ export default function Settings({
       <p className="settings-note">
         <Building2 size={15} /> Tap the branch name at the top to switch anytime.
       </p>
+      {admin ? <PushAlerts /> : null}
       {admin ? (
         <form onSubmit={rename} className="rename-form">
           <h3>Manage branch names</h3>

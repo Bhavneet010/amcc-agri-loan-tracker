@@ -549,6 +549,7 @@ small {
   line-height: 1.5;
 }
 .rename-form,
+.push-alerts,
 .onboarding-footer {
   margin-top: var(--space-4);
   padding-top: var(--space-4);
@@ -562,6 +563,16 @@ small {
   font: var(--weight-bold) var(--text-lg) var(--serif);
 }
 .rename-form .button {
+  justify-self: end;
+}
+.push-alerts {
+  display: grid;
+  gap: var(--space-3);
+}
+.push-alerts h3 {
+  font: var(--weight-bold) var(--text-lg) var(--serif);
+}
+.push-alerts .button {
   justify-self: end;
 }
 .onboarding-footer {

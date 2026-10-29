@@ -70,6 +70,18 @@ export function createStorage(client: SupabaseClient): Storage {
       if (error || !data) throw new Error(`Charge image link failed (${error?.message || 'unknown'}).`);
       return data.signedUrl;
     },
+    async getPushKeys() {
+      const row = checked(await client.from('amcc_push_keys').select('public_key,private_jwk').eq('id', true).maybeSingle());
+      return row ? { publicKey: row.public_key, privateJwk: row.private_jwk } : null;
+    },
+    async savePushKeys(keys) { checked(await client.from('amcc_push_keys').upsert({ id: true, public_key: keys.publicKey, private_jwk: keys.privateJwk }, { onConflict: 'id', ignoreDuplicates: true })); },
+    async savePushSubscription(subscription) {
+      checked(await client.from('amcc_push_subscriptions').upsert({ endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth: subscription.auth, updated_at: new Date().toISOString() }, { onConflict: 'endpoint' }));
+    },
+    async removePushSubscription(endpoint) { checked(await client.from('amcc_push_subscriptions').delete().eq('endpoint', endpoint)); },
+    async listPushSubscriptions() { return checked(await client.from('amcc_push_subscriptions').select('endpoint,p256dh,auth')); },
+    async claimPushJobs() { return checked(await client.rpc('amcc_claim_push_jobs')); },
+    async finishPushJob(id) { checked(await client.from('amcc_push_outbox').delete().eq('id', id)); },
     async readNotifications(branchId, deviceId, eventIds) { return checked(await client.rpc('amcc_read_notifications', { p_branch_id: branchId, p_device_id: deviceId, p_event_ids: eventIds })); },
     async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
     async createSharedLoan(input,source) {

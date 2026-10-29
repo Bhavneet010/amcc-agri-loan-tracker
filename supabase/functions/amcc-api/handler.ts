@@ -2,11 +2,12 @@ import { AppError, validateLoanInput, publicChanges, adminChanges,validateDecisi
 import { isAdmin, sessionCookie, signSession, verifyPassword } from './auth.ts';
 import { handleLinkage, validateSharedCreate, type LinkStorage } from './linkage.ts';
 import { handleNotifications, type NotificationStorage } from './notifications.ts';
+import { deliverPushAlerts, handlePush, type PushStorage } from './push.ts';
 import { chargeChoice, dropChargeImage, imageBody, imageType, missingChoice, needsCharge, type ChargeStorage } from './charge.ts';
 
 export type Config = { enabled: boolean; passwordSalt: string; passwordHash: string; sessionSecret: string; linkageEnabled?: boolean };
 export type RecordData = Record<string, any>;
-export interface Storage extends Partial<ChargeStorage> {
+export interface Storage extends Partial<ChargeStorage>, Partial<PushStorage> {
   getConfig(): Promise<Config>;
   listBranches(): Promise<RecordData[]>;
   listLoans(filters: { branchId?: string; category?: string }): Promise<RecordData[]>;
@@ -60,8 +61,13 @@ async function body(request: Request): Promise<RecordData> {
   return data;
 }
 
-export function createHandler(db: Storage, publicKeys: string | string[]) {
+// `background` keeps work running after the response is sent (EdgeRuntime.waitUntil in Supabase).
+export function createHandler(db: Storage, publicKeys: string | string[], background: (work: Promise<unknown>) => void = () => {}) {
   const keys = Array.isArray(publicKeys) ? publicKeys : [publicKeys];
+  // Loans are queued for alerts in the same transaction that creates them; sending happens after the reply.
+  const alertAdmin = () => {
+    if (db.claimPushJobs) background(deliverPushAlerts(db as PushStorage).catch(error => console.error('Push alerts failed', error instanceof Error ? error.message : 'Unknown error')));
+  };
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^.*\/amcc-api(?=\/)/, '');
@@ -72,21 +78,26 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
     if (originAllowed) headers['Access-Control-Allow-Origin'] = origin;
     const json = (value: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(value, { status, headers: { ...headers, ...extra } });
     try {
-      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|loans\/[^/]+\/charge|notifications|admin\/session|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
+      if (!/^\/api\/(branches|loans(?:\/[^/]+)?|loans\/[^/]+\/charge|notifications|admin\/session|admin\/push|linkage\/loans(?:\/[^/]+)?)$/.test(path)) throw new AppError('Not found.', 404);
       if (request.method === 'OPTIONS') {
         if (!originAllowed) throw new AppError('Request origin is not allowed.', 403);
         return new Response(null, { status: 204, headers: { ...headers, 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'apikey, authorization, content-type, x-region', 'Access-Control-Max-Age': '600' } });
       }
       if (!keys.some(key => key && key === request.headers.get('apikey'))) throw new AppError('An application API key is required.', 401);
-      const methods = path === '/api/notifications' || chargePath ? ['GET','POST'] : path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
+      const methods = path === '/api/notifications' || chargePath ? ['GET','POST'] : path.startsWith('/api/linkage/') ? ['GET','POST','PATCH'] : path === '/api/admin/session' || path === '/api/admin/push' ? ['GET', 'POST', 'DELETE'] : path === '/api/branches' ? ['GET', 'PATCH'] : path === '/api/loans' ? ['GET', 'POST'] : ['GET', 'PATCH', 'DELETE'];
       if (!methods.includes(request.method)) throw new AppError('Method not allowed.', 405);
       if (request.method !== 'GET' && !originAllowed) throw new AppError('Request origin is not allowed.', 403);
       const config = await db.getConfig();
       if (!config.enabled) throw new AppError('The shared workspace is being migrated. Please try again shortly; nothing was changed.', 503);
       if (path === '/api/notifications') return json(await handleNotifications(request, db as NotificationStorage, request.method === 'GET' ? undefined : await body(request)));
+      if (path === '/api/admin/push') {
+        if (!db.savePushSubscription) throw new AppError('Phone alerts are not available yet.', 503);
+        return json(await handlePush(request, db as PushStorage, await isAdmin(request, config.sessionSecret), request.method === 'GET' ? undefined : await body(request)));
+      }
       if (path.startsWith('/api/linkage/')) {
         if (!config.linkageEnabled) throw new AppError('Shared Agriculture linkage is not enabled yet.', 503);
         const result = await handleLinkage(request, path, db as LinkStorage, request.method === 'GET' ? undefined : await body(request), await isAdmin(request, config.sessionSecret));
+        if (request.method === 'POST') alertAdmin();
         return json(result.data,result.status);
       }
       if (path === '/api/admin/session') {
@@ -137,9 +148,11 @@ export function createHandler(db: Storage, publicKeys: string | string[]) {
           const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.nirnayMatchId?{nirnayMatchId:input.nirnayMatchId}:{}),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
           if(shared.nirnayMatchId&&!await isAdmin(request,config.sessionSecret))throw new AppError('Admin login is required to link an existing Nirnay decision.',401);
           const saved=await db.createSharedLoan(shared,'agri');
+          alertAdmin();
           return json(saved,saved.needsConfirmation?409:201);
         }
         const created = await db.createLoan({ branchId: input.branchId, category: input.category, ...validated });
+        alertAdmin();
         if (!askCharge) return json(publicLoan(created), 201);
         await chargeStore(db).setCharge(created.id, choice!, null);
         return json(publicLoan(await db.getLoan(created.id)), 201);
