@@ -6,7 +6,8 @@ import { disablePushAlerts, enablePushAlerts, pushState, type PushState } from '
 const notes: Record<PushState, string> = {
   on: 'This phone gets a notification whenever a branch or Nirnay adds a new loan or renewal.',
   off: 'Get a notification on this phone whenever a branch or Nirnay adds a new loan or renewal. Only phones where you turn this on are alerted.',
-  blocked: 'Notifications are blocked for this app. Allow them in the phone’s settings, then come back here.',
+  blocked:
+    'Notifications are blocked for this app. Long-press the app icon, open App info → Notifications and allow them, then open this again.',
   unsupported: 'This browser cannot show phone alerts. On Android, open the installed app in Chrome.',
 };
 
@@ -35,7 +36,6 @@ export default function PushAlerts() {
   if (!state) return null;
   return (
     <section className="push-alerts">
-      <h3>New loan alerts</h3>
       <p className="settings-note">{notes[state]}</p>
       {error ? (
         <p className="form-error" role="alert">

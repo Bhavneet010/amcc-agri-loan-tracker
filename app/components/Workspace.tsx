@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
+  Bell,
   Building2,
   Calculator,
   CheckCheck,
@@ -31,6 +32,7 @@ import InstallPrompt from './InstallPrompt';
 import SummaryCarousel from './SummaryCarousel';
 import HomeLandscape from './HomeLandscape';
 import BranchNotifications from './BranchNotifications';
+import PushAlerts from './PushAlerts';
 import { disablePushAlerts, syncPushAlerts } from '../../lib/push';
 
 const KccCalculator = dynamic(() => import('./KccCalculator'), { ssr: false });
@@ -82,6 +84,7 @@ export default function Workspace() {
   const [notice, setNotice] = useState('');
   const [settings, setSettings] = useState(false);
   const [calculator, setCalculator] = useState(false);
+  const [alerts, setAlerts] = useState(false);
   const [login, setLogin] = useState(false);
   const [form, setForm] = useState<Loan | 'new' | null>(null);
   const [addChoice, setAddChoice] = useState(false);
@@ -466,6 +469,9 @@ export default function Workspace() {
                     >
                       <ShieldCheck size={17} /> Admin overview
                     </button>
+                    <button role="menuitem" onClick={() => setAlerts(true)}>
+                      <Bell size={17} /> New loan alerts
+                    </button>
                     {/* The KCC calculator is a beta, so it stays with the admin settings until it is ready for branches. */}
                     {activeAdmin ? (
                       <>
@@ -715,6 +721,16 @@ export default function Workspace() {
         </Modal>
       ) : null}
       {calculator && activeAdmin ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
+      {alerts && admin ? (
+        <Modal
+          title="New loan alerts"
+          subtitle="Notifications on this phone for new loans and renewals."
+          icon={<Bell size={22} />}
+          onClose={() => setAlerts(false)}
+        >
+          <PushAlerts />
+        </Modal>
+      ) : null}
       {ready && (settings || (!branchId && !activeAdmin)) && !login && !calculator ? (
         <Settings
           branches={branches}
