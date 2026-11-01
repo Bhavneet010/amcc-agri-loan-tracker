@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { Building2, ChevronDown, RefreshCcw, Sprout, Trash2 } from 'lucide-react';
-import type { Branch, Loan } from '../../lib/types';
-import { atsDigits, request, rupees, shortDateLabel } from '../../lib/types';
+import type { Branch, Loan, ReturnedMatch } from '../../lib/types';
+import { atsDigits, dateLabel, request, rupees, shortDateLabel } from '../../lib/types';
 import Modal from './Modal';
 import { ChargePrompt, ChargeReview } from './ChargeDetails';
 import { amountToPaise, needsCharge } from '../../lib/charge-image';
@@ -42,6 +42,9 @@ export default function LoanForm({
   const [candidates, setCandidates] = useState<Loan[]>([]);
   const [linkExistingId, setLinkExistingId] = useState('');
   const [nirnayMatchId, setNirnayMatchId] = useState('');
+  // Returned loans in this branch that match the loan being added; the branch can update one and resubmit it.
+  const [returnedMatches, setReturnedMatches] = useState<ReturnedMatch[]>([]);
+  const [ignoreReturned, setIgnoreReturned] = useState(false);
   const today = () =>
     new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Kolkata',
@@ -153,6 +156,9 @@ export default function LoanForm({
   }
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    await submit();
+  }
+  async function submit(choice: { resubmitReturnedId?: string; ignoreReturned?: boolean } = {}) {
     setError('');
     setSaving(true);
     try {
@@ -181,9 +187,14 @@ export default function LoanForm({
             amount,
             ...charge,
             requestId,
-            ...(nirnayMatchId ? { nirnayMatchId } : {}),
-            ...(linkExistingId ? { linkExistingId } : {}),
-            ...(allowDistinct ? { allowDistinct: true } : {}),
+            ...(choice.resubmitReturnedId
+              ? { resubmitReturnedId: choice.resubmitReturnedId }
+              : {
+                  ...(nirnayMatchId ? { nirnayMatchId } : {}),
+                  ...(linkExistingId ? { linkExistingId } : {}),
+                  ...(allowDistinct ? { allowDistinct: true } : {}),
+                  ...(ignoreReturned || choice.ignoreReturned ? { ignoreReturned: true } : {}),
+                }),
           };
       const saved = await request<Loan>(loan ? `/api/loans/${loan.id}` : '/api/loans', {
         method: loan ? 'PATCH' : 'POST',
@@ -191,7 +202,11 @@ export default function LoanForm({
       });
       onSaved(askCharge && chargeChoice === 'yes' && chargeImage ? await uploadCharge(saved) : saved);
     } catch (e) {
-      const failure = e as Error & { candidates?: Loan[] };
+      const failure = e as Error & { candidates?: Loan[]; returnedMatches?: ReturnedMatch[] };
+      if (failure.returnedMatches?.length) {
+        setReturnedMatches(failure.returnedMatches);
+        return;
+      }
       setError(failure.message);
       if (failure.candidates) {
         setCandidates(failure.candidates);
@@ -389,6 +404,99 @@ export default function LoanForm({
             <textarea rows={3} value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={2000} />
           </label>
         ) : null}
+        {loan && loan.status === 'pending' && loan.resubmittedAt ? (
+          <div className="review-summary">
+            <strong>Resubmitted after return</strong>
+            {loan.returnReason ? (
+              <p>
+                Returned{loan.returnedDate ? ` on ${dateLabel(loan.returnedDate)}` : ''}: {loan.returnReason}
+              </p>
+            ) : null}
+            <small>Resubmitted by the branch on {dateLabel(loan.resubmittedAt)}</small>
+          </div>
+        ) : null}
+        {returnedMatches.length ? (
+          <div className="returned-match" role="group" aria-label="Loan already exists as Returned">
+            <strong>This loan already exists as Returned</strong>
+            <p>Do you want to update it with these details and resubmit it?</p>
+            {returnedMatches.map((match) => {
+              const atsChanged = atsDigits(match.atsId) !== ats;
+              const amountChanged = match.amountPaise !== amountToPaise(amount);
+              const nameChanged =
+                match.borrowerName.trim().toUpperCase().replace(/\s+/g, ' ') !==
+                borrowerName.trim().toUpperCase().replace(/\s+/g, ' ');
+              return (
+                <div className="returned-match-item" key={match.id}>
+                  <span className="returned-match-title">
+                    {match.borrowerName}
+                    {match.returnedDate ? ` · returned ${shortDateLabel(match.returnedDate)}` : ''}
+                  </span>
+                  {match.returnReason ? <p className="returned-match-reason">Reason: {match.returnReason}</p> : null}
+                  <dl>
+                    {nameChanged ? (
+                      <>
+                        <dt>Name</dt>
+                        <dd>
+                          {match.borrowerName} → <strong>{borrowerName.trim()}</strong> <em>changed</em>
+                        </dd>
+                      </>
+                    ) : null}
+                    <dt>ATS</dt>
+                    <dd>
+                      {atsChanged ? (
+                        <>
+                          {match.atsId || 'pending'} → <strong>{atsId}</strong> <em>changed</em>
+                        </>
+                      ) : (
+                        match.atsId
+                      )}
+                    </dd>
+                    <dt>Amount</dt>
+                    <dd>
+                      {amountChanged ? (
+                        <>
+                          {rupees(match.amountPaise)} → <strong>{rupees(amountToPaise(amount))}</strong>{' '}
+                          <em>changed</em>
+                        </>
+                      ) : (
+                        rupees(match.amountPaise)
+                      )}
+                    </dd>
+                  </dl>
+                  <button
+                    type="button"
+                    className="button primary"
+                    disabled={saving}
+                    onClick={() => submit({ resubmitReturnedId: match.id })}
+                  >
+                    {saving ? 'Saving…' : 'Update & resubmit'}
+                  </button>
+                </div>
+              );
+            })}
+            <div className="returned-match-actions">
+              {returnedMatches.some((match) => match.atsMatch) ? (
+                <small>This ATS number belongs to the returned loan, so it can only be updated and resubmitted.</small>
+              ) : (
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={saving}
+                  onClick={() => {
+                    setIgnoreReturned(true);
+                    setReturnedMatches([]);
+                    void submit({ ignoreReturned: true });
+                  }}
+                >
+                  This is a different loan
+                </button>
+              )}
+              <button type="button" className="text-button" disabled={saving} onClick={() => setReturnedMatches([])}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
         {candidates.length ? (
           <div className="review-summary" role="group" aria-label="Possible existing applications">
             <strong>Possible existing application</strong>
@@ -511,22 +619,24 @@ export default function LoanForm({
             </div>
           </div>
         ) : null}
-        <div className="modal-actions">
-          <button type="button" className="button secondary" onClick={closeForm} disabled={saving}>
-            Cancel
-          </button>
-          <button className="button primary" disabled={saving}>
-            {saving
-              ? 'Saving…'
-              : uploadPending
-                ? 'Retry upload'
-                : reviewing
-                  ? 'Save review'
-                  : loan
-                    ? 'Save changes'
-                    : 'Add loan'}
-          </button>
-        </div>
+        {returnedMatches.length ? null : (
+          <div className="modal-actions">
+            <button type="button" className="button secondary" onClick={closeForm} disabled={saving}>
+              Cancel
+            </button>
+            <button className="button primary" disabled={saving}>
+              {saving
+                ? 'Saving…'
+                : uploadPending
+                  ? 'Retry upload'
+                  : reviewing
+                    ? 'Save review'
+                    : loan
+                      ? 'Save changes'
+                      : 'Add loan'}
+            </button>
+          </div>
+        )}
         {loan && !confirmDelete ? (
           <button
             type="button"

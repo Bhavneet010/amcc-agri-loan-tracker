@@ -923,6 +923,34 @@ main > .message {
   place-items: center;
   color: var(--amber);
 }
+/* A pending loan the branch sent back after it was returned. Icon only on phones; the word shows on wider screens. */
+.resubmitted-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+  font: var(--weight-semibold) var(--text-xs) / 1.2 var(--sans);
+}
+.resubmitted-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+@media (min-width: 681px) {
+  .resubmitted-text {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+}
 /* Pending age, sanctioned and returned markers share one 32px pill. */
 .pending-circle,
 .loan-line .status {

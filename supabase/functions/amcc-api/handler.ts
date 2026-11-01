@@ -24,6 +24,8 @@ export interface Storage extends Partial<ChargeStorage>, Partial<PushStorage> {
   updateNirnay?: LinkStorage['updateNirnay'];
   listNotifications?: NotificationStorage['listNotifications'];
   readNotifications?: NotificationStorage['readNotifications'];
+  findReturnedMatches?(branchId: string, atsId: string, borrowerName: string): Promise<RecordData[]>;
+  resubmitReturned?(id: string, input: RecordData): Promise<{ id: string }>;
 }
 const allowedOrigins = new Set(['https://amcc-agri-loan-tracker.vercel.app', 'https://amcc-agri-loans.bhavneet.chatgpt.site', 'https://loan-tracker-xi.vercel.app', 'https://xebnciawqwscifzgrkbu.supabase.co']);
 const publicLoan = (row: RecordData) => {
@@ -136,7 +138,7 @@ export function createHandler(db: Storage, publicKeys: string | string[], backgr
           return json(rows.map(publicLoan));
         }
         const input = await body(request);
-        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','nirnayMatchId','allowDistinct','chargeChoice'].includes(k))) throw new AppError('Invalid loan fields.');
+        if (Object.keys(input).some(k => !['branchId', 'category', 'atsId', 'borrowerName', 'amount','requestId','linkExistingId','nirnayMatchId','allowDistinct','chargeChoice','resubmitReturnedId','ignoreReturned'].includes(k))) throw new AppError('Invalid loan fields.');
         if (!['new', 'renewal'].includes(input.category)) throw new AppError('Choose New or Renewal.');
         const branches = await db.listBranches();
         if (!branches.some(b => b.id === input.branchId)) throw new AppError('Choose a valid branch.');
@@ -144,6 +146,23 @@ export function createHandler(db: Storage, publicKeys: string | string[], backgr
         const choice = chargeChoice(input.chargeChoice);
         const askCharge = needsCharge(input.category, validated.amountPaise);
         if (askCharge && !choice) throw missingChoice();
+        // A branch cannot edit a returned loan, so it adds the loan again; offer to update the returned one instead.
+        if (input.category === 'new' && db.findReturnedMatches && db.resubmitReturned) {
+          if (input.ignoreReturned !== undefined && typeof input.ignoreReturned !== 'boolean') throw new AppError('Confirm whether this is a different application.');
+          if (input.resubmitReturnedId !== undefined) {
+            if (typeof input.resubmitReturnedId !== 'string' || !input.resubmitReturnedId || input.resubmitReturnedId.length > 100) throw new AppError('Invalid returned application.');
+            if (typeof input.requestId !== 'string' || !/^[a-zA-Z0-9:_-]{8,180}$/.test(input.requestId)) throw new AppError('A stable save request ID is required.');
+            if (!validated.borrowerName) throw new AppError('Enter a borrower name of 1–120 characters.');
+            const { id } = await db.resubmitReturned(input.resubmitReturnedId, { branchId: input.branchId, atsId: validated.atsId, borrowerName: validated.borrowerName, amountPaise: validated.amountPaise, requestId: input.requestId });
+            alertAdmin();
+            return json(publicLoan(await db.getLoan(id)), 200);
+          }
+          const returned = await db.findReturnedMatches(input.branchId, validated.atsId, validated.borrowerName ?? '');
+          // The same ATS can only be one application, so that match cannot be skipped as a different loan.
+          if (returned.length && (!input.ignoreReturned || returned.some(row => row.atsMatch))) {
+            return json({ needsConfirmation: true, error: 'This loan already exists as Returned. Update it and resubmit, or confirm it is a different loan.', returnedMatches: returned }, 409);
+          }
+        }
         if (input.category==='new' && config.linkageEnabled && db.createSharedLoan) {
           const shared = validateSharedCreate({branchId:input.branchId,...validated,requestId:input.requestId||crypto.randomUUID(),...(input.nirnayMatchId?{nirnayMatchId:input.nirnayMatchId}:{}),...(input.linkExistingId?{linkExistingId:input.linkExistingId}:{}),...(input.allowDistinct?{allowDistinct:true}:{})},'agri');
           if(shared.nirnayMatchId&&!await isAdmin(request,config.sessionSecret))throw new AppError('Admin login is required to link an existing Nirnay decision.',401);

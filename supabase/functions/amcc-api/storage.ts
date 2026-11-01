@@ -83,6 +83,8 @@ export function createStorage(client: SupabaseClient): Storage {
     async claimPushJobs() { return checked(await client.rpc('amcc_claim_push_jobs')); },
     async finishPushJob(id) { checked(await client.from('amcc_push_outbox').delete().eq('id', id)); },
     async readNotifications(branchId, deviceId, eventIds) { return checked(await client.rpc('amcc_read_notifications', { p_branch_id: branchId, p_device_id: deviceId, p_event_ids: eventIds })); },
+    async findReturnedMatches(branchId, atsId, borrowerName) { return checked(await client.rpc('amcc_find_returned_matches', { p_branch_id: branchId, p_ats: atsId, p_name: borrowerName })); },
+    async resubmitReturned(id, input) { return checked(await client.rpc('amcc_resubmit_returned', { p_id: id, p_input: input })); },
     async getSharedLoan(id) { return checked(await client.rpc('amcc_get_shared',{p_id:id})); },
     async createSharedLoan(input,source) {
       const payload={...input};
@@ -116,7 +118,7 @@ export function createStorage(client: SupabaseClient): Storage {
   };
 }
 function mapLoan(row: RecordData): RecordData {
-  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),returnedDate:row.returned_date,returnReason:row.return_reason,sanctionDate:row.sanction_date,statusChangedAt:row.status_changed_at,statusHistory:(row.amcc_status_events||[]).map((e:any)=>({id:e.id,fromStatus:e.from_status,toStatus:e.to_status,reason:e.reason,returnedDate:e.returned_date,sourceApp:e.source_app,author:e.author,requestId:e.request_id,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)),shareEligible:row.share_eligible,charge:chargeRow(row.amcc_charge_details),remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
+  return { id: row.id, branchId: row.branch_id, branchName: row.amcc_branches.name, category: row.category, atsId: row.ats_id||'', borrowerName: row.borrower_name, amountPaise: row.amount_paise, status: row.status, remarks: row.remarks, compliance: row.compliance, version: row.version, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString(),returnedDate:row.returned_date,returnReason:row.return_reason,sanctionDate:row.sanction_date,statusChangedAt:row.status_changed_at,resubmittedAt:row.resubmitted_at,statusHistory:(row.amcc_status_events||[]).map((e:any)=>({id:e.id,fromStatus:e.from_status,toStatus:e.to_status,reason:e.reason,returnedDate:e.returned_date,sourceApp:e.source_app,author:e.author,requestId:e.request_id,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)),shareEligible:row.share_eligible,charge:chargeRow(row.amcc_charge_details),remarkHistory:(row.amcc_remark_events||[]).map((e:any)=>({id:e.id,requestId:e.request_id,body:e.body,sourceApp:e.source_app,author:e.author,createdAt:e.created_at})).sort((a:any,b:any)=>a.createdAt.localeCompare(b.createdAt)) };
 }
 // One-to-one embeds come back as an object; older PostgREST versions return a one-item array.
 function chargeRow(value: any) {

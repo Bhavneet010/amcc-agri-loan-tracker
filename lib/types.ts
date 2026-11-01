@@ -18,6 +18,8 @@ export type Loan = {
   returnReason?: string;
   sanctionDate?: string | null;
   statusChangedAt?: string;
+  // Set when a branch resubmitted this loan after it was returned; pending days count from here.
+  resubmittedAt?: string | null;
   statusHistory?: {
     id: string;
     fromStatus: string;
@@ -32,6 +34,16 @@ export type Loan = {
   // Renewals above ₹2 lakh: whether the branch chose to upload charge details, and if an image is still stored.
   chargeDetails?: { choice: 'yes' | 'no'; hasImage: boolean; uploadedAt?: string | null };
   remarkHistory?: { id: string; body: string; sourceApp: string; author: string; createdAt: string }[];
+};
+// A Returned loan in the same branch that matches a loan being added (same ATS or borrower name).
+export type ReturnedMatch = {
+  id: string;
+  atsId: string;
+  borrowerName: string;
+  amountPaise: number;
+  returnedDate?: string | null;
+  returnReason?: string;
+  atsMatch: boolean;
 };
 export const rupees = (paise: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -72,6 +84,8 @@ const dayNumber = (date: Date) => {
   const parts = Object.fromEntries(indiaDay.formatToParts(date).map((part) => [part.type, part.value]));
   return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) / 86400000;
 };
+// Days a pending loan has waited: from its resubmission if it was returned and sent back, else from creation.
+export const pendingSince = (loan: Pick<Loan, 'createdAt' | 'resubmittedAt'>) => loan.resubmittedAt || loan.createdAt;
 export const pendingDays = (createdAt: string, now = new Date()) =>
   Math.max(0, dayNumber(now) - dayNumber(new Date(createdAt)));
 // Pending badges warm up as an application waits: 3 days turns amber, 6 days turns clay.
@@ -108,8 +122,9 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
   if (!response.ok) {
     const error = new Error(
       data.error || `Unable to complete the request (error ${response.status}). Please try again.`,
-    ) as Error & { candidates?: Loan[]; status?: number };
+    ) as Error & { candidates?: Loan[]; returnedMatches?: ReturnedMatch[]; status?: number };
     error.candidates = data.candidates;
+    error.returnedMatches = data.returnedMatches;
     error.status = response.status;
     throw error;
   }

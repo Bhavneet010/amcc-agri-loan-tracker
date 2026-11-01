@@ -1,7 +1,7 @@
 'use client';
-import { ArrowUpRight, Check, CircleDashed, Eye, FileText, Paperclip, Undo2 } from 'lucide-react';
+import { ArrowUpRight, Check, CircleDashed, Eye, FileText, Paperclip, RotateCcw, Undo2 } from 'lucide-react';
 import type { Loan } from '../../lib/types';
-import { branchCode, lakhs, pendingAge, pendingDays, rupees } from '../../lib/types';
+import { branchCode, dateLabel, lakhs, pendingAge, pendingDays, pendingSince, rupees } from '../../lib/types';
 const EmptyArt = () => (
   <img className="empty-art" src="/home-empty.png" width="190" height="140" alt="" aria-hidden="true" />
 );
@@ -41,7 +41,7 @@ export default function LoanTable({
   return (
     <ul className="loan-list">
       {loans.map((loan) => {
-        const daysPending = pendingDays(loan.createdAt);
+        const daysPending = pendingDays(pendingSince(loan));
         return (
           <li key={loan.id} className={`loan-card ${loan.status === 'pending' && loan.remarks ? 'has-alert' : ''}`}>
             <button
@@ -86,6 +86,12 @@ export default function LoanTable({
               <span className="amount" title={rupees(loan.amountPaise)}>
                 {lakhs(loan.amountPaise)}
               </span>
+              {loan.status === 'pending' && loan.resubmittedAt ? (
+                <span className="resubmitted-tag" title={`Resubmitted after return · ${dateLabel(loan.resubmittedAt)}`}>
+                  <RotateCcw size={12} aria-hidden="true" />
+                  <span className="resubmitted-text">Resubmitted</span>
+                </span>
+              ) : null}
               {loan.status === 'pending' ? (
                 <span
                   className={`pending-circle ${pendingAge(daysPending)}`}

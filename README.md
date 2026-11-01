@@ -10,6 +10,15 @@ An admin can open the ⚙ menu, choose **New loan alerts** and tap **Turn on for
 
 A database trigger queues an alert in `amcc_push_outbox` in the same transaction that inserts the loan, so request replays and rolled-back saves queue nothing. Attaching an existing Nirnay application is an admin review of an old application, so it does not alert. After replying to the create request, the Edge Function sends queued alerts through standard Web Push (VAPID, encrypted payloads) to the phones in `amcc_push_subscriptions`. Failed sends are retried with the next new loan, for up to a day or five attempts. Phones the push service reports as gone are removed. The function creates the signing key pair on first use and keeps it in the server-only `amcc_push_keys` table. All three tables deny public access. Only loans created after activation alert.
 
+## Resubmitting a returned loan
+
+A branch can't edit a loan once it is Returned, so it adds the loan again. When a branch adds a **New** loan, the API first looks for **Returned** loans in the same branch with the same ATS number, or with the same borrower name (case and spaces ignored) and a different ATS. If one exists, nothing is saved yet. Instead the form shows **This loan already exists as Returned**, with the return date and reason and the old and new ATS, amount and name, each change marked.
+
+- **Update & resubmit** updates that same record with the new ATS, name and amount and sets it back to Pending, in one transaction (`amcc_resubmit_returned`). The return reason and date stay in the status history, the audit records the previous values, and linked Nirnay applications move back to Pending as well. Retries with the same request ID don't change the loan again. The save is refused if the loan is no longer Returned or if the new ATS already belongs to another loan in the branch.
+- **This is a different loan** adds a new record as before. This option isn't offered when the ATS matches, because one ATS can only belong to one application.
+
+A resubmitted loan shows a **Resubmitted** tag next to its pending-days badge (an icon only on phones), and its pending days count from the resubmission. The admin review shows the earlier return reason. Admin phones with alerts on get a **Resubmitted · branch** notification. The branch gets no "Updates to your loans" entry for its own resubmission. Renewals can't be returned, so they are never checked.
+
 ## Renewal charge details
 
 Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No before they can be saved; the API enforces this for new renewals and for edits that leave a renewal above the limit. Choosing Yes lets the branch take or choose a photo, which the phone compresses (1600px long side, JPEG, usually under 450 KB) before upload. Images sit in the private `amcc-charge-details` Supabase Storage bucket and the admin and branch view them through five-minute signed links. When the loan is sanctioned or deleted, the API deletes the image file; the Yes/No answer stays in `amcc_charge_details`. Any cleanup that fails is retried the next time the loan is read.
