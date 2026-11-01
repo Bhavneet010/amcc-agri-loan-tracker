@@ -1,7 +1,7 @@
 import { AppError } from './validation.ts';
 import { base64UrlDecode, generatePushKeys, sendPush, type PushKeys, type PushSubscriptionData } from './webpush.ts';
 
-export type PushJob = { id: string; loanId: string; branchName: string; category: string; borrowerName: string; amountPaise: number; sourceApp: string };
+export type PushJob = { id: string; loanId: string; branchName: string; category: string; borrowerName: string; amountPaise: number; sourceApp: string; kind?: 'created' | 'resubmitted' };
 export interface PushStorage {
   getPushKeys(): Promise<PushKeys | null>;
   savePushKeys(keys: PushKeys): Promise<void>;
@@ -58,13 +58,13 @@ export async function handlePush(request: Request, db: PushStorage, admin: boole
 const rupees = (paise: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: paise % 100 ? 2 : 0 }).format(paise / 100);
 export function alertMessage(job: PushJob) {
   return {
-    title: `New loan · ${job.branchName}`,
+    title: `${job.kind === 'resubmitted' ? 'Resubmitted' : 'New loan'} · ${job.branchName}`,
     body: `${job.borrowerName || 'Borrower name pending'} — ${job.category === 'renewal' ? 'Renewal' : 'New'} — ${rupees(job.amountPaise)}${job.sourceApp === 'nirnay' ? ' · via Nirnay' : ''}`,
     tag: `loan-${job.loanId}`,
     url: '/',
   };
 }
-// Sends queued new-loan alerts to every registered admin phone. A job stays queued for a retry if any phone could not be reached.
+// Sends queued alerts (new loans and resubmitted returned loans) to every registered admin phone. A job stays queued for a retry if any phone could not be reached.
 export async function deliverPushAlerts(db: PushStorage, fetcher: typeof fetch = fetch) {
   const jobs = await db.claimPushJobs();
   if (!jobs.length) return;

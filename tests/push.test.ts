@@ -223,6 +223,7 @@ test('alert text names the branch, borrower, type and amount', () => {
     alertMessage({ ...job, category: 'new', sourceApp: 'nirnay', amountPaise: 12345 }).body,
     'Ram Singh — New — ₹123.45 · via Nirnay',
   );
+  assert.equal(alertMessage({ ...job, category: 'new', kind: 'resubmitted' }).title, 'Resubmitted · 8117 · Rajban');
 });
 
 test('delivery finishes sent alerts, drops gone phones and retries failures', async () => {

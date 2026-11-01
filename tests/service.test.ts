@@ -194,3 +194,86 @@ test('deletion rejects extra fields and removes only the expected version', asyn
   assert.equal((await f.call('/api/loans/loan-1', 'DELETE', { version: 1 })).status, 200);
   assert.equal((await f.call('/api/loans/loan-1')).status, 404);
 });
+
+test('adding a New loan that matches a Returned loan asks to update and resubmit it', async () => {
+  const calls: any[] = [];
+  const matches = [
+    { id: 'returned-1', atsId: 'ATS 12345678', borrowerName: 'Test Borrower', amountPaise: 10000, atsMatch: false },
+  ];
+  const f = fixture();
+  const handler = createHandler(
+    {
+      getConfig: async () => f.config,
+      listBranches: async () => [{ id: 'branch-01', name: 'Test branch', version: 1 }],
+      getLoan: async (id: string) => ({ ...f.row, id, status: 'pending', resubmittedAt: '2026-11-01T00:00:00.000Z' }),
+      createLoan: async (input: any) => {
+        calls.push(['create', input]);
+        return { ...f.row, ...input };
+      },
+      findReturnedMatches: async (...args: any[]) => {
+        calls.push(['find', ...args]);
+        return matches;
+      },
+      resubmitReturned: async (id: string, input: any) => {
+        calls.push(['resubmit', id, input]);
+        return { id };
+      },
+    } as any,
+    'public-test-key',
+  );
+  const post = (body: unknown) =>
+    handler(
+      new Request(base + '/api/loans', {
+        method: 'POST',
+        headers: { apikey: 'public-test-key', origin, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+  const input = {
+    branchId: 'branch-01',
+    category: 'new',
+    atsId: 'ATS 87654321',
+    borrowerName: ' Test Borrower ',
+    amount: '150',
+    requestId: 'request-resubmit-1',
+  };
+
+  const prompt = await post(input);
+  assert.equal(prompt.status, 409);
+  const body = await prompt.json();
+  assert.equal(body.needsConfirmation, true);
+  assert.deepEqual(body.returnedMatches, matches);
+  assert.deepEqual(calls.at(-1), ['find', 'branch-01', 'ATS 87654321', 'Test Borrower']);
+  assert.ok(!calls.some(([kind]) => kind === 'create'));
+
+  const resubmitted = await post({ ...input, resubmitReturnedId: 'returned-1' });
+  assert.equal(resubmitted.status, 200);
+  assert.equal((await resubmitted.json()).status, 'pending');
+  assert.deepEqual(calls.at(-1), [
+    'resubmit',
+    'returned-1',
+    {
+      branchId: 'branch-01',
+      atsId: 'ATS 87654321',
+      borrowerName: 'Test Borrower',
+      amountPaise: 15000,
+      requestId: 'request-resubmit-1',
+    },
+  ]);
+
+  // Confirmed as a different loan, a name-only match lets the new loan be added.
+  assert.equal((await post({ ...input, ignoreReturned: true })).status, 201);
+  assert.equal(calls.at(-1)[0], 'create');
+
+  // The same ATS is the same application, so it cannot be added again as a different loan.
+  matches[0].atsMatch = true;
+  assert.equal((await post({ ...input, ignoreReturned: true })).status, 409);
+
+  assert.equal((await post({ ...input, ignoreReturned: 'yes' })).status, 400);
+  assert.equal((await post({ ...input, resubmitReturnedId: 7 })).status, 400);
+  assert.equal((await post({ ...input, requestId: undefined, resubmitReturnedId: 'returned-1' })).status, 400);
+  // Renewals cannot be returned, so they are never checked.
+  const before = calls.length;
+  assert.equal((await post({ ...input, category: 'renewal' })).status, 201);
+  assert.ok(!calls.slice(before).some(([kind]) => kind === 'find'));
+});
