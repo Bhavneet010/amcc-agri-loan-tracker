@@ -1,12 +1,20 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { BellRing, CheckCheck } from 'lucide-react';
+import { BellRing, CheckCheck, CircleCheckBig, Undo2 } from 'lucide-react';
 import Modal from './Modal';
 import { atsDigits, request } from '../../lib/types';
 import { groupNotifications, notificationDeviceId, type NotificationFeed } from '../../lib/notifications';
 
 const empty: NotificationFeed = { items: [], hasMore: false };
 const statusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1);
+/** Status from the most recent decision event, used to tint the whole loan card. */
+function latestDecision(events: NotificationFeed['items']) {
+  let latest: NotificationFeed['items'][number] | undefined;
+  for (const event of events) {
+    if (event.decisionChanged && (!latest || event.createdAt > latest.createdAt)) latest = event;
+  }
+  return latest?.toStatus ?? '';
+}
 const changeTime = (date: string) =>
   new Date(date).toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
@@ -126,7 +134,7 @@ export default function BranchNotifications({
     >
       <div className="notification-list" aria-label="Unread loan alerts">
         {groupNotifications(feed.items).map((group) => (
-          <section className="notification-loan" key={group.loanId}>
+          <section className={`notification-loan ${latestDecision(group.events)}`} key={group.loanId}>
             <div className="notification-loan-head">
               <h3>{group.borrowerName || 'Loan application'}</h3>
               <span className="notification-ats">
@@ -136,10 +144,16 @@ export default function BranchNotifications({
             {group.events.map((event) => (
               <div className="notification-event" key={event.id}>
                 {event.decisionChanged ? (
-                  <div className="notification-decision">
+                  <div className={`notification-decision ${event.toStatus}`}>
                     <strong>
-                      {event.statusChanged ? <>{statusLabel(event.fromStatus)} → </> : null}
-                      <span className={`status-word ${event.toStatus}`}>{statusLabel(event.toStatus)}</span>
+                      {event.statusChanged ? (
+                        <span className="status-from">{statusLabel(event.fromStatus)} → </span>
+                      ) : null}
+                      <span className={`status-word ${event.toStatus}`}>
+                        {event.toStatus === 'sanctioned' ? <CircleCheckBig size={13} aria-hidden /> : null}
+                        {event.toStatus === 'returned' ? <Undo2 size={13} aria-hidden /> : null}
+                        {statusLabel(event.toStatus)}
+                      </span>
                       {event.statusChanged ? null : ' details updated'}
                     </strong>
                     {event.toStatus === 'returned' ? (

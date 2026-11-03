@@ -820,14 +820,78 @@ small {
   font-size: var(--text-xs);
   line-height: 1.4;
 }
+.notification-loan.sanctioned {
+  border-color: #b9dcc6;
+  border-left: 4px solid var(--green);
+  background: linear-gradient(180deg, var(--green-tint), #fff 70%);
+}
+.notification-loan.returned {
+  border-color: #efc9ba;
+  border-left: 4px solid var(--returned-ink);
+  background: linear-gradient(180deg, var(--returned-soft), #fff 70%);
+}
 .notification-decision {
   display: grid;
   gap: 1px;
   font-size: var(--text-sm);
   line-height: 1.5;
 }
+.notification-decision.sanctioned,
+.notification-decision.returned {
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.notification-decision.sanctioned {
+  border: 1px solid #b9dcc6;
+  background: var(--green-tint);
+}
+.notification-decision.returned {
+  border: 1px solid #efc9ba;
+  background: var(--returned-soft);
+}
 .notification-decision strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--ink);
+}
+.notification-decision .status-from {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+.notification-decision .status-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.notification-decision.sanctioned .status-word,
+.notification-decision.returned .status-word {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-size: var(--text-sm);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.notification-decision.sanctioned .status-word {
+  background: var(--green);
+}
+.notification-decision.returned .status-word {
+  background: var(--returned-ink);
+}
+.notification-decision.returned p {
+  color: #5e2c1b;
+  font-weight: var(--weight-medium);
+}
+.notification-decision.sanctioned small {
+  color: var(--green);
+  font-weight: var(--weight-semibold);
+}
+.notification-decision.returned small {
+  color: var(--returned-ink);
+  font-weight: var(--weight-semibold);
 }
 .status-word.pending {
   color: var(--pending-ink);
