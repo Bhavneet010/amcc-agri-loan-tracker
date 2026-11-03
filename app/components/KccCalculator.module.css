@@ -486,8 +486,7 @@
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
-.exportButton,
-.exportWide {
+.exportButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -500,19 +499,10 @@
   color: var(--green);
   font: var(--weight-semibold) var(--text-sm) var(--sans);
 }
-.exportWide {
-  gap: var(--space-2);
-  width: 100%;
-  min-height: var(--control-lg);
-  border-radius: var(--radius-md);
-  font-size: var(--text-lg);
-}
-.exportButton:hover:not(:disabled),
-.exportWide:hover:not(:disabled) {
+.exportButton:hover:not(:disabled) {
   background: var(--green-light);
 }
-.exportButton:disabled,
-.exportWide:disabled {
+.exportButton:disabled {
   opacity: 0.6;
 }
 .firstYear,

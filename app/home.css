@@ -219,26 +219,48 @@
 .connection-dot.offline {
   background: #bc9049;
 }
-/* KCC calculator launcher: a full-width card under the top bar, open to every user. */
+/*
+ * KCC calculator launcher. It shares the summary cards' shape, border, shadow and botanical texture, in a harvest
+ * gold instead of green so the tool reads as separate from the loan figures.
+ */
 .kcc-launch {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: var(--space-4);
   width: calc(100% - 2 * var(--page-x));
   margin: var(--space-3) var(--page-x) 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--green-line);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  overflow: hidden;
+  border: 1px solid #fff8ec;
   border-radius: var(--radius-lg);
-  background: linear-gradient(100deg, #ffffff 0%, var(--green-tint) 100%);
-  box-shadow: 0 4px 12px #0f3d2714;
-  color: var(--heading);
+  background: linear-gradient(110deg, #8f5f17 0%, #b07a26 55%, #c4923d 100%);
+  box-shadow: 0 5px 10px #6b45122e;
+  color: #fff;
   text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.kcc-launch::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/home-botanical.png') center/cover;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
 }
 .kcc-launch:hover {
-  border-color: var(--leaf);
+  box-shadow: 0 7px 14px #6b45123d;
 }
 .kcc-launch:active {
   transform: scale(0.99);
+}
+.kcc-launch:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 .kcc-launch-icon {
   display: grid;
@@ -246,8 +268,9 @@
   place-items: center;
   width: var(--control-lg);
   height: var(--control-lg);
+  border: 1px solid #ffffff38;
   border-radius: var(--radius-md);
-  background: var(--green);
+  background: #ffffff24;
   color: #fff;
 }
 .kcc-launch-icon svg {
@@ -267,16 +290,27 @@
 }
 .kcc-launch-text span {
   overflow: hidden;
-  color: var(--muted);
+  color: #fff3dc;
   font: var(--weight-medium) var(--text-sm) / 1.3 var(--sans);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.kcc-launch-arrow {
+.kcc-launch-go {
+  display: flex;
   flex: none;
-  width: 20px;
-  height: 20px;
-  color: var(--green);
+  align-items: center;
+  gap: 2px;
+  height: var(--control-sm);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #7a4f12;
+  font: var(--weight-bold) var(--text-sm) / 1 var(--sans);
+}
+.kcc-launch-go svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
 }
 
 /* Page body */
