@@ -23,6 +23,7 @@ import {
 import type { Branch, Loan } from '../../lib/types';
 import { request } from '../../lib/types';
 import { upsertLoan } from '../../lib/loan-state';
+import { loanInPeriod, periodLabels, type SummaryPeriod } from '../../lib/loan-summary';
 import LoanTable from './LoanTable';
 import LoanForm from './LoanForm';
 import Settings from './Settings';
@@ -76,6 +77,9 @@ export default function Workspace() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [search, setSearch] = useState('');
   const [view, setView] = useState<View>('pending');
+  // Pending loans carry forward, so "today" starts on every pending loan and highlights the front summary box.
+  const [period, setPeriod] = useState<SummaryPeriod>('today');
+  const [now, setNow] = useState<Date | null>(null);
   const [compliance, setCompliance] = useState('');
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
@@ -261,6 +265,12 @@ export default function Workspace() {
     };
   }, [refresh]);
   useEffect(() => {
+    // The clock starts after mount so server and client render the same markup.
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
     if (!filters) return;
     const close = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFilters(false);
@@ -343,21 +353,27 @@ export default function Workspace() {
     setForm('new');
   }
   const filtered = !!(search || compliance);
+  const matches = useCallback(
+    (loan: Loan, status: View, within: SummaryPeriod) =>
+      inView(loan, status) && (within === 'all' || (!!now && loanInPeriod(loan, within, now))),
+    [now],
+  );
   const visibleLoans = useMemo(
     () =>
       loans
         .filter(
           (loan) =>
-            inView(loan, view) &&
+            matches(loan, view, period) &&
             `${loan.atsId} ${loan.borrowerName ?? ''} ${loan.branchName}`
               .toLowerCase()
               .includes(search.toLowerCase()) &&
             (!compliance || loan.compliance === compliance),
         )
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [loans, view, search, compliance],
+    [loans, view, period, search, compliance, matches],
   );
-  const limited = view === 'all' || view === 'sanctioned' || view === 'returned';
+  // A period from the summary boxes shows every matching loan, so the list length equals the tapped number.
+  const limited = period === 'all' && (view === 'all' || view === 'sanctioned' || view === 'returned');
   const grouped = groups.map((group) => {
     const all = visibleLoans.filter((loan) => loan.category === group.id);
     return {
@@ -379,17 +395,40 @@ export default function Workspace() {
           : 'No applications yet';
   const emptyText = filtered
     ? 'Try another ATS number or clear the filters.'
-    : view === 'all'
+    : view === 'all' && period === 'all'
       ? 'Add your first application to start tracking its progress.'
-      : 'Choose All to see every application.';
+      : 'Tap Show all to see every application.';
   function chooseView(next: View) {
     setView(next);
     setShowAll([]);
   }
+  function choosePeriod(next: SummaryPeriod) {
+    setPeriod(next);
+    setShowAll([]);
+  }
+  /** A summary box sets both the status and the period, and opens the tab that holds its loans. */
+  function showSummary(status: Loan['status'], within: SummaryPeriod) {
+    chooseView(status);
+    choosePeriod(within);
+    setSearch('');
+    const counts = Object.fromEntries(
+      groups.map((group) => [
+        group.id,
+        loans.filter((loan) => loan.category === group.id && matches(loan, status, within)).length,
+      ]),
+    ) as Record<Category, number>;
+    const other = category === 'new' ? 'renewal' : 'new';
+    if (!counts[category] && counts[other]) setCategory(other);
+    document.getElementById('recent-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   const activeFilters =
-    (view !== 'all' ? 1 : 0) + (activeAdmin && adminFilter ? 1 : 0) + (activeAdmin && compliance ? 1 : 0);
+    (view !== 'all' ? 1 : 0) +
+    (period !== 'all' ? 1 : 0) +
+    (activeAdmin && adminFilter ? 1 : 0) +
+    (activeAdmin && compliance ? 1 : 0);
   function clearFilters() {
     chooseView('all');
+    choosePeriod('all');
     setAdminFilter('');
     setCompliance('');
   }
@@ -472,22 +511,10 @@ export default function Workspace() {
                     <button role="menuitem" onClick={() => setAlerts(true)}>
                       <Bell size={17} /> New loan alerts
                     </button>
-                    {/* The KCC calculator is a beta, so it stays with the admin settings until it is ready for branches. */}
                     {activeAdmin ? (
-                      <>
-                        <button role="menuitem" onClick={() => setSettings(true)}>
-                          <Building2 size={17} /> Branch settings
-                        </button>
-                        <button
-                          role="menuitem"
-                          onClick={() => {
-                            setSettings(false);
-                            setCalculator(true);
-                          }}
-                        >
-                          <Calculator size={17} /> KCC calculator <span className="kcc-menu-beta">Beta</span>
-                        </button>
-                      </>
+                      <button role="menuitem" onClick={() => setSettings(true)}>
+                        <Building2 size={17} /> Branch settings
+                      </button>
                     ) : null}
                     <div className="menu-divider" />
                   </>
@@ -516,6 +543,25 @@ export default function Workspace() {
         </div>
       </header>
       <main>
+        {/* The KCC calculator works offline from its own rate table, so every branch user can open it at any time. */}
+        <button
+          type="button"
+          className="kcc-launch"
+          onClick={() => {
+            setMenu(false);
+            setSettings(false);
+            setCalculator(true);
+          }}
+        >
+          <span className="kcc-launch-icon" aria-hidden="true">
+            <Calculator />
+          </span>
+          <span className="kcc-launch-text">
+            <strong>KCC calculator</strong>
+            <span>Work out a borrower’s 5-year KCC limit</span>
+          </span>
+          <ChevronRight className="kcc-launch-arrow" aria-hidden="true" />
+        </button>
         {!online ? (
           <div className="message warning" role="status">
             <WifiOff size={17} /> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.
@@ -539,7 +585,9 @@ export default function Workspace() {
           <SummaryCarousel
             loans={loans}
             loading={loading}
-            onStatus={(status) => chooseView(view === status ? 'all' : status)}
+            now={now}
+            active={view === 'all' ? null : { status: view, period }}
+            onStatus={showSummary}
           />
         </section>
         <section className="recent" aria-labelledby="recent-heading">
@@ -596,6 +644,19 @@ export default function Workspace() {
                         <ChevronDown size={18} />
                       </span>
                     </label>
+                    <label>
+                      Period
+                      <span className="filter-select">
+                        <select value={period} onChange={(e) => choosePeriod(e.target.value as SummaryPeriod)}>
+                          {(['all', 'today', 'month'] as SummaryPeriod[]).map((id) => (
+                            <option key={id} value={id}>
+                              {periodLabels[id]}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={18} />
+                      </span>
+                    </label>
                     {activeAdmin ? (
                       <label>
                         Branch
@@ -639,6 +700,24 @@ export default function Workspace() {
               ) : null}
             </div>
           </div>
+          {view !== 'all' || period !== 'all' ? (
+            <div className="active-filter" role="status">
+              <span>
+                Showing <strong>{view === 'all' ? 'all' : viewLabel}</strong> ·{' '}
+                <strong>{periodLabels[period].toLowerCase()}</strong>
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  chooseView('all');
+                  choosePeriod('all');
+                }}
+              >
+                Show all
+              </button>
+            </div>
+          ) : null}
           <div className="tabs" role="tablist" aria-label="Loan category">
             {grouped.map((group) => (
               <button
@@ -720,7 +799,7 @@ export default function Workspace() {
           </div>
         </Modal>
       ) : null}
-      {calculator && activeAdmin ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
+      {calculator ? <KccCalculator onClose={() => setCalculator(false)} /> : null}
       {alerts && admin ? (
         <Modal
           title="New loan alerts"

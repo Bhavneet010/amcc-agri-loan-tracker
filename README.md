@@ -25,7 +25,7 @@ Renewals above ₹2,00,000 must answer **Upload charge details?** with Yes or No
 
 ## KCC calculator beta
 
-Open the Settings gear menu and choose **KCC calculator · Beta**. This entry is available in branch and admin views; the calculator has no separate route or homepage shortcut. Inputs stay in memory and are cleared when the calculator closes. It does not create loan records or call the data service.
+Tap the **KCC calculator** card at the top of the home screen. It is open to every branch user as well as admins. Inputs (and the optional borrower name) stay on this device until **Reset**. **Export PDF** downloads the calculation — borrower and land details, crop pattern with Scale of Finance and finance per crop, season totals, Year 1 limit, MPL and the 5-year schedule — as an A4 PDF. The calculator does not create loan records or call the data service.
 
 The FY 2026–27 rates are extracted verbatim from the supplied `KCC CALCULATION - SOF FY 2026-27 UPDATED.xlsx`, `FINAL AGRICULTURE!B1:N176`, with all 175 crop/condition rows and 12 districts retained. The source SHA256 is recorded in `lib/kcc-sof.ts`. Both borrower cultivated land and Scale of Finance use **acres**, as confirmed for this workbook. For each included season, recorded crop areas determine crop shares; those shares allocate the borrower's cultivated acreage. Year 1 is combined Kharif/Rabi crop finance × 1.30; years 2–5 compound at 10% annually. Automated tests reproduce the saved workbook results, including ₹24,747.01 in year 1 and ₹36,232.09 in year 5. The user interface starts with blank inputs.
 

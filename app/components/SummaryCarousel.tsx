@@ -1,33 +1,34 @@
 'use client';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { CalendarDays, ChartNoAxesColumnIncreasing, CircleCheck, Clock, Undo2 } from 'lucide-react';
 import type { Loan } from '../../lib/types';
-import { summarizeLoans, type SummaryPeriod } from '../../lib/loan-summary';
+import { periodLabels as labels, summarizeLoans, type SummaryPeriod } from '../../lib/loan-summary';
 
 const periods: SummaryPeriod[] = ['today', 'all', 'month'];
-const labels = { today: 'Today', month: 'This Month', all: 'All Time' };
+type Status = Loan['status'];
+const statusLabels: Record<Status, string> = { pending: 'pending', sanctioned: 'sanctioned', returned: 'returned' };
+const statusIcons = { pending: Clock, sanctioned: CircleCheck, returned: Undo2 };
 
 // Long counts step down a size so they stay inside their third of the card.
 const digits = (count: number) => Math.min(String(count).length, 4);
 export default function SummaryCarousel({
   loans,
   loading,
+  now,
+  active,
   onStatus,
 }: {
   loans: Loan[];
   loading: boolean;
-  onStatus: (status: Loan['status']) => void;
+  now: Date | null;
+  /** The status and period currently filtering the list, so the matching box is shown as selected. */
+  active: { status: Status; period: SummaryPeriod } | null;
+  onStatus: (status: Status, period: SummaryPeriod) => void;
 }) {
   const [period, setPeriod] = useState<SummaryPeriod>('today');
   const touchStart = useRef<number | null>(null);
   const [drag, setDrag] = useState(0);
   const [wrapping, setWrapping] = useState<SummaryPeriod | null>(null);
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const timer = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
   const activeIndex = periods.indexOf(period);
   const slotOf = (id: SummaryPeriod, active = activeIndex) => (periods.indexOf(id) - active + 4) % 3;
   const select = (next: SummaryPeriod) => {
@@ -107,42 +108,30 @@ export default function SummaryCarousel({
                   ) : null}
                 </div>
                 <div className="summary-counts">
-                  <button
-                    type="button"
-                    className="summary-count pending-count"
-                    onClick={() => onStatus('pending')}
-                    aria-label={`${labels[id]}: ${counts.pending} pending, show pending applications`}
-                  >
-                    <span className="summary-number">
-                      <Clock aria-hidden="true" />
-                      <strong data-digits={digits(counts.pending)}>{loading ? '—' : counts.pending}</strong>
-                    </span>
-                    <span>Pending</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="summary-count sanctioned-count"
-                    onClick={() => onStatus('sanctioned')}
-                    aria-label={`${labels[id]}: ${counts.sanctioned} sanctioned, show sanctioned applications`}
-                  >
-                    <span className="summary-number">
-                      <CircleCheck aria-hidden="true" />
-                      <strong data-digits={digits(counts.sanctioned)}>{loading ? '—' : counts.sanctioned}</strong>
-                    </span>
-                    <span>Sanctioned</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="summary-count returned-count"
-                    onClick={() => onStatus('returned')}
-                    aria-label={`${labels[id]}: ${counts.returned} returned, show returned applications`}
-                  >
-                    <span className="summary-number">
-                      <Undo2 aria-hidden="true" />
-                      <strong data-digits={digits(counts.returned)}>{loading ? '—' : counts.returned}</strong>
-                    </span>
-                    <span>Returned</span>
-                  </button>
+                  {(['pending', 'sanctioned', 'returned'] as Status[]).map((status) => {
+                    const StatusIcon = statusIcons[status];
+                    const selected = active?.status === status && active.period === id;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        className={`summary-count ${status}-count${selected ? ' active' : ''}`}
+                        onClick={() => {
+                          // Tapping a box on a side card also brings that card to the front.
+                          select(id);
+                          onStatus(status, id);
+                        }}
+                        aria-pressed={selected}
+                        aria-label={`${labels[id]}: ${counts[status]} ${statusLabels[status]}, show these applications`}
+                      >
+                        <span className="summary-number">
+                          <StatusIcon aria-hidden="true" />
+                          <strong data-digits={digits(counts[status])}>{loading ? '—' : counts[status]}</strong>
+                        </span>
+                        <span>{status[0].toUpperCase() + status.slice(1)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </article>

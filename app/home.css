@@ -219,17 +219,64 @@
 .connection-dot.offline {
   background: #bc9049;
 }
-.kcc-menu-beta {
-  margin-left: auto;
-  padding: 1px 4px;
-  border: 1px solid var(--amber-line);
-  border-radius: var(--radius-sm);
-  background: var(--amber-soft);
-  color: var(--amber-ink);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+/* KCC calculator launcher: a full-width card under the top bar, open to every user. */
+.kcc-launch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: calc(100% - 2 * var(--page-x));
+  margin: var(--space-3) var(--page-x) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--green-line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(100deg, #ffffff 0%, var(--green-tint) 100%);
+  box-shadow: 0 4px 12px #0f3d2714;
+  color: var(--heading);
+  text-align: left;
+}
+.kcc-launch:hover {
+  border-color: var(--leaf);
+}
+.kcc-launch:active {
+  transform: scale(0.99);
+}
+.kcc-launch-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--control-lg);
+  height: var(--control-lg);
+  border-radius: var(--radius-md);
+  background: var(--green);
+  color: #fff;
+}
+.kcc-launch-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.1;
+}
+.kcc-launch-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kcc-launch-text strong {
+  font: var(--weight-bold) var(--text-xl) / 1.15 var(--serif);
+}
+.kcc-launch-text span {
+  overflow: hidden;
+  color: var(--muted);
+  font: var(--weight-medium) var(--text-sm) / 1.3 var(--sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kcc-launch-arrow {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--green);
 }
 
 /* Page body */
@@ -465,6 +512,28 @@ main > .message {
   width: 20px;
   height: 20px;
   stroke-width: 2.1;
+}
+/* The box that is filtering the list is marked, so the number and the list below read together. */
+.summary-count {
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s;
+}
+.featured .summary-count.active {
+  background: #ffffff24;
+}
+.featured .summary-count.active::after {
+  content: '';
+  position: absolute;
+  right: 22%;
+  bottom: -4px;
+  left: 22%;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+}
+.compact .summary-count.active {
+  background: #ffffffb3;
+  box-shadow: inset 0 0 0 1px var(--green);
 }
 /* Side cards list the three counts in a column; on phones only the icon and number fit. */
 .compact .summary-card-body {
@@ -762,6 +831,26 @@ main > .message {
 .filter-panel-actions .button {
   min-height: var(--control-sm);
   font-size: var(--text-sm);
+}
+.active-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--green-line);
+  border-radius: var(--radius-md);
+  background: var(--green-tint);
+  color: var(--heading);
+  font: var(--weight-medium) var(--text-md) / 1.3 var(--sans);
+}
+.active-filter strong {
+  font-weight: var(--weight-bold);
+}
+.active-filter .text-button {
+  flex: none;
+  font-size: var(--text-md);
 }
 .tabs {
   display: grid;
