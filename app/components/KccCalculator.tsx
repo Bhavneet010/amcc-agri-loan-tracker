@@ -575,12 +575,6 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               <p>Your five-year limits will update as you enter valid inputs.</p>
             </div>
           )}
-          {result.annualLimits ? (
-            <button type="button" className={styles.exportWide} onClick={exportPdf} disabled={exporting}>
-              <Download size={18} />
-              {exporting ? 'Preparing PDF…' : 'Export calculation as PDF'}
-            </button>
-          ) : null}
           {exportError ? (
             <p className={styles.error} role="alert">
               {exportError}

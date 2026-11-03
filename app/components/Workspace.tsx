@@ -560,7 +560,10 @@ export default function Workspace() {
             <strong>KCC calculator</strong>
             <span>Work out a borrower’s 5-year KCC limit</span>
           </span>
-          <ChevronRight className="kcc-launch-arrow" aria-hidden="true" />
+          <span className="kcc-launch-go" aria-hidden="true">
+            Open
+            <ChevronRight />
+          </span>
         </button>
         {!online ? (
           <div className="message warning" role="status">
