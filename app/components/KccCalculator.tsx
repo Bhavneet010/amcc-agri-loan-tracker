@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Calculator, ChartNoAxesColumn, ChevronDown, FileText, Plus, RotateCcw, Sprout, Trash2 } from 'lucide-react';
+import {
+  Calculator,
+  ChartNoAxesColumn,
+  ChevronDown,
+  Download,
+  FileText,
+  Plus,
+  RotateCcw,
+  Sprout,
+  Trash2,
+} from 'lucide-react';
 import {
   areaInAcres,
   blankKccInput,
@@ -39,6 +49,15 @@ const specialBasis = /(protected|sqm|colony|bags|term loan|green house)/i;
 const cropsById = new Map(kccCrops.map((crop) => [crop.id, crop]));
 // Inputs stay in this browser until Reset, so closing the calculator or the app does not lose them.
 const savedInputKey = 'kcc-calculator-input';
+const savedBorrowerKey = 'kcc-calculator-borrower';
+
+function loadSavedBorrower(): string {
+  try {
+    return localStorage.getItem(savedBorrowerKey) ?? '';
+  } catch {
+    return '';
+  }
+}
 
 function loadSavedInput(): KccInput {
   try {
@@ -299,6 +318,9 @@ function CropTable({
 
 export default function KccCalculator({ onClose }: { onClose: () => void }) {
   const [input, setInput] = useState(loadSavedInput);
+  const [borrower, setBorrower] = useState(loadSavedBorrower);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const [showErrors, setShowErrors] = useState(false);
   const [editing, setEditing] = useState<{ row: KccRow; isNew: boolean } | null>(null);
   const [converter, setConverter] = useState<AreaInput>({ unit: 'bigha', values: ['', '', ''], karam: '' });
@@ -322,11 +344,37 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
       // Storage can be full or blocked; the calculator still works for this visit.
     }
   }, [input]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(savedBorrowerKey, borrower);
+    } catch {}
+  }, [borrower]);
+  async function exportPdf() {
+    if (!result.annualLimits) {
+      // Nothing to export yet: show what is missing instead.
+      setShowErrors(true);
+      summary.current?.focus();
+      summary.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    setExporting(true);
+    setExportError('');
+    try {
+      const { downloadKccPdf } = await import('./kcc-pdf');
+      await downloadKccPdf(input, borrower);
+    } catch {
+      setExportError('Could not create the PDF. Check your connection and try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
   function update(changes: Partial<KccInput>) {
     setInput((current) => ({ ...current, ...changes }));
   }
   function reset() {
     setInput(blankKccInput());
+    setBorrower('');
+    setExportError('');
     setShowErrors(false);
     setEditing(null);
     setConverter({ unit: 'bigha', values: ['', '', ''], karam: '' });
@@ -350,6 +398,16 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
           <RotateCcw size={14} />
           Reset
         </button>
+        <button
+          type="button"
+          className={styles.exportButton}
+          onClick={exportPdf}
+          disabled={exporting}
+          title={result.annualLimits ? 'Download this calculation as a PDF' : 'Complete the land & crop details first'}
+        >
+          <Download size={14} />
+          {exporting ? 'Preparing PDF…' : 'Export PDF'}
+        </button>
       </div>
       <div className={styles.layout}>
         <div className={styles.inputs}>
@@ -361,6 +419,18 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div className={styles.landFields}>
+              <label htmlFor={`${id}-borrower`} className={styles.borrowerField}>
+                Borrower name
+                <input
+                  id={`${id}-borrower`}
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Optional, printed on the PDF"
+                  maxLength={80}
+                  value={borrower}
+                  onChange={(event) => setBorrower(event.target.value)}
+                />
+              </label>
               <label htmlFor={`${id}-district`}>
                 District
                 <select
@@ -505,6 +575,17 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
               <p>Your five-year limits will update as you enter valid inputs.</p>
             </div>
           )}
+          {result.annualLimits ? (
+            <button type="button" className={styles.exportWide} onClick={exportPdf} disabled={exporting}>
+              <Download size={18} />
+              {exporting ? 'Preparing PDF…' : 'Export calculation as PDF'}
+            </button>
+          ) : null}
+          {exportError ? (
+            <p className={styles.error} role="alert">
+              {exportError}
+            </p>
+          ) : null}
           {showErrors && result.errors.length ? (
             <div className={styles.validation} role="alert">
               <strong>Check these inputs</strong>

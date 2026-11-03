@@ -42,3 +42,25 @@ test('returned loans have their own count and use the return date without carryi
   assert.deepEqual(summarizeLoans([returned], 'month', now), { pending: 0, sanctioned: 0, returned: 1 });
   assert.deepEqual(summarizeLoans([returned], 'all', now), { pending: 0, sanctioned: 0, returned: 1 });
 });
+test('every loan counted in a summary box is in that box’s list filter, and no other', async () => {
+  const { loanInPeriod } = await import('../lib/loan-summary.ts');
+  const loans = [
+    loan('pending', '2026-10-12T05:00:00Z'),
+    loan('pending', '2026-08-01T05:00:00Z'),
+    loan('sanctioned', '2026-10-12T05:00:00Z'),
+    loan('sanctioned', '2026-10-02T05:00:00Z'),
+    loan('sanctioned', '2026-07-02T05:00:00Z'),
+    { ...loan('returned', '2026-09-01T10:00:00Z'), returnedDate: '2026-10-12' },
+  ];
+  for (const period of ['today', 'month', 'all'] as const) {
+    const counts = summarizeLoans(loans, period, now);
+    for (const status of ['pending', 'sanctioned', 'returned'] as const)
+      assert.equal(
+        loans.filter((l) => l.status === status && loanInPeriod(l, period, now)).length,
+        counts[status],
+        `${period} ${status}`,
+      );
+  }
+  assert.deepEqual(summarizeLoans(loans, 'today', now), { pending: 2, sanctioned: 1, returned: 1 });
+  assert.deepEqual(summarizeLoans(loans, 'month', now), { pending: 2, sanctioned: 2, returned: 1 });
+});
