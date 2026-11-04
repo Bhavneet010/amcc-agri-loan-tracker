@@ -6,10 +6,18 @@ import { calculateKcc, kccAreaUnits, seasonLabel, type AreaInput, type KccInput 
  * font, which has no ₹ glyph.
  */
 const amount = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const acreFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+const wholeAmount = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const acreFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const reportMoney = (value: number | null, symbol = '₹') =>
   value === null ? '-' : `${symbol === '₹' ? '₹' : `${symbol} `}${amount.format(value)}`;
+const reportWholeMoney = (value: number | null, symbol: string) =>
+  value === null ? '-' : `${symbol === '₹' ? '₹' : `${symbol} `}${wholeAmount.format(value)}`;
 const showAcres = (value: number | null) => (value === null ? '-' : acreFormat.format(value));
+
+/** Drop the workbook's condition after its separator, while preserving hyphens inside crop names. */
+export function cropNameBeforeCondition(label: string) {
+  return label.split(/\s*[–—]\s*|\s+-\s+/u, 1)[0]?.trim() || label;
+}
 
 /** The recorded area as entered on the crop card, e.g. "2 Bigha 3 Biswa 0 Biswansi". */
 export function areaText(area: AreaInput) {
@@ -45,6 +53,7 @@ export type KccReport = {
 
 export function kccReport(input: KccInput, borrower = '', symbol = '₹'): KccReport {
   const money = (value: number | null) => reportMoney(value, symbol);
+  const cropMoney = (value: number | null) => reportWholeMoney(value, symbol);
   const result = calculateKcc(input);
   const details: [string, string][] = [];
   if (borrower.trim()) details.push(['Borrower', borrower.trim()]);
@@ -56,11 +65,11 @@ export function kccReport(input: KccInput, borrower = '', symbol = '₹'): KccRe
     return [
       String(index + 1),
       seasonLabel(row.season),
-      line?.label ?? '-',
+      cropNameBeforeCondition(line?.label ?? '-'),
       compactAreaText(row.area),
       showAcres(line?.borrowerAcres ?? null),
-      money(line?.rate ?? null),
-      money(line?.finance ?? null),
+      cropMoney(line?.rate ?? null),
+      cropMoney(line?.finance ?? null),
     ];
   });
   const seasons = (['kharif', 'rabi', 'longTerm'] as const)

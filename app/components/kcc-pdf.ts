@@ -1,10 +1,10 @@
 import type { KccInput } from '../../lib/kcc';
-import { topSectionBottom } from '../../lib/kcc-pdf-layout';
+import { cropRowMinHeight, topSectionBottom } from '../../lib/kcc-pdf-layout';
 import { kccFileName, kccReport } from '../../lib/kcc-report';
 
 type Color = [number, number, number];
 const green: Color = [0, 89, 42];
-const deep: Color = [0, 69, 35];
+const deep: Color = [1, 78, 38];
 const leaf: Color = [30, 157, 58];
 const ink: Color = [18, 28, 22];
 const pale: Color = [231, 247, 231];
@@ -19,11 +19,11 @@ async function pdfAsset(path: string) {
   }
 }
 
-/** DejaVu Sans includes the rupee glyph. Built-in Helvetica remains the offline fallback. */
+/** A compact text face keeps the reference's type scale legible in a narrow A4 crop table. */
 async function loadFonts() {
   const [normal, bold] = await Promise.all([
-    pdfAsset('/fonts/DejaVuSans-subset.ttf'),
-    pdfAsset('/fonts/DejaVuSans-Bold-subset.ttf'),
+    pdfAsset('/fonts/NotoSansDisplay-subset.ttf'),
+    pdfAsset('/fonts/NotoSansDisplay-Bold-subset.ttf'),
   ]);
   if (!normal || !bold) return null;
   const encode = (bytes: Uint8Array) => {
@@ -46,11 +46,11 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let font = 'helvetica';
   if (fonts) {
-    doc.addFileToVFS('DejaVuSans.ttf', fonts.normal);
-    doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
-    doc.addFileToVFS('DejaVuSans-Bold.ttf', fonts.bold);
-    doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
-    font = 'DejaVuSans';
+    doc.addFileToVFS('NotoSansDisplay.ttf', fonts.normal);
+    doc.addFont('NotoSansDisplay.ttf', 'NotoSansDisplay', 'normal');
+    doc.addFileToVFS('NotoSansDisplay-Bold.ttf', fonts.bold);
+    doc.addFont('NotoSansDisplay-Bold.ttf', 'NotoSansDisplay', 'bold');
+    font = 'NotoSansDisplay';
   }
   const report = kccReport(input, borrower, fonts ? '₹' : 'Rs.');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -80,25 +80,48 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     doc.setFillColor(...color);
     doc.roundedRect(x, y, w, h, 3, 3, 'F');
   };
-  const sprout = (x: number, y: number, color: Color = green, scale = 1) => {
+  const sprout = (x: number, y: number, color: Color = green, scale = 1, filled = false) => {
     doc.setDrawColor(...color);
     doc.setFillColor(...color);
     doc.setLineWidth(0.65);
     const point = (dx: number, dy: number) => [x + dx * scale, y + dy * scale];
     doc.line(...(point(4, 8) as [number, number]), ...(point(4, 2.5) as [number, number]));
+    const left = [
+      { op: 'm', c: point(3.8, 4.7) },
+      { op: 'c', c: [...point(1.8, 4.8), ...point(0.3, 2.6), ...point(0.4, 0.8)] },
+      { op: 'c', c: [...point(2.2, 0.9), ...point(3.5, 2.3), ...point(3.8, 4.7)] },
+      { op: 'h', c: [] },
+    ];
+    const right = [
+      { op: 'm', c: point(4.1, 3.9) },
+      { op: 'c', c: [...point(4.2, 1.4), ...point(5.8, 0.2), ...point(7.7, 0.2)] },
+      { op: 'c', c: [...point(7.8, 2.5), ...point(6.8, 3.7), ...point(4.1, 3.9)] },
+      { op: 'h', c: [] },
+    ];
+    if (filled) {
+      doc.path(left).fill();
+      doc.path(right).fill();
+    } else {
+      doc.path(left).stroke();
+      doc.path(right).stroke();
+    }
+  };
+  const kharifBranch = (x: number, y: number) => {
+    sprout(x, y, leaf, 1, true);
+    doc.setFillColor(...leaf);
     doc
       .path([
-        { op: 'm', c: point(3.8, 4.7) },
-        { op: 'c', c: [...point(1.8, 4.8), ...point(0.3, 2.6), ...point(0.4, 0.8)] },
-        { op: 'c', c: [...point(2.2, 0.9), ...point(3.5, 2.3), ...point(3.8, 4.7)] },
+        { op: 'm', c: [x + 3, y + 6.2] },
+        { op: 'c', c: [x + 1.1, y + 6.1, x + 0.4, y + 5.2, x + 0.5, y + 3.8] },
+        { op: 'c', c: [x + 2, y + 4, x + 2.8, y + 4.9, x + 3, y + 6.2] },
         { op: 'h', c: [] },
       ])
       .fill();
     doc
       .path([
-        { op: 'm', c: point(4.1, 3.9) },
-        { op: 'c', c: [...point(4.2, 1.4), ...point(5.8, 0.2), ...point(7.7, 0.2)] },
-        { op: 'c', c: [...point(7.8, 2.5), ...point(6.8, 3.7), ...point(4.1, 3.9)] },
+        { op: 'm', c: [x + 4.2, y + 5.6] },
+        { op: 'c', c: [x + 4.7, y + 4.2, x + 5.8, y + 4.1, x + 6.8, y + 3.7] },
+        { op: 'c', c: [x + 6.8, y + 5, x + 5.6, y + 5.8, x + 4.2, y + 5.6] },
         { op: 'h', c: [] },
       ])
       .fill();
@@ -110,42 +133,101 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     color: Color = green,
   ) => {
     doc.setDrawColor(...color);
+    doc.setFillColor(...color);
     doc.setLineWidth(0.55);
     if (kind === 'person') {
       doc.circle(x + 4, y + 2, 1.5, 'S');
-      doc.roundedRect(x + 0.6, y + 4.4, 6.8, 4, 2, 2, 'S');
+      doc
+        .path([
+          { op: 'm', c: [x + 0.6, y + 8] },
+          { op: 'c', c: [x + 0.6, y + 5.5, x + 2, y + 4.5, x + 4, y + 4.5] },
+          { op: 'c', c: [x + 6, y + 4.5, x + 7.4, y + 5.5, x + 7.4, y + 8] },
+          { op: 'h', c: [] },
+        ])
+        .stroke();
     } else if (kind === 'pin') {
-      doc.circle(x + 4, y + 3, 2.5, 'S');
-      doc.circle(x + 4, y + 3, 0.6, 'S');
-      doc.line(x + 2.2, y + 4.8, x + 4, y + 8);
-      doc.line(x + 5.8, y + 4.8, x + 4, y + 8);
+      doc
+        .path([
+          { op: 'm', c: [x + 4, y + 8] },
+          { op: 'c', c: [x + 2.6, y + 6.2, x + 1.2, y + 4.5, x + 1.2, y + 3] },
+          { op: 'c', c: [x + 1.2, y + 1.2, x + 2.4, y + 0.2, x + 4, y + 0.2] },
+          { op: 'c', c: [x + 5.6, y + 0.2, x + 6.8, y + 1.2, x + 6.8, y + 3] },
+          { op: 'c', c: [x + 6.8, y + 4.5, x + 5.4, y + 6.2, x + 4, y + 8] },
+          { op: 'h', c: [] },
+        ])
+        .stroke();
+      doc.circle(x + 4, y + 3, 0.9, 'S');
     } else if (kind === 'field') {
-      doc.line(x, y + 8, x + 8, y + 8);
-      for (const dx of [1, 3.5, 6]) {
-        doc.line(x + dx, y + 7.7, x + dx + 0.5, y + 2.8);
-        doc.line(x + dx + 0.5, y + 2.8, x + dx - 0.5, y + 4.5);
-        doc.line(x + dx + 0.5, y + 2.8, x + dx + 1.5, y + 4.5);
+      doc.line(x + 0.2, y + 7.8, x + 7.8, y + 7.8);
+      for (const dx of [1.4, 4, 6.6]) {
+        doc.line(x + dx, y + 7.6, x + dx, y + 4.1);
+        doc
+          .path([
+            { op: 'm', c: [x + dx, y + 4.6] },
+            { op: 'c', c: [x + dx - 1.1, y + 4.6, x + dx - 1.5, y + 3.8, x + dx - 1.4, y + 2.7] },
+            { op: 'c', c: [x + dx - 0.5, y + 3, x + dx - 0.1, y + 3.7, x + dx, y + 4.6] },
+            { op: 'h', c: [] },
+          ])
+          .fill();
+        doc
+          .path([
+            { op: 'm', c: [x + dx, y + 4.5] },
+            { op: 'c', c: [x + dx + 1.1, y + 4.5, x + dx + 1.5, y + 3.7, x + dx + 1.4, y + 2.6] },
+            { op: 'c', c: [x + dx + 0.5, y + 3, x + dx + 0.1, y + 3.7, x + dx, y + 4.5] },
+            { op: 'h', c: [] },
+          ])
+          .fill();
       }
     } else if (kind === 'coins') {
-      doc.ellipse(x + 2.5, y + 5.7, 2.4, 0.9, 'S');
-      doc.ellipse(x + 5.6, y + 3.6, 2.4, 0.9, 'S');
-      doc.ellipse(x + 2.5, y + 7.3, 2.4, 0.9, 'S');
-      doc.line(x + 0.1, y + 5.7, x + 0.1, y + 7.3);
-      doc.line(x + 4.9, y + 5.7, x + 4.9, y + 7.3);
-      doc.line(x + 3.2, y + 3.6, x + 3.2, y + 5.1);
-      doc.line(x + 8, y + 3.6, x + 8, y + 5.1);
+      const stack = (cx: number, top: number, layers: number) => {
+        doc.ellipse(x + cx, y + top, 2.1, 0.8, 'S');
+        for (let i = 1; i <= layers; i++) {
+          doc.line(x + cx - 2.1, y + top + (i - 1) * 1.2, x + cx - 2.1, y + top + i * 1.2);
+          doc.line(x + cx + 2.1, y + top + (i - 1) * 1.2, x + cx + 2.1, y + top + i * 1.2);
+          doc
+            .path([
+              { op: 'm', c: [x + cx - 2.1, y + top + i * 1.2] },
+              {
+                op: 'c',
+                c: [
+                  x + cx - 1.3,
+                  y + top + i * 1.2 + 0.8,
+                  x + cx + 1.3,
+                  y + top + i * 1.2 + 0.8,
+                  x + cx + 2.1,
+                  y + top + i * 1.2,
+                ],
+              },
+            ])
+            .stroke();
+        }
+      };
+      stack(5.7, 1.4, 2);
+      stack(2.5, 4, 2);
     } else if (kind === 'calendar') {
       doc.roundedRect(x + 0.5, y + 1.5, 7, 6.3, 0.5, 0.5, 'S');
       doc.line(x + 0.5, y + 3.4, x + 7.5, y + 3.4);
       doc.line(x + 2, y + 0.3, x + 2, y + 2.4);
       doc.line(x + 6, y + 0.3, x + 6, y + 2.4);
+      for (const dx of [2.2, 4, 5.8]) for (const dy of [4.8, 6.4]) doc.circle(x + dx, y + dy, 0.2, 'F');
     } else if (kind === 'layers') {
-      for (const dy of [0, 2.6, 5.2]) {
-        doc.line(x, y + dy + 2, x + 4, y + dy);
-        doc.line(x + 4, y + dy, x + 8, y + dy + 2);
-        doc.line(x + 8, y + dy + 2, x + 4, y + dy + 4);
-        doc.line(x + 4, y + dy + 4, x, y + dy + 2);
-      }
+      doc
+        .path([
+          { op: 'm', c: [x, y + 2] },
+          { op: 'l', c: [x + 4, y] },
+          { op: 'l', c: [x + 8, y + 2] },
+          { op: 'l', c: [x + 4, y + 4] },
+          { op: 'h', c: [] },
+        ])
+        .stroke();
+      for (const dy of [4.1, 6.4])
+        doc
+          .path([
+            { op: 'm', c: [x, y + dy] },
+            { op: 'l', c: [x + 4, y + dy + 2] },
+            { op: 'l', c: [x + 8, y + dy] },
+          ])
+          .stroke();
     } else {
       doc.circle(x + 4, y + 4, 3.5, 'S');
       doc.line(x + 4, y + 3.5, x + 4, y + 6);
@@ -163,13 +245,29 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   const header = () => {
     doc.setFillColor(...deep);
     doc.rect(0, 0, pageWidth, 23, 'F');
-    doc.setFillColor(...green);
-    doc.triangle(153, 0, pageWidth, 0, pageWidth, 14, 'F');
-    sprout(6, 4, [203, 227, 57], 1.3);
-    text('KCC Limit Calculation', 25, 11.2, 18, [255, 255, 255], true);
-    text('AMCC Paonta Sahib   |   Scale of Finance FY 2026-27   |   Himachal Pradesh', 25, 18.1, 7.6, [255, 255, 255]);
+    doc.setFillColor(42, 132, 47);
+    doc
+      .path([
+        { op: 'm', c: [154, 0] },
+        { op: 'c', c: [174, 0, 192, 5, pageWidth, 13] },
+        { op: 'l', c: [pageWidth, 0] },
+        { op: 'h', c: [] },
+      ])
+      .fill();
+    doc.setFillColor(116, 170, 47);
+    doc
+      .path([
+        { op: 'm', c: [171, 0] },
+        { op: 'c', c: [188, 1, 202, 6, pageWidth, 10] },
+        { op: 'l', c: [pageWidth, 0] },
+        { op: 'h', c: [] },
+      ])
+      .fill();
+    sprout(8, 4, [203, 227, 57], 1.3, true);
+    text('KCC Limit Calculation', 25, 11.2, 19.5, [255, 255, 255], true);
+    text('AMCC Paonta Sahib   |   Scale of Finance FY 2026-27   |   Himachal Pradesh', 25, 18.1, 8.5, [255, 255, 255]);
     doc.setFont(font, 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(8.2);
     doc.setTextColor(255, 255, 255);
     doc.text(`Generated ${stamp} IST`, pageWidth - 6, 18.1, { align: 'right' });
   };
@@ -185,7 +283,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
         '#',
         'Season',
         'Crop',
-        'Recorded area\n(B-Bi-Bs)',
+        'Recorded area\n(B-Bi, Bi-Bis, Bw-Bws)',
         'Acres',
         `SOF / acre (${fonts ? '₹' : 'Rs.'})`,
         `Finance (${fonts ? '₹' : 'Rs.'})`,
@@ -197,30 +295,31 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     theme: 'grid',
     styles: {
       font,
-      fontSize: 7.35,
+      fontSize: 7.7,
       textColor: ink,
       cellPadding: { top: 0.48, bottom: 0.48, left: 0.6, right: 0.6 },
       lineColor: line,
       lineWidth: 0.15,
-      minCellHeight: 4.2,
+      minCellHeight: cropRowMinHeight(report.crops.length),
+      valign: 'middle',
       overflow: 'linebreak',
     },
     headStyles: {
       fillColor: green,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 7.15,
+      fontSize: 7.45,
       minCellHeight: 8.2,
       valign: 'middle',
     },
     columnStyles: {
       0: { cellWidth: 7, halign: 'center' },
       1: { cellWidth: 15 },
-      2: { cellWidth: 33 },
-      3: { cellWidth: 26, halign: 'center' },
-      4: { cellWidth: 14, halign: 'right' },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 31, halign: 'center' },
+      4: { cellWidth: 16, halign: 'right' },
       5: { cellWidth: 23, halign: 'right' },
-      6: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 20, halign: 'right' },
     },
     didDrawPage: (data) => {
       if (data.pageNumber > 1) {
@@ -237,18 +336,18 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   card(6, 31, 50, panelBottom - 31);
   card(7, 45, 48, 17, [243, 251, 243]);
   icon('person', 9, 34);
-  text('Borrower & Land', 19, 39, 11.4, ink, true);
+  text('Borrower & Land', 19, 39, 12.2, ink, true);
   const details = report.details.filter(([label]) => label !== 'Total land');
   const detailIcons = { Borrower: 'person', District: 'pin', 'Cultivated land': 'field' } as const;
   const detailGap = Math.min(19.8, (panelBottom - (totalLand ? 21 : 14) - 47) / Math.max(1, details.length - 1));
   details.forEach(([label, value], index) => {
     const detailY = 47 + index * detailGap;
     icon(detailIcons[label as keyof typeof detailIcons] || 'field', 9.5, detailY + 3, leaf);
-    text(label, 22, detailY + 3.5, 8.15);
+    text(label, 22, detailY + 3.5, 9);
     doc.setFont(font, 'bold');
-    doc.setFontSize(10.8);
+    doc.setFontSize(11.6);
     const lines = doc.splitTextToSize(value, 31);
-    fittedText(lines[0] || '-', 22, detailY + 9.3, 10.8, 31, ink);
+    fittedText(lines[0] || '-', 22, detailY + 9.3, 11.6, 31, ink);
     if (lines[1]) text(lines[1], 22, detailY + 13.6, 8.3, ink, true);
     if (index < details.length - 1) {
       doc.setDrawColor(...line);
@@ -272,39 +371,41 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   card(6, y, 198, 17);
   const slot = report.seasons.length ? 128 / report.seasons.length : 128;
   report.seasons.forEach(([label, value], index) => {
-    const x = 10 + index * slot;
-    sprout(x, y + 4, leaf);
-    text(label, x + 12, y + 6.3, 8);
-    fittedText(value, x + 12, y + 13.2, 12.1, slot - 17, ink);
+    const x = (report.seasons.length <= 2 ? 17 : 10) + index * slot;
+    if (label.startsWith('Kharif')) kharifBranch(x, y + 4);
+    else sprout(x, y + 4, leaf, 1, true);
+    text(label, x + 12, y + 6.3, 9.1);
+    fittedText(value, x + 12, y + 13.3, 14, slot - 17, ink);
     if (index < report.seasons.length - 1) {
       doc.setDrawColor(...line);
-      doc.line(x + slot - 3, y + 3, x + slot - 3, y + 14);
+      const dividerX = 10 + (index + 1) * slot - 3;
+      doc.line(dividerX, y + 3, dividerX, y + 14);
     }
   });
   card(134, y, 70, 17, green);
-  icon('coins', 140, y + 4, [255, 255, 255]);
-  text('Total crop finance', 154, y + 6.2, 8, [255, 255, 255]);
-  fittedText(report.totalFinance, 154, y + 13.2, 13.4, 46, [255, 255, 255]);
+  icon('coins', 144, y + 4, [255, 255, 255]);
+  text('Total crop finance', 158, y + 6.2, 9.1, [255, 255, 255]);
+  fittedText(report.totalFinance, 158, y + 13.3, 15.8, 42, [255, 255, 255]);
   doc.setDrawColor(...line);
   doc.line(6, y + 23, 204, y + 23);
   icon('layers', 7, y + 26);
-  text('KCC Limit', 21, y + 33, 14, green, true);
+  text('KCC Limit', 21, y + 33, 15.3, green, true);
   const cardY = y + 38;
   card(6, cardY, 97, 25);
   card(107, cardY, 97, 25);
-  sprout(13, cardY + 8, leaf);
-  icon('coins', 113, cardY + 8);
-  text('Year 1 limit', 33, cardY + 7, 8.5);
-  fittedText(report.yearOne, 33, cardY + 16.2, 19.5, 65, green);
-  text('Includes 30% additional finance', 33, cardY + 21.5, 7.5);
-  text('MPL (max. permissible limit)', 134, cardY + 7, 8.5);
-  fittedText(report.mpl, 134, cardY + 16.2, 19.5, 65, green);
-  text('Year 5 limit', 134, cardY + 21.5, 7.5);
+  sprout(13, cardY + 4.8, leaf, 1.2);
+  icon('coins', 113, cardY + 5);
+  text('Year 1 limit', 33, cardY + 5.8, 9.3);
+  fittedText(report.yearOne, 33, cardY + 14.9, 21.5, 65, green);
+  text('Includes 30% additional finance', 33, cardY + 20.4, 8.2);
+  text('MPL (max. permissible limit)', 134, cardY + 5.8, 9.3);
+  fittedText(report.mpl, 134, cardY + 14.9, 21.5, 65, green);
+  text('Year 5 limit', 134, cardY + 20.4, 8.2);
   const scheduleY = cardY + 33;
   icon('calendar', 7, scheduleY - 6);
-  text('5-Year Schedule', 21, scheduleY, 13.3, green, true);
+  text('5-Year Schedule', 21, scheduleY, 14.8, green, true);
   autoTable(doc, {
-    startY: scheduleY + 5,
+    startY: scheduleY + 8,
     margin: { left: 6, right: 6 },
     tableWidth: 198,
     head: [['Year', ...report.schedule.map(([label]) => label)]],
@@ -312,9 +413,9 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     theme: 'grid',
     styles: {
       font,
-      fontSize: 9.25,
+      fontSize: 10.2,
       textColor: ink,
-      cellPadding: 2.05,
+      cellPadding: 3,
       lineColor: line,
       lineWidth: 0.2,
       fontStyle: 'bold',
@@ -331,12 +432,20 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     notes.unshift(`Calculation incomplete: ${report.errors.join(' ') || 'complete the land and crop details.'}`);
   doc.setFont(font, 'normal');
   doc.setFontSize(7.45);
-  const noteLines = notes.flatMap((note) => doc.splitTextToSize(note, 176));
+  const noteLines = notes.flatMap((note) => doc.splitTextToSize(note, 185));
   const noteY = afterTable() + 6;
   const noteHeight = Math.max(18, 7 + noteLines.length * 3.6);
   card(6, noteY, 198, noteHeight, [238, 248, 244]);
   icon('info', 10, noteY + 5);
-  noteLines.forEach((note, index) => text(note, 23, noteY + 5.5 + index * 3.6, 7.45));
+  noteLines.forEach((note, index) => {
+    const baseline = noteY + 5.5 + index * 3.6;
+    if (note.startsWith('Method:')) {
+      text('Method:', 19, baseline, 7.45, ink, true);
+      doc.setFont(font, 'bold');
+      doc.setFontSize(7.45);
+      text(note.slice(7), 19 + doc.getTextWidth('Method:') + 0.3, baseline, 7.45);
+    } else text(note, 19, baseline, 7.45);
+  });
 
   const artworkY = Math.max(239, noteY + noteHeight + 1);
   if (landscape && artworkY < pageHeight - 12)

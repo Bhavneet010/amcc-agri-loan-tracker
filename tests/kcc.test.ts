@@ -299,23 +299,33 @@ test('rejects acre changes that cannot fit the season', () => {
 });
 
 test('the PDF report lists the inputs, crop finance and five-year schedule', async () => {
-  const { kccReport, kccFileName, areaText, compactAreaText } = await import('../lib/kcc-report.ts');
+  const { kccReport, kccFileName, areaText, compactAreaText, cropNameBeforeCondition } = await import(
+    '../lib/kcc-report.ts'
+  );
   const report = kccReport(kccWorkbookExample(), ' Ram Singh ');
   assert.equal(report.ready, true);
   assert.deepEqual(report.details[0], ['Borrower', 'Ram Singh']);
   assert.equal(report.crops.length, kccWorkbookExample().crops.length);
+  assert.equal(report.crops[0][2], 'Citrus fruits');
   assert.equal(report.crops[0][3], '20-12-15');
-  assert.equal(report.crops[7][4], '0.0200');
+  assert.equal(report.crops[0][4], '0.02');
+  assert.equal(report.crops[7][4], '0.02');
+  assert.equal(report.crops[10][4], '0.00');
+  assert.equal(report.crops[0][5], '₹2,97,902');
+  assert.equal(report.crops[0][6], '₹4,969');
+  assert.equal(report.totalFinance, '₹19,036.16');
   assert.equal(report.schedule.length, 5);
   assert.equal(report.yearOne, '₹24,747.01');
   assert.equal(report.mpl, '₹36,232.09');
   assert.equal(kccReport(kccWorkbookExample(), '', 'Rs.').mpl, 'Rs. 36,232.09');
+  assert.equal(kccReport(kccWorkbookExample(), '', 'Rs.').crops[0][5], 'Rs. 2,97,902');
   assert.equal(report.schedule[4][0], 'Year 5 (MPL)');
   assert.equal(areaText(area('bigha', ['2', '3', ''])), '2 Bigha 3 Biswa 0 Biswansi');
   assert.equal(compactAreaText(area('bigha', ['20', '12', '15'])), '20-12-15');
   assert.equal(compactAreaText(area('kanal', ['1', '2', '3'], '66')), '1-2-3 K-M-S (66 in)');
   assert.equal(compactAreaText(area('metric', ['1', '2', '3'])), '1-2-3 Ha-A-Ca');
   assert.equal(compactAreaText(area('acre', ['1.25', '', ''])), '1.25 acres');
+  assert.equal(cropNameBeforeCondition('Long-term apples — Bearing'), 'Long-term apples');
   assert.equal(kccFileName(' Ram Singh ', new Date('2026-11-03T20:00:00Z')), 'KCC-Ram-Singh-2026-11-04.pdf');
   assert.equal(kccFileName('', new Date('2026-11-03T05:00:00Z')), 'KCC-2026-11-03.pdf');
   assert.equal(kccReport(blankKccInput()).ready, false);
