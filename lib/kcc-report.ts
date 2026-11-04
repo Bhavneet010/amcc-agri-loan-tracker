@@ -6,7 +6,7 @@ import { calculateKcc, kccAreaUnits, seasonLabel, type AreaInput, type KccInput 
  * font, which has no ₹ glyph.
  */
 const amount = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const acreFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const acreFormat = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 export const reportMoney = (value: number | null, symbol = '₹') =>
   value === null ? '-' : `${symbol === '₹' ? '₹' : `${symbol} `}${amount.format(value)}`;
 const showAcres = (value: number | null) => (value === null ? '-' : acreFormat.format(value));
@@ -18,6 +18,17 @@ export function areaText(area: AreaInput) {
   if (unit.parts.length === 1) return `${area.values[0].trim() || '0'} ${unit.parts[0].toLowerCase()}`;
   const text = unit.parts.map((part, index) => `${area.values[index].trim() || '0'} ${part}`).join(' ');
   return area.unit === 'kanal' && area.karam ? `${text} (karam ${area.karam} in)` : text;
+}
+
+/** Space-saving label for the PDF's recorded-area column. The column heading supplies the positional unit order. */
+export function compactAreaText(area: AreaInput) {
+  const unit = kccAreaUnits.find((option) => option.value === area.unit);
+  if (!unit) return '-';
+  if (unit.parts.length === 1) return `${area.values[0].trim() || '0'} ${unit.parts[0].toLowerCase()}`;
+  const values = unit.parts.map((_, index) => area.values[index].trim() || '0').join('-');
+  if (area.unit === 'kanal') return `${values} K-M-S${area.karam ? ` (${area.karam} in)` : ''}`;
+  if (area.unit === 'metric') return `${values} Ha-A-Ca`;
+  return values;
 }
 
 export type KccReport = {
@@ -46,7 +57,7 @@ export function kccReport(input: KccInput, borrower = '', symbol = '₹'): KccRe
       String(index + 1),
       seasonLabel(row.season),
       line?.label ?? '-',
-      areaText(row.area),
+      compactAreaText(row.area),
       showAcres(line?.borrowerAcres ?? null),
       money(line?.rate ?? null),
       money(line?.finance ?? null),

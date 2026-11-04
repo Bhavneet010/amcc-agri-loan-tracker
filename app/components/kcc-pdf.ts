@@ -1,41 +1,48 @@
 import type { KccInput } from '../../lib/kcc';
 import { kccFileName, kccReport } from '../../lib/kcc-report';
 
-const green: [number, number, number] = [0, 84, 63];
-const ink: [number, number, number] = [22, 33, 27];
-const muted: [number, number, number] = [95, 107, 100];
-const tint: [number, number, number] = [227, 243, 233];
-const danger: [number, number, number] = [160, 78, 67];
+type Color = [number, number, number];
+const green: Color = [0, 89, 42];
+const deep: Color = [0, 69, 35];
+const leaf: Color = [30, 157, 58];
+const ink: Color = [18, 28, 22];
+const pale: Color = [231, 247, 231];
+const line: Color = [208, 221, 212];
 
-/** Subsets of DejaVu Sans (Latin plus ₹), served from /public/fonts, as base64 for jsPDF. */
-async function loadFonts() {
-  const read = async (file: string) => {
-    const response = await fetch(`/fonts/${file}`);
-    if (!response.ok) throw new Error(`Font ${file} unavailable`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    let binary = '';
-    for (let index = 0; index < bytes.length; index += 0x8000)
-      binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-    return btoa(binary);
-  };
+async function pdfAsset(path: string) {
   try {
-    const [normal, bold] = await Promise.all([read('DejaVuSans-subset.ttf'), read('DejaVuSans-Bold-subset.ttf')]);
-    return { normal, bold };
+    const response = await fetch(path);
+    return response.ok ? new Uint8Array(await response.arrayBuffer()) : null;
   } catch {
     return null;
   }
 }
 
-/** Builds the KCC calculation as an A4 PDF and downloads it. The PDF library loads only when this runs. */
+/** DejaVu Sans includes the rupee glyph. Built-in Helvetica remains the offline fallback. */
+async function loadFonts() {
+  const [normal, bold] = await Promise.all([
+    pdfAsset('/fonts/DejaVuSans-subset.ttf'),
+    pdfAsset('/fonts/DejaVuSans-Bold-subset.ttf'),
+  ]);
+  if (!normal || !bold) return null;
+  const encode = (bytes: Uint8Array) => {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(binary);
+  };
+  return { normal: encode(normal), bold: encode(bold) };
+}
+
+/** Builds the KCC calculation as an A4 PDF and downloads it. */
 export async function downloadKccPdf(input: KccInput, borrower: string) {
-  const [{ jsPDF }, { autoTable }, fonts] = await Promise.all([
+  const [{ jsPDF }, { autoTable }, fonts, landscape] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
     loadFonts(),
+    pdfAsset('/kcc-report-landscape.png'),
   ]);
   const now = new Date();
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  // DejaVu Sans carries the ₹ sign. If it cannot be fetched (offline before it was cached), use Helvetica and "Rs.".
   let font = 'helvetica';
   if (fonts) {
     doc.addFileToVFS('DejaVuSans.ttf', fonts.normal);
@@ -44,22 +51,74 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
     font = 'DejaVuSans';
   }
-  doc.setFont(font, 'normal');
   const report = kccReport(input, borrower, fonts ? '₹' : 'Rs.');
-  const page = doc.internal.pageSize;
-  const margin = 14;
-  const width = page.getWidth() - margin * 2;
-  const after = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-
-  doc.setFillColor(...green);
-  doc.rect(0, 0, page.getWidth(), 26, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont(font, 'bold');
-  doc.setFontSize(16);
-  doc.text('KCC Limit Calculation', margin, 12);
-  doc.setFont(font, 'normal');
-  doc.setFontSize(9);
-  doc.text('AMCC Paonta Sahib  |  Scale of Finance FY 2026-27  |  Himachal Pradesh', margin, 19);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const amount = (value: string) => value.replace(/^(₹|Rs\.)\s*/, '');
+  const text = (value: string, x: number, y: number, size: number, color: Color = ink, bold = false) => {
+    doc.setFont(font, bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.text(value, x, y);
+  };
+  const card = (x: number, y: number, w: number, h: number, color: Color = pale) => {
+    doc.setFillColor(...color);
+    doc.roundedRect(x, y, w, h, 3, 3, 'F');
+  };
+  const sprout = (x: number, y: number, color: Color = green) => {
+    doc.setDrawColor(...color);
+    doc.setFillColor(...color);
+    doc.setLineWidth(0.65);
+    doc.line(x + 4, y + 8, x + 4, y + 2.5);
+    doc.line(x + 4, y + 5, x + 2, y + 3.3);
+    doc.triangle(x + 3.4, y + 4, x + 0.3, y + 2.3, x + 0.4, y + 0.7, 'F');
+    doc.triangle(x + 4.4, y + 3.8, x + 7.5, y + 0.3, x + 7.2, y + 3.2, 'F');
+  };
+  const icon = (
+    kind: 'person' | 'pin' | 'field' | 'coins' | 'calendar' | 'info' | 'layers',
+    x: number,
+    y: number,
+    color: Color = green,
+  ) => {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.55);
+    if (kind === 'person') {
+      doc.circle(x + 4, y + 2, 1.5, 'S');
+      doc.roundedRect(x + 0.6, y + 4.4, 6.8, 4, 2, 2, 'S');
+    } else if (kind === 'pin') {
+      doc.circle(x + 4, y + 3, 2.5, 'S');
+      doc.circle(x + 4, y + 3, 0.6, 'S');
+      doc.line(x + 2.2, y + 4.8, x + 4, y + 8);
+      doc.line(x + 5.8, y + 4.8, x + 4, y + 8);
+    } else if (kind === 'field') {
+      doc.line(x, y + 8, x + 8, y + 8);
+      for (const dx of [1, 3.5, 6]) {
+        doc.line(x + dx, y + 7.7, x + dx + 0.5, y + 2.8);
+        doc.line(x + dx + 0.5, y + 2.8, x + dx - 0.5, y + 4.5);
+        doc.line(x + dx + 0.5, y + 2.8, x + dx + 1.5, y + 4.5);
+      }
+    } else if (kind === 'coins') {
+      doc.ellipse(x + 2.5, y + 5.7, 2.4, 0.9, 'S');
+      doc.ellipse(x + 5.6, y + 3.6, 2.4, 0.9, 'S');
+      doc.ellipse(x + 2.5, y + 7.3, 2.4, 0.9, 'S');
+    } else if (kind === 'calendar') {
+      doc.roundedRect(x + 0.5, y + 1.5, 7, 6.3, 0.5, 0.5, 'S');
+      doc.line(x + 0.5, y + 3.4, x + 7.5, y + 3.4);
+      doc.line(x + 2, y + 0.3, x + 2, y + 2.4);
+      doc.line(x + 6, y + 0.3, x + 6, y + 2.4);
+    } else if (kind === 'layers') {
+      for (const dy of [0, 2.6, 5.2]) {
+        doc.line(x, y + dy + 2, x + 4, y + dy);
+        doc.line(x + 4, y + dy, x + 8, y + dy + 2);
+        doc.line(x + 8, y + dy + 2, x + 4, y + dy + 4);
+        doc.line(x + 4, y + dy + 4, x, y + dy + 2);
+      }
+    } else {
+      doc.circle(x + 4, y + 4, 3.5, 'S');
+      doc.line(x + 4, y + 3.5, x + 4, y + 6);
+      doc.circle(x + 4, y + 2.2, 0.2, 'S');
+    }
+  };
   const stamp = now.toLocaleString('en-GB', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit',
@@ -68,116 +127,179 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
-  doc.text(`Generated ${stamp} IST`, page.getWidth() - margin, 19, { align: 'right' });
+  const header = () => {
+    doc.setFillColor(...deep);
+    doc.rect(0, 0, pageWidth, 23, 'F');
+    doc.setFillColor(...green);
+    doc.triangle(153, 0, pageWidth, 0, pageWidth, 14, 'F');
+    sprout(6, 5, [203, 227, 57]);
+    text('KCC Limit Calculation', 25, 11.2, 16, [255, 255, 255], true);
+    text('AMCC Paonta Sahib   |   Scale of Finance FY 2026-27   |   Himachal Pradesh', 25, 18.1, 6.8, [255, 255, 255]);
+    doc.setFont(font, 'normal');
+    doc.setFontSize(6.4);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Generated ${stamp} IST`, pageWidth - 6, 18.1, { align: 'right' });
+  };
+  header();
 
-  const section = (title: string, y: number) => {
-    doc.setTextColor(...green);
+  // Borrower panel and crop pattern form the two-column top section.
+  card(6, 31, 50, 80);
+  icon('person', 9, 34);
+  text('Borrower & Land', 19, 39, 10, ink, true);
+  const details = report.details.filter(([label]) => label !== 'Total land');
+  const detailIcons = { Borrower: 'person', District: 'pin', 'Cultivated land': 'field' } as const;
+  details.forEach(([label, value], index) => {
+    const y = 47 + index * 19.8;
+    icon(detailIcons[label as keyof typeof detailIcons] || 'field', 9.5, y + 3, leaf);
+    text(label, 22, y + 3.5, 7.1);
     doc.setFont(font, 'bold');
-    doc.setFontSize(11);
-    doc.text(title, margin, y);
-    return y + 2;
-  };
-  const plain = {
-    theme: 'plain' as const,
-    margin: { left: margin, right: margin },
-    styles: { font, fontSize: 9, textColor: ink, cellPadding: 1.6 },
-  };
-
-  autoTable(doc, {
-    ...plain,
-    startY: section('Borrower & land', 35),
-    body: report.details,
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40, textColor: muted } },
+    doc.setFontSize(9.2);
+    const lines = doc.splitTextToSize(value, 31);
+    text(lines[0] || '-', 22, y + 9, 9.2, ink, true);
+    if (lines[1]) text(lines[1], 22, y + 13.4, 7.4, ink, true);
+    if (index < details.length - 1) {
+      doc.setDrawColor(...line);
+      doc.line(10, y + 16, 52, y + 16);
+    }
   });
-
+  const totalLand = report.details.find(([label]) => label === 'Total land');
+  if (totalLand) text(`Total land: ${totalLand[1]}`, 10, 106, 6.3);
+  doc.setDrawColor(...line);
+  doc.roundedRect(60, 31, 144, 80, 3, 3, 'S');
+  sprout(63, 31.5);
+  text('Crop Pattern', 73, 38, 10.4, ink, true);
   autoTable(doc, {
-    startY: section('Crop pattern', after() + 8),
-    margin: { left: margin, right: margin },
-    head: [['#', 'Season', 'Crop', 'Recorded area', 'Acres', 'SOF / acre', 'Finance']],
-    body: report.crops.length ? report.crops : [['', '', 'No crops added', '', '', '', '']],
-    foot: [
-      ...report.seasons.map(([label, value]) => ['', '', label, '', '', '', value]),
-      ['', '', 'Total crop finance', '', '', '', report.totalFinance],
+    startY: 41,
+    margin: { left: 61, right: 7, top: 31, bottom: 14 },
+    tableWidth: 142,
+    head: [
+      [
+        '#',
+        'Season',
+        'Crop',
+        'Recorded area\n(B-Bi-Bs)',
+        'Acres',
+        `SOF / acre (${fonts ? '₹' : 'Rs.'})`,
+        `Finance (${fonts ? '₹' : 'Rs.'})`,
+      ],
     ],
+    body: report.crops.length
+      ? report.crops.map((row) => row.map((value, index) => (index >= 5 ? amount(value) : value)))
+      : [['', '', 'No crops added', '', '', '', '']],
     theme: 'grid',
-    styles: { font, fontSize: 8, textColor: ink, cellPadding: 1.1, lineColor: [215, 221, 216], lineWidth: 0.2 },
-    headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold' },
-    footStyles: { fillColor: tint, textColor: ink, fontStyle: 'bold' },
+    styles: {
+      font,
+      fontSize: 6.25,
+      textColor: ink,
+      cellPadding: { top: 0.72, bottom: 0.72, left: 0.65, right: 0.65 },
+      lineColor: line,
+      lineWidth: 0.15,
+      minCellHeight: 4.25,
+      overflow: 'linebreak',
+    },
+    headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold', minCellHeight: 8, valign: 'middle' },
     columnStyles: {
       0: { cellWidth: 7, halign: 'center' },
-      1: { cellWidth: 18 },
-      4: { halign: 'right', cellWidth: 16 },
-      5: { halign: 'right', cellWidth: 26 },
-      6: { halign: 'right', cellWidth: 28 },
+      1: { cellWidth: 15 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 28, halign: 'center' },
+      4: { cellWidth: 15, halign: 'right' },
+      5: { cellWidth: 23, halign: 'right' },
+      6: { cellWidth: 24, halign: 'right' },
+    },
+    didDrawPage: (data) => {
+      if (data.pageNumber > 1) {
+        header();
+        text('Crop Pattern (continued)', 61, 28.5, 7.5, green, true);
+      }
     },
   });
-
-  let y = after() + 8;
-  if (y > page.getHeight() - 80) {
+  const afterTable = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  let y = afterTable() + 5;
+  if (y > 119) {
     doc.addPage();
-    y = 20;
-  }
-  y = section('KCC limit', y) + 3;
-  const box = (x: number, label: string, value: string, note: string) => {
-    doc.setFillColor(...tint);
-    doc.setDrawColor(211, 231, 218);
-    doc.roundedRect(x, y, width / 2 - 3, 22, 2, 2, 'FD');
-    doc.setTextColor(...muted);
-    doc.setFont(font, 'normal');
-    doc.setFontSize(8.5);
-    doc.text(label, x + 4, y + 6);
-    doc.setTextColor(...green);
-    doc.setFont(font, 'bold');
-    doc.setFontSize(14);
-    doc.text(value, x + 4, y + 13.5);
-    doc.setTextColor(...muted);
-    doc.setFont(font, 'normal');
-    doc.setFontSize(7.5);
-    doc.text(note, x + 4, y + 18.5);
-  };
-  box(margin, 'Year 1 limit', report.yearOne, 'Includes 30% additional finance');
-  box(margin + width / 2 + 3, 'MPL (max. permissible limit)', report.mpl, 'Year 5 limit');
+    header();
+    y = 32;
+  } else y = Math.max(116, y);
 
-  autoTable(doc, {
-    startY: section('5-year schedule', y + 31),
-    margin: { left: margin, right: margin },
-    head: [['Year', 'Calculated limit']],
-    body: report.schedule,
-    theme: 'grid',
-    tableWidth: width / 2 + 10,
-    styles: { font, fontSize: 9, textColor: ink, cellPadding: 1.3, lineColor: [215, 221, 216], lineWidth: 0.2 },
-    headStyles: { fillColor: green, textColor: 255 },
-    columnStyles: { 1: { halign: 'right' } },
+  // Finance strip, KCC cards, and horizontal five-year schedule.
+  card(6, y, 198, 17);
+  const slot = report.seasons.length ? 128 / report.seasons.length : 128;
+  report.seasons.forEach(([label, value], index) => {
+    const x = 10 + index * slot;
+    sprout(x, y + 4, leaf);
+    text(label, x + 12, y + 6.3, 7.1);
+    text(value, x + 12, y + 13, 10.2, ink, true);
+    if (index < report.seasons.length - 1) {
+      doc.setDrawColor(...line);
+      doc.line(x + slot - 3, y + 3, x + slot - 3, y + 14);
+    }
   });
-
-  y = after() + 8;
+  card(134, y, 70, 17, green);
+  icon('coins', 140, y + 4, [255, 255, 255]);
+  text('Total crop finance', 154, y + 6.2, 7.1, [255, 255, 255]);
+  text(report.totalFinance, 154, y + 13.2, 11.2, [255, 255, 255], true);
+  doc.setDrawColor(...line);
+  doc.line(6, y + 23, 204, y + 23);
+  icon('layers', 7, y + 26);
+  text('KCC Limit', 21, y + 33, 12.5, green, true);
+  const cardY = y + 38;
+  card(6, cardY, 97, 25);
+  card(107, cardY, 97, 25);
+  sprout(13, cardY + 8, leaf);
+  icon('coins', 113, cardY + 8);
+  text('Year 1 limit', 33, cardY + 7, 7.4);
+  text(report.yearOne, 33, cardY + 15.5, 15.1, green, true);
+  text('Includes 30% additional finance', 33, cardY + 21.5, 6.7);
+  text('MPL (max. permissible limit)', 134, cardY + 7, 7.4);
+  text(report.mpl, 134, cardY + 15.5, 15.1, green, true);
+  text('Year 5 limit', 134, cardY + 21.5, 6.7);
+  const scheduleY = cardY + 33;
+  icon('calendar', 7, scheduleY - 6);
+  text('5-Year Schedule', 21, scheduleY, 11.7, green, true);
+  autoTable(doc, {
+    startY: scheduleY + 5,
+    margin: { left: 6, right: 6 },
+    tableWidth: 198,
+    head: [['Year', ...report.schedule.map(([label]) => label)]],
+    body: [[`Calculated limit (${fonts ? '₹' : 'Rs.'})`, ...report.schedule.map(([, value]) => amount(value))]],
+    theme: 'grid',
+    styles: {
+      font,
+      fontSize: 8.1,
+      textColor: ink,
+      cellPadding: 2.3,
+      lineColor: line,
+      lineWidth: 0.2,
+      fontStyle: 'bold',
+    },
+    headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 45, fillColor: pale } },
+  });
   const notes = [
-    'Method: within each season, recorded areas set each crop share of the cultivated land. Crop finance = borrower crop acres x district Scale of Finance. Long-term crops count in both seasons at half their annual rate.',
-    'Year 1 = total crop finance x 1.30. Each later year = previous year x 1.10.',
+    'Method: within each season, recorded areas set each crop share of the cultivated land. Crop finance = borrower crop acres × district SOF.',
+    'Year 1 = total crop finance × 1.30. Each later year = previous year × 1.10.',
     'Beta estimate for review. Verify inputs against the Jamabandi and the current Scale of Finance before sanction. This document is not a sanction letter.',
   ];
   if (!report.ready)
     notes.unshift(`Calculation incomplete: ${report.errors.join(' ') || 'complete the land and crop details.'}`);
   doc.setFont(font, 'normal');
-  doc.setFontSize(7.5);
-  for (const note of notes) {
-    const lines = doc.splitTextToSize(note, width);
-    if (y + lines.length * 3.5 > page.getHeight() - 14) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setTextColor(...(note.startsWith('Calculation incomplete') ? danger : muted));
-    doc.text(lines, margin, y);
-    y += lines.length * 3.5 + 1.5;
-  }
+  doc.setFontSize(6.25);
+  const noteLines = notes.flatMap((note) => doc.splitTextToSize(note, 176));
+  const noteY = afterTable() + 6;
+  const noteHeight = Math.max(18, 7 + noteLines.length * 3.2);
+  card(6, noteY, 198, noteHeight, [238, 248, 244]);
+  icon('info', 10, noteY + 5);
+  noteLines.forEach((note, index) => text(note, 23, noteY + 5.4 + index * 3.2, 6.25));
 
+  const artworkY = Math.max(239, noteY + noteHeight + 1);
+  if (landscape && artworkY < pageHeight - 12)
+    doc.addImage(landscape, 'PNG', 0, artworkY, pageWidth, pageHeight - artworkY, undefined, 'FAST');
   const pages = doc.getNumberOfPages();
-  for (let index = 1; index <= pages; index++) {
-    doc.setPage(index);
-    doc.setTextColor(...muted);
-    doc.setFontSize(7.5);
-    doc.text(`Page ${index} of ${pages}`, page.getWidth() - margin, page.getHeight() - 8, { align: 'right' });
-    doc.text('AMCC Paonta Sahib - KCC calculator', margin, page.getHeight() - 8);
-  }
+  if (pages > 1)
+    for (let index = 1; index <= pages; index++) {
+      doc.setPage(index);
+      text(`Page ${index} of ${pages}`, pageWidth - 26, pageHeight - 5, 6.5);
+    }
   doc.save(kccFileName(borrower, now));
 }
