@@ -219,73 +219,6 @@
 .connection-dot.offline {
   background: #bc9049;
 }
-/*
- * KCC calculator launcher. It shares the summary cards' shape, border, shadow and botanical texture, in a harvest
- * gold instead of green so the tool reads as separate from the loan figures.
- */
-.kcc-launch {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  /* A compact, centred pill: the whole card is the tap target. */
-  justify-content: center;
-  width: calc((100% - 2 * var(--page-x) - 2 * var(--space-8)) * 0.65);
-  margin: var(--space-4) auto 0;
-  padding: var(--space-3) var(--space-4);
-  overflow: hidden;
-  border: 1px solid #fff8ec;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(110deg, #8f5f17 0%, #b07a26 55%, #c4923d 100%);
-  box-shadow: 0 5px 10px #6b45122e;
-  color: #fff;
-  text-align: left;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-.kcc-launch::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url('/home-botanical.png') center/cover;
-  opacity: 0.22;
-  mix-blend-mode: soft-light;
-}
-.kcc-launch:hover {
-  box-shadow: 0 7px 14px #6b45123d;
-}
-.kcc-launch:active {
-  transform: scale(0.99);
-}
-.kcc-launch:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 2px;
-}
-.kcc-launch-icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: var(--control-lg);
-  height: var(--control-lg);
-  border: 1px solid #ffffff38;
-  border-radius: var(--radius-md);
-  background: #ffffff24;
-  color: #fff;
-}
-.kcc-launch-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 2.1;
-}
-.kcc-launch-text {
-  min-width: 0;
-  font: var(--weight-bold) var(--text-xl) / 1.15 var(--serif);
-  white-space: nowrap;
-}
-
 /* Page body */
 .landscape-home main {
   max-width: var(--page-max);
@@ -662,29 +595,64 @@ main > .message {
   justify-items: center;
   gap: var(--space-1);
 }
-.add-loan-pill {
+/*
+ * Quick actions: one pill split in two. The KCC calculator half keeps its harvest-gold gradient and botanical
+ * texture; the Add Loan half keeps the app green.
+ */
+.action-pill {
+  display: flex;
+  height: var(--control-md);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 4px 10px #0f3d2733;
+}
+.action-pill > button {
   display: flex;
   align-items: center;
   gap: 4px;
-  height: var(--control-md);
-  padding: 0 var(--space-4) 0 var(--space-3);
+  height: 100%;
   border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--green);
-  box-shadow: 0 4px 10px #0f3d2733;
   color: #fff;
   font: var(--weight-semibold) var(--text-md) / 1 var(--sans);
 }
-.add-loan-pill svg {
+.action-pill > button:hover {
+  filter: brightness(1.12);
+}
+.action-pill > button:active {
+  transform: scale(0.98);
+}
+.action-pill > button:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -3px;
+}
+.action-pill svg {
   width: 18px;
   height: 18px;
   stroke-width: 2.4;
 }
-.add-loan-pill:hover {
-  filter: brightness(1.12);
+.action-pill-kcc {
+  position: relative;
+  isolation: isolate;
+  padding: 0 var(--space-3);
+  background: linear-gradient(110deg, #8f5f17 0%, #b07a26 55%, #c4923d 100%);
 }
-.add-loan-pill:active {
-  transform: scale(0.98);
+.action-pill-kcc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/home-botanical.png') center/cover;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+}
+.action-pill-kcc svg {
+  stroke-width: 2.1;
+}
+/* A hairline divides the two halves. */
+.action-pill > .add-loan-pill {
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border-left: 1px solid #ffffff4d;
+  background: var(--green);
 }
 .add-loan-action > span {
   display: none;

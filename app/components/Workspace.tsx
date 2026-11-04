@@ -571,29 +571,31 @@ export default function Workspace() {
             onStatus={showSummary}
           />
         </section>
-        {/* The KCC calculator works offline from its own rate table, so every branch user can open it at any time. */}
-        <button
-          type="button"
-          className="kcc-launch"
-          onClick={() => {
-            setMenu(false);
-            setSettings(false);
-            setCalculator(true);
-          }}
-        >
-          <span className="kcc-launch-icon" aria-hidden="true">
-            <Calculator />
-          </span>
-          <strong className="kcc-launch-text">KCC calculator</strong>
-        </button>
         <section className="recent" aria-labelledby="recent-heading">
           <div className="applications-head">
             <h2 id="recent-heading">Applications</h2>
             <div className="add-loan-action">
-              <button type="button" className="add-loan-pill" onClick={() => setAddChoice(true)} disabled={!canAdd}>
-                <Plus aria-hidden="true" />
-                Add Loan
-              </button>
+              {/* One split pill: the KCC calculator in harvest gold beside Add Loan in green. The calculator works
+                  offline from its own rate table, so every branch user can open it at any time. */}
+              <div className="action-pill" role="group" aria-label="Quick actions">
+                <button
+                  type="button"
+                  className="action-pill-kcc"
+                  aria-label="KCC calculator"
+                  onClick={() => {
+                    setMenu(false);
+                    setSettings(false);
+                    setCalculator(true);
+                  }}
+                >
+                  <Calculator aria-hidden="true" />
+                  KCC
+                </button>
+                <button type="button" className="add-loan-pill" onClick={() => setAddChoice(true)} disabled={!canAdd}>
+                  <Plus aria-hidden="true" />
+                  Add Loan
+                </button>
+              </div>
               <span>New loan or renewal</span>
             </div>
           </div>
