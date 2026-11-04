@@ -146,7 +146,7 @@ function CropEditor({
         </div>
         {crop && specialBasis.test(crop.label) ? (
           <p className={styles.basisNote}>
-            The source label specifies a cultivation/activity size. This beta follows the workbook’s confirmed per-acre
+            The source label specifies a cultivation/activity size. This calculator follows the workbook’s confirmed per-acre
             calculation; review this entry’s basis before use.
           </p>
         ) : null}
@@ -384,7 +384,7 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
     <Modal
       title={
         <span className={styles.title}>
-          KCC calculator <span className={styles.beta}>Beta</span>
+          KCC calculator
         </span>
       }
       subtitle="FY 2026–27 · Himachal Pradesh"
@@ -653,13 +653,12 @@ export default function KccCalculator({ onClose }: { onClose: () => void }) {
                 m². Use certified Jamabandi area and confirm the karam for kanal land.
               </p>
               <p>
-                Beta estimate for review. This calculator does not create a loan. Your inputs stay on this device until
+                Estimate for review. This calculator does not create a loan. Your inputs stay on this device until
                 you press Reset.
               </p>
             </div>
           </details>
-          <div className={styles.betaNote}>
-            <span className={styles.betaPill}>Beta</span>
+          <div className={styles.reviewNote}>
             <p>Review inputs and source rates before using the estimate.</p>
           </div>
         </aside>

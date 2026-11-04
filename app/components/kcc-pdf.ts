@@ -455,7 +455,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   const notes = [
     'Method: within each season, recorded areas set each crop share of the cultivated land. Crop finance = borrower crop acres × district SOF.',
     'Year 1 = total crop finance × 1.30. Each later year = previous year × 1.10.',
-    'Beta estimate for review. Verify inputs against the Jamabandi and the current Scale of Finance before sanction. This document is not a sanction letter.',
+    'Estimate for review. Verify inputs against the Jamabandi and the current Scale of Finance before sanction. This document is not a sanction letter.',
   ];
   if (!report.ready)
     notes.unshift(`Calculation incomplete: ${report.errors.join(' ') || 'complete the land and crop details.'}`);

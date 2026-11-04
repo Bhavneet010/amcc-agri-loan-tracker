@@ -584,14 +584,7 @@ export default function Workspace() {
           <span className="kcc-launch-icon" aria-hidden="true">
             <Calculator />
           </span>
-          <span className="kcc-launch-text">
-            <strong>KCC calculator</strong>
-            <span>Work out a borrower’s 5-year KCC limit</span>
-          </span>
-          <span className="kcc-launch-go" aria-hidden="true">
-            Open
-            <ChevronRight />
-          </span>
+          <strong className="kcc-launch-text">KCC calculator</strong>
         </button>
         <section className="recent" aria-labelledby="recent-heading">
           <div className="applications-head">

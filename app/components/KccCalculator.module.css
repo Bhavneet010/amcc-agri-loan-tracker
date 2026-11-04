@@ -44,25 +44,6 @@
   align-items: center;
   gap: var(--space-2);
 }
-.beta,
-.betaPill {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  border: 1px solid var(--amber-line);
-  border-radius: var(--radius-sm);
-  background: var(--amber-soft);
-  color: var(--amber-ink);
-  font: var(--weight-bold) var(--text-2xs) var(--sans);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-}
-.beta {
-  padding: 1px 4px;
-}
-.betaPill {
-  padding: var(--space-1) var(--space-3);
-}
 .toolbar,
 .layout {
   width: calc(100% - 2 * var(--dialog-pad));
@@ -646,14 +627,7 @@
   color: var(--amber-ink);
   font-weight: var(--weight-bold);
 }
-.betaNote {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.betaNote p {
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--line-strong);
+.reviewNote p {
   color: var(--muted);
   font-size: var(--text-xs);
   line-height: 1.4;

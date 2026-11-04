@@ -229,10 +229,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  /* Inset a little more than the page gutter so the pill sits narrower than the full-width content below. */
-  width: calc(100% - 2 * var(--page-x) - 2 * var(--space-8));
+  /* A compact, centred pill: the whole card is the tap target. */
+  justify-content: center;
+  width: calc((100% - 2 * var(--page-x) - 2 * var(--space-8)) * 0.65);
   margin: var(--space-4) auto 0;
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   overflow: hidden;
   border: 1px solid #fff8ec;
   border-radius: var(--radius-lg);
@@ -280,38 +281,9 @@
   stroke-width: 2.1;
 }
 .kcc-launch-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
-}
-.kcc-launch-text strong {
   font: var(--weight-bold) var(--text-xl) / 1.15 var(--serif);
-}
-.kcc-launch-text span {
-  overflow: hidden;
-  color: #fff3dc;
-  font: var(--weight-medium) var(--text-sm) / 1.3 var(--sans);
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-.kcc-launch-go {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-  height: var(--control-sm);
-  padding: 0 var(--space-2) 0 var(--space-3);
-  border-radius: var(--radius-pill);
-  background: #fff;
-  color: #7a4f12;
-  font: var(--weight-bold) var(--text-sm) / 1 var(--sans);
-}
-.kcc-launch-go svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2.4;
 }
 
 /* Page body */
