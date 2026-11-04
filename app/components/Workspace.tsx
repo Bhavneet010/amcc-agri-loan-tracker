@@ -543,28 +543,6 @@ export default function Workspace() {
         </div>
       </header>
       <main>
-        {/* The KCC calculator works offline from its own rate table, so every branch user can open it at any time. */}
-        <button
-          type="button"
-          className="kcc-launch"
-          onClick={() => {
-            setMenu(false);
-            setSettings(false);
-            setCalculator(true);
-          }}
-        >
-          <span className="kcc-launch-icon" aria-hidden="true">
-            <Calculator />
-          </span>
-          <span className="kcc-launch-text">
-            <strong>KCC calculator</strong>
-            <span>Work out a borrower’s 5-year KCC limit</span>
-          </span>
-          <span className="kcc-launch-go" aria-hidden="true">
-            Open
-            <ChevronRight />
-          </span>
-        </button>
         {!online ? (
           <div className="message warning" role="status">
             <WifiOff size={17} /> You’re offline. Reconnect to load or save loans. Unsaved form details stay here.
@@ -593,6 +571,28 @@ export default function Workspace() {
             onStatus={showSummary}
           />
         </section>
+        {/* The KCC calculator works offline from its own rate table, so every branch user can open it at any time. */}
+        <button
+          type="button"
+          className="kcc-launch"
+          onClick={() => {
+            setMenu(false);
+            setSettings(false);
+            setCalculator(true);
+          }}
+        >
+          <span className="kcc-launch-icon" aria-hidden="true">
+            <Calculator />
+          </span>
+          <span className="kcc-launch-text">
+            <strong>KCC calculator</strong>
+            <span>Work out a borrower’s 5-year KCC limit</span>
+          </span>
+          <span className="kcc-launch-go" aria-hidden="true">
+            Open
+            <ChevronRight />
+          </span>
+        </button>
         <section className="recent" aria-labelledby="recent-heading">
           <div className="applications-head">
             <h2 id="recent-heading">Applications</h2>
