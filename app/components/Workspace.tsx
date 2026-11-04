@@ -589,7 +589,7 @@ export default function Workspace() {
                   }}
                 >
                   <Calculator aria-hidden="true" />
-                  KCC
+                  KCC calc
                 </button>
                 <button type="button" className="add-loan-pill" onClick={() => setAddChoice(true)} disabled={!canAdd}>
                   <Plus aria-hidden="true" />

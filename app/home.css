@@ -599,8 +599,10 @@ main > .message {
  * Quick actions: one pill split in two. The KCC calculator half keeps its harvest-gold gradient and botanical
  * texture; the Add Loan half keeps the app green.
  */
+/* Two equal columns, each as wide as the longer label, so both halves are the same size. */
 .action-pill {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   height: var(--control-md);
   overflow: hidden;
   border-radius: var(--radius-pill);
@@ -609,8 +611,11 @@ main > .message {
 .action-pill > button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   height: 100%;
+  padding: 0 var(--space-3);
+  white-space: nowrap;
   border: 0;
   color: #fff;
   font: var(--weight-semibold) var(--text-md) / 1 var(--sans);
@@ -633,7 +638,6 @@ main > .message {
 .action-pill-kcc {
   position: relative;
   isolation: isolate;
-  padding: 0 var(--space-3);
   background: linear-gradient(110deg, #8f5f17 0%, #b07a26 55%, #c4923d 100%);
 }
 .action-pill-kcc::before {
@@ -650,7 +654,6 @@ main > .message {
 }
 /* A hairline divides the two halves. */
 .action-pill > .add-loan-pill {
-  padding: 0 var(--space-4) 0 var(--space-3);
   border-left: 1px solid #ffffff4d;
   background: var(--green);
 }
