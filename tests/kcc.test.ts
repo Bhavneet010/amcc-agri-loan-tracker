@@ -305,8 +305,9 @@ test('the PDF report lists the inputs, crop finance and five-year schedule', asy
   assert.deepEqual(report.details[0], ['Borrower', 'Ram Singh']);
   assert.equal(report.crops.length, kccWorkbookExample().crops.length);
   assert.equal(report.schedule.length, 5);
-  assert.equal(report.yearOne, 'Rs. 24,747.01');
-  assert.equal(report.mpl, 'Rs. 36,232.09');
+  assert.equal(report.yearOne, '₹24,747.01');
+  assert.equal(report.mpl, '₹36,232.09');
+  assert.equal(kccReport(kccWorkbookExample(), '', 'Rs.').mpl, 'Rs. 36,232.09');
   assert.equal(report.schedule[4][0], 'Year 5 (MPL)');
   assert.equal(areaText(area('bigha', ['2', '3', ''])), '2 Bigha 3 Biswa 0 Biswansi');
   assert.equal(kccFileName(' Ram Singh ', new Date('2026-11-03T20:00:00Z')), 'KCC-Ram-Singh-2026-11-04.pdf');

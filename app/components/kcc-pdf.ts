@@ -7,12 +7,45 @@ const muted: [number, number, number] = [95, 107, 100];
 const tint: [number, number, number] = [227, 243, 233];
 const danger: [number, number, number] = [160, 78, 67];
 
+/** Subsets of DejaVu Sans (Latin plus ₹), served from /public/fonts, as base64 for jsPDF. */
+async function loadFonts() {
+  const read = async (file: string) => {
+    const response = await fetch(`/fonts/${file}`);
+    if (!response.ok) throw new Error(`Font ${file} unavailable`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000)
+      binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    return btoa(binary);
+  };
+  try {
+    const [normal, bold] = await Promise.all([read('DejaVuSans-subset.ttf'), read('DejaVuSans-Bold-subset.ttf')]);
+    return { normal, bold };
+  } catch {
+    return null;
+  }
+}
+
 /** Builds the KCC calculation as an A4 PDF and downloads it. The PDF library loads only when this runs. */
 export async function downloadKccPdf(input: KccInput, borrower: string) {
-  const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-  const report = kccReport(input, borrower);
+  const [{ jsPDF }, { autoTable }, fonts] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+    loadFonts(),
+  ]);
   const now = new Date();
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  // DejaVu Sans carries the ₹ sign. If it cannot be fetched (offline before it was cached), use Helvetica and "Rs.".
+  let font = 'helvetica';
+  if (fonts) {
+    doc.addFileToVFS('DejaVuSans.ttf', fonts.normal);
+    doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+    doc.addFileToVFS('DejaVuSans-Bold.ttf', fonts.bold);
+    doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+    font = 'DejaVuSans';
+  }
+  doc.setFont(font, 'normal');
+  const report = kccReport(input, borrower, fonts ? '₹' : 'Rs.');
   const page = doc.internal.pageSize;
   const margin = 14;
   const width = page.getWidth() - margin * 2;
@@ -21,10 +54,10 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   doc.setFillColor(...green);
   doc.rect(0, 0, page.getWidth(), 26, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(font, 'bold');
   doc.setFontSize(16);
   doc.text('KCC Limit Calculation', margin, 12);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(font, 'normal');
   doc.setFontSize(9);
   doc.text('AMCC Paonta Sahib  |  Scale of Finance FY 2026-27  |  Himachal Pradesh', margin, 19);
   const stamp = now.toLocaleString('en-GB', {
@@ -39,7 +72,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
 
   const section = (title: string, y: number) => {
     doc.setTextColor(...green);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font, 'bold');
     doc.setFontSize(11);
     doc.text(title, margin, y);
     return y + 2;
@@ -47,7 +80,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   const plain = {
     theme: 'plain' as const,
     margin: { left: margin, right: margin },
-    styles: { fontSize: 9, textColor: ink, cellPadding: 1.6 },
+    styles: { font, fontSize: 9, textColor: ink, cellPadding: 1.6 },
   };
 
   autoTable(doc, {
@@ -67,7 +100,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
       ['', '', 'Total crop finance', '', '', '', report.totalFinance],
     ],
     theme: 'grid',
-    styles: { fontSize: 8, textColor: ink, cellPadding: 1.1, lineColor: [215, 221, 216], lineWidth: 0.2 },
+    styles: { font, fontSize: 8, textColor: ink, cellPadding: 1.1, lineColor: [215, 221, 216], lineWidth: 0.2 },
     headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold' },
     footStyles: { fillColor: tint, textColor: ink, fontStyle: 'bold' },
     columnStyles: {
@@ -90,15 +123,15 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     doc.setDrawColor(211, 231, 218);
     doc.roundedRect(x, y, width / 2 - 3, 22, 2, 2, 'FD');
     doc.setTextColor(...muted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font, 'normal');
     doc.setFontSize(8.5);
     doc.text(label, x + 4, y + 6);
     doc.setTextColor(...green);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(font, 'bold');
     doc.setFontSize(14);
     doc.text(value, x + 4, y + 13.5);
     doc.setTextColor(...muted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(font, 'normal');
     doc.setFontSize(7.5);
     doc.text(note, x + 4, y + 18.5);
   };
@@ -112,7 +145,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     body: report.schedule,
     theme: 'grid',
     tableWidth: width / 2 + 10,
-    styles: { fontSize: 9, textColor: ink, cellPadding: 1.3, lineColor: [215, 221, 216], lineWidth: 0.2 },
+    styles: { font, fontSize: 9, textColor: ink, cellPadding: 1.3, lineColor: [215, 221, 216], lineWidth: 0.2 },
     headStyles: { fillColor: green, textColor: 255 },
     columnStyles: { 1: { halign: 'right' } },
   });
@@ -125,7 +158,7 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   ];
   if (!report.ready)
     notes.unshift(`Calculation incomplete: ${report.errors.join(' ') || 'complete the land and crop details.'}`);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(font, 'normal');
   doc.setFontSize(7.5);
   for (const note of notes) {
     const lines = doc.splitTextToSize(note, width);
