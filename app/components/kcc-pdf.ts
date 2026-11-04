@@ -1,4 +1,5 @@
 import type { KccInput } from '../../lib/kcc';
+import { topSectionBottom } from '../../lib/kcc-pdf-layout';
 import { kccFileName, kccReport } from '../../lib/kcc-report';
 
 type Color = [number, number, number];
@@ -61,18 +62,46 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     doc.setTextColor(...color);
     doc.text(value, x, y);
   };
+  const fittedText = (
+    value: string,
+    x: number,
+    y: number,
+    size: number,
+    maxWidth: number,
+    color: Color,
+    bold = true,
+  ) => {
+    doc.setFont(font, bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    const fittedSize = Math.min(size, (size * maxWidth) / doc.getTextWidth(value));
+    text(value, x, y, fittedSize, color, bold);
+  };
   const card = (x: number, y: number, w: number, h: number, color: Color = pale) => {
     doc.setFillColor(...color);
     doc.roundedRect(x, y, w, h, 3, 3, 'F');
   };
-  const sprout = (x: number, y: number, color: Color = green) => {
+  const sprout = (x: number, y: number, color: Color = green, scale = 1) => {
     doc.setDrawColor(...color);
     doc.setFillColor(...color);
     doc.setLineWidth(0.65);
-    doc.line(x + 4, y + 8, x + 4, y + 2.5);
-    doc.line(x + 4, y + 5, x + 2, y + 3.3);
-    doc.triangle(x + 3.4, y + 4, x + 0.3, y + 2.3, x + 0.4, y + 0.7, 'F');
-    doc.triangle(x + 4.4, y + 3.8, x + 7.5, y + 0.3, x + 7.2, y + 3.2, 'F');
+    const point = (dx: number, dy: number) => [x + dx * scale, y + dy * scale];
+    doc.line(...(point(4, 8) as [number, number]), ...(point(4, 2.5) as [number, number]));
+    doc
+      .path([
+        { op: 'm', c: point(3.8, 4.7) },
+        { op: 'c', c: [...point(1.8, 4.8), ...point(0.3, 2.6), ...point(0.4, 0.8)] },
+        { op: 'c', c: [...point(2.2, 0.9), ...point(3.5, 2.3), ...point(3.8, 4.7)] },
+        { op: 'h', c: [] },
+      ])
+      .fill();
+    doc
+      .path([
+        { op: 'm', c: point(4.1, 3.9) },
+        { op: 'c', c: [...point(4.2, 1.4), ...point(5.8, 0.2), ...point(7.7, 0.2)] },
+        { op: 'c', c: [...point(7.8, 2.5), ...point(6.8, 3.7), ...point(4.1, 3.9)] },
+        { op: 'h', c: [] },
+      ])
+      .fill();
   };
   const icon = (
     kind: 'person' | 'pin' | 'field' | 'coins' | 'calendar' | 'info' | 'layers',
@@ -101,6 +130,10 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
       doc.ellipse(x + 2.5, y + 5.7, 2.4, 0.9, 'S');
       doc.ellipse(x + 5.6, y + 3.6, 2.4, 0.9, 'S');
       doc.ellipse(x + 2.5, y + 7.3, 2.4, 0.9, 'S');
+      doc.line(x + 0.1, y + 5.7, x + 0.1, y + 7.3);
+      doc.line(x + 4.9, y + 5.7, x + 4.9, y + 7.3);
+      doc.line(x + 3.2, y + 3.6, x + 3.2, y + 5.1);
+      doc.line(x + 8, y + 3.6, x + 8, y + 5.1);
     } else if (kind === 'calendar') {
       doc.roundedRect(x + 0.5, y + 1.5, 7, 6.3, 0.5, 0.5, 'S');
       doc.line(x + 0.5, y + 3.4, x + 7.5, y + 3.4);
@@ -132,42 +165,17 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     doc.rect(0, 0, pageWidth, 23, 'F');
     doc.setFillColor(...green);
     doc.triangle(153, 0, pageWidth, 0, pageWidth, 14, 'F');
-    sprout(6, 5, [203, 227, 57]);
-    text('KCC Limit Calculation', 25, 11.2, 16, [255, 255, 255], true);
-    text('AMCC Paonta Sahib   |   Scale of Finance FY 2026-27   |   Himachal Pradesh', 25, 18.1, 6.8, [255, 255, 255]);
+    sprout(6, 4, [203, 227, 57], 1.3);
+    text('KCC Limit Calculation', 25, 11.2, 18, [255, 255, 255], true);
+    text('AMCC Paonta Sahib   |   Scale of Finance FY 2026-27   |   Himachal Pradesh', 25, 18.1, 7.6, [255, 255, 255]);
     doc.setFont(font, 'normal');
-    doc.setFontSize(6.4);
+    doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
     doc.text(`Generated ${stamp} IST`, pageWidth - 6, 18.1, { align: 'right' });
   };
   header();
 
-  // Borrower panel and crop pattern form the two-column top section.
-  card(6, 31, 50, 80);
-  icon('person', 9, 34);
-  text('Borrower & Land', 19, 39, 10, ink, true);
-  const details = report.details.filter(([label]) => label !== 'Total land');
-  const detailIcons = { Borrower: 'person', District: 'pin', 'Cultivated land': 'field' } as const;
-  details.forEach(([label, value], index) => {
-    const y = 47 + index * 19.8;
-    icon(detailIcons[label as keyof typeof detailIcons] || 'field', 9.5, y + 3, leaf);
-    text(label, 22, y + 3.5, 7.1);
-    doc.setFont(font, 'bold');
-    doc.setFontSize(9.2);
-    const lines = doc.splitTextToSize(value, 31);
-    text(lines[0] || '-', 22, y + 9, 9.2, ink, true);
-    if (lines[1]) text(lines[1], 22, y + 13.4, 7.4, ink, true);
-    if (index < details.length - 1) {
-      doc.setDrawColor(...line);
-      doc.line(10, y + 16, 52, y + 16);
-    }
-  });
-  const totalLand = report.details.find(([label]) => label === 'Total land');
-  if (totalLand) text(`Total land: ${totalLand[1]}`, 10, 106, 6.3);
-  doc.setDrawColor(...line);
-  doc.roundedRect(60, 31, 144, 80, 3, 3, 'S');
-  sprout(63, 31.5);
-  text('Crop Pattern', 73, 38, 10.4, ink, true);
+  // The crop table determines the height of the entire two-column section.
   autoTable(doc, {
     startY: 41,
     margin: { left: 61, right: 7, top: 31, bottom: 14 },
@@ -189,21 +197,28 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     theme: 'grid',
     styles: {
       font,
-      fontSize: 6.25,
+      fontSize: 7.35,
       textColor: ink,
-      cellPadding: { top: 0.72, bottom: 0.72, left: 0.65, right: 0.65 },
+      cellPadding: { top: 0.48, bottom: 0.48, left: 0.6, right: 0.6 },
       lineColor: line,
       lineWidth: 0.15,
-      minCellHeight: 4.25,
+      minCellHeight: 4.2,
       overflow: 'linebreak',
     },
-    headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold', minCellHeight: 8, valign: 'middle' },
+    headStyles: {
+      fillColor: green,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7.15,
+      minCellHeight: 8.2,
+      valign: 'middle',
+    },
     columnStyles: {
       0: { cellWidth: 7, halign: 'center' },
       1: { cellWidth: 15 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 28, halign: 'center' },
-      4: { cellWidth: 15, halign: 'right' },
+      2: { cellWidth: 33 },
+      3: { cellWidth: 26, halign: 'center' },
+      4: { cellWidth: 14, halign: 'right' },
       5: { cellWidth: 23, halign: 'right' },
       6: { cellWidth: 24, halign: 'right' },
     },
@@ -215,12 +230,43 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     },
   });
   const afterTable = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  let y = afterTable() + 5;
-  if (y > 119) {
+  const tablePageCount = doc.getNumberOfPages();
+  const totalLand = report.details.find(([label]) => label === 'Total land');
+  const panelBottom = tablePageCount === 1 ? topSectionBottom(afterTable(), !!totalLand) : 111;
+  doc.setPage(1);
+  card(6, 31, 50, panelBottom - 31);
+  card(7, 45, 48, 17, [243, 251, 243]);
+  icon('person', 9, 34);
+  text('Borrower & Land', 19, 39, 11.4, ink, true);
+  const details = report.details.filter(([label]) => label !== 'Total land');
+  const detailIcons = { Borrower: 'person', District: 'pin', 'Cultivated land': 'field' } as const;
+  const detailGap = Math.min(19.8, (panelBottom - (totalLand ? 21 : 14) - 47) / Math.max(1, details.length - 1));
+  details.forEach(([label, value], index) => {
+    const detailY = 47 + index * detailGap;
+    icon(detailIcons[label as keyof typeof detailIcons] || 'field', 9.5, detailY + 3, leaf);
+    text(label, 22, detailY + 3.5, 8.15);
+    doc.setFont(font, 'bold');
+    doc.setFontSize(10.8);
+    const lines = doc.splitTextToSize(value, 31);
+    fittedText(lines[0] || '-', 22, detailY + 9.3, 10.8, 31, ink);
+    if (lines[1]) text(lines[1], 22, detailY + 13.6, 8.3, ink, true);
+    if (index < details.length - 1) {
+      doc.setDrawColor(...line);
+      doc.line(10, detailY + detailGap - 1, 52, detailY + detailGap - 1);
+    }
+  });
+  if (totalLand) text(`Total land: ${totalLand[1]}`, 10, panelBottom - 4, 7.25);
+  doc.setDrawColor(...line);
+  doc.roundedRect(60, 31, 144, panelBottom - 31, 3, 3, 'S');
+  sprout(63, 31.5);
+  text('Crop Pattern', 73, 38, 12.3, ink, true);
+  doc.setPage(tablePageCount);
+  let y = tablePageCount === 1 ? panelBottom + 5 : afterTable() + 5;
+  if (y > 124 || tablePageCount > 1) {
     doc.addPage();
     header();
     y = 32;
-  } else y = Math.max(116, y);
+  }
 
   // Finance strip, KCC cards, and horizontal five-year schedule.
   card(6, y, 198, 17);
@@ -228,8 +274,8 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   report.seasons.forEach(([label, value], index) => {
     const x = 10 + index * slot;
     sprout(x, y + 4, leaf);
-    text(label, x + 12, y + 6.3, 7.1);
-    text(value, x + 12, y + 13, 10.2, ink, true);
+    text(label, x + 12, y + 6.3, 8);
+    fittedText(value, x + 12, y + 13.2, 12.1, slot - 17, ink);
     if (index < report.seasons.length - 1) {
       doc.setDrawColor(...line);
       doc.line(x + slot - 3, y + 3, x + slot - 3, y + 14);
@@ -237,26 +283,26 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   });
   card(134, y, 70, 17, green);
   icon('coins', 140, y + 4, [255, 255, 255]);
-  text('Total crop finance', 154, y + 6.2, 7.1, [255, 255, 255]);
-  text(report.totalFinance, 154, y + 13.2, 11.2, [255, 255, 255], true);
+  text('Total crop finance', 154, y + 6.2, 8, [255, 255, 255]);
+  fittedText(report.totalFinance, 154, y + 13.2, 13.4, 46, [255, 255, 255]);
   doc.setDrawColor(...line);
   doc.line(6, y + 23, 204, y + 23);
   icon('layers', 7, y + 26);
-  text('KCC Limit', 21, y + 33, 12.5, green, true);
+  text('KCC Limit', 21, y + 33, 14, green, true);
   const cardY = y + 38;
   card(6, cardY, 97, 25);
   card(107, cardY, 97, 25);
   sprout(13, cardY + 8, leaf);
   icon('coins', 113, cardY + 8);
-  text('Year 1 limit', 33, cardY + 7, 7.4);
-  text(report.yearOne, 33, cardY + 15.5, 15.1, green, true);
-  text('Includes 30% additional finance', 33, cardY + 21.5, 6.7);
-  text('MPL (max. permissible limit)', 134, cardY + 7, 7.4);
-  text(report.mpl, 134, cardY + 15.5, 15.1, green, true);
-  text('Year 5 limit', 134, cardY + 21.5, 6.7);
+  text('Year 1 limit', 33, cardY + 7, 8.5);
+  fittedText(report.yearOne, 33, cardY + 16.2, 19.5, 65, green);
+  text('Includes 30% additional finance', 33, cardY + 21.5, 7.5);
+  text('MPL (max. permissible limit)', 134, cardY + 7, 8.5);
+  fittedText(report.mpl, 134, cardY + 16.2, 19.5, 65, green);
+  text('Year 5 limit', 134, cardY + 21.5, 7.5);
   const scheduleY = cardY + 33;
   icon('calendar', 7, scheduleY - 6);
-  text('5-Year Schedule', 21, scheduleY, 11.7, green, true);
+  text('5-Year Schedule', 21, scheduleY, 13.3, green, true);
   autoTable(doc, {
     startY: scheduleY + 5,
     margin: { left: 6, right: 6 },
@@ -266,9 +312,9 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
     theme: 'grid',
     styles: {
       font,
-      fontSize: 8.1,
+      fontSize: 9.25,
       textColor: ink,
-      cellPadding: 2.3,
+      cellPadding: 2.05,
       lineColor: line,
       lineWidth: 0.2,
       fontStyle: 'bold',
@@ -284,13 +330,13 @@ export async function downloadKccPdf(input: KccInput, borrower: string) {
   if (!report.ready)
     notes.unshift(`Calculation incomplete: ${report.errors.join(' ') || 'complete the land and crop details.'}`);
   doc.setFont(font, 'normal');
-  doc.setFontSize(6.25);
+  doc.setFontSize(7.45);
   const noteLines = notes.flatMap((note) => doc.splitTextToSize(note, 176));
   const noteY = afterTable() + 6;
-  const noteHeight = Math.max(18, 7 + noteLines.length * 3.2);
+  const noteHeight = Math.max(18, 7 + noteLines.length * 3.6);
   card(6, noteY, 198, noteHeight, [238, 248, 244]);
   icon('info', 10, noteY + 5);
-  noteLines.forEach((note, index) => text(note, 23, noteY + 5.4 + index * 3.2, 6.25));
+  noteLines.forEach((note, index) => text(note, 23, noteY + 5.5 + index * 3.6, 7.45));
 
   const artworkY = Math.max(239, noteY + noteHeight + 1);
   if (landscape && artworkY < pageHeight - 12)
