@@ -605,7 +605,7 @@ main > .message {
   grid-template-columns: 1fr 1fr;
   height: var(--control-md);
   overflow: hidden;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 10px #0f3d2733;
 }
 .action-pill > button {
