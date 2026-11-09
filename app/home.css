@@ -721,9 +721,6 @@ main > .message {
 .group-button {
   border-radius: 0;
 }
-.group-button.is-grouped {
-  background: var(--green-light);
-}
 .filter-button > svg {
   width: 20px;
   height: 20px;
@@ -1364,16 +1361,16 @@ main > .message {
 }
 .loan-groups {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: var(--space-3) 0 var(--space-6);
 }
 .loan-group-head {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   width: 100%;
-  min-height: 48px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 42px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -1391,18 +1388,18 @@ main > .message {
   display: grid;
   flex: none;
   place-items: center;
-  width: var(--control-sm);
-  height: var(--control-sm);
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--green);
   color: #fff;
-  font: var(--weight-bold) var(--text-sm) / 1 var(--sans);
+  font: var(--weight-bold) var(--text-2xs) / 1 var(--sans);
 }
 .loan-group-title {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;

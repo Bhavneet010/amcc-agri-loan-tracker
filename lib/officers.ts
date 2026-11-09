@@ -22,9 +22,8 @@ export const branchOfficers: Record<string, string> = {
 };
 export const officerForBranch = (branchName: string) => branchOfficers[branchCode(branchName)] || unassignedOfficer;
 
-export type GroupMode = 'none' | 'officer' | 'date';
+export type GroupMode = 'officer' | 'date';
 export const groupModes: { id: GroupMode; label: string }[] = [
-  { id: 'none', label: 'None' },
   { id: 'officer', label: 'Officer' },
   { id: 'date', label: 'Received date' },
 ];
@@ -55,7 +54,7 @@ const dayLabel = (day: string, now: Date) => {
 };
 
 /** Splits loans into sections, keeping each loan's order within its section. */
-export function groupLoans(loans: Loan[], mode: Exclude<GroupMode, 'none'>, now = new Date()): LoanGroup[] {
+export function groupLoans(loans: Loan[], mode: GroupMode, now = new Date()): LoanGroup[] {
   const map = new Map<string, Loan[]>();
   for (const loan of loans) {
     const key = mode === 'officer' ? officerForBranch(loan.branchName) : receivedDay(loan);

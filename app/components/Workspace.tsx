@@ -104,8 +104,9 @@ export default function Workspace() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState(false);
   const [groupMenu, setGroupMenu] = useState(false);
-  const [groupMode, setGroupMode] = useState<GroupMode>('none');
-  const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [groupMode, setGroupMode] = useState<GroupMode>('officer');
+  // Sections start collapsed; this lists the ones the user opened.
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [showAll, setShowAll] = useState<Category[]>([]);
   const [installOpen, setInstallOpen] = useState(false);
   const activeAdmin = admin && viewAdmin;
@@ -404,19 +405,18 @@ export default function Workspace() {
   });
   const tab = grouped.find((group) => group.id === category)!;
   // Officer grouping is for the loan cell's all-branch view; a branch only ever has one officer.
-  const activeGroup: GroupMode = groupMode === 'officer' && !activeAdmin ? 'none' : groupMode;
-  const sections = activeGroup === 'none' || !now ? null : groupLoans(tab.all, activeGroup, now);
+  const activeGroup: GroupMode = activeAdmin ? groupMode : 'date';
+  const sections = now ? groupLoans(tab.all, activeGroup, now) : null;
   function chooseGroup(next: GroupMode) {
     setGroupMode(next);
-    setCollapsed([]);
+    setExpanded([]);
     setGroupMenu(false);
     try {
-      if (next === 'none') localStorage.removeItem(groupKey);
-      else localStorage.setItem(groupKey, next);
+      localStorage.setItem(groupKey, next);
     } catch {}
   }
   const toggleSection = (key: string) =>
-    setCollapsed((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
+    setExpanded((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
   const viewLabel = views.find((v) => v.id === view)!.label.toLowerCase();
   const emptyTitle = filtered
     ? 'No matching loans'
@@ -646,12 +646,12 @@ export default function Workspace() {
             <div className="filter-anchor">
               <button
                 type="button"
-                className={`filter-button group-button ${activeGroup !== 'none' ? 'is-grouped' : ''}`}
+                className="filter-button group-button"
                 onClick={() => {
                   setFilters(false);
                   setGroupMenu(!groupMenu);
                 }}
-                aria-label={`Group by${activeGroup !== 'none' ? `, ${groupModes.find((m) => m.id === activeGroup)!.label}` : ''}`}
+                aria-label={`Group by, ${groupModes.find((m) => m.id === activeGroup)!.label}`}
                 title="Group by"
                 aria-expanded={groupMenu}
                 aria-haspopup="dialog"
@@ -674,6 +674,7 @@ export default function Workspace() {
                               value={m.id}
                               checked={activeGroup === m.id}
                               onChange={() => chooseGroup(m.id)}
+                              onClick={() => setGroupMenu(false)}
                             />
                             {m.label}
                           </label>
@@ -816,7 +817,7 @@ export default function Workspace() {
             ) : sections && sections.length ? (
               <div className="loan-groups">
                 {sections.map((section) => {
-                  const open = !collapsed.includes(section.key);
+                  const open = expanded.includes(section.key);
                   return (
                     <section key={section.key} className={`loan-group ${open ? 'open' : ''}`}>
                       <button
@@ -834,7 +835,7 @@ export default function Workspace() {
                               .slice(0, 2)
                               .toUpperCase()
                           ) : (
-                            <Calendar size={16} />
+                            <Calendar size={12} />
                           )}
                         </span>
                         <strong className="loan-group-title">{section.label}</strong>
