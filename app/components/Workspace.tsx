@@ -406,7 +406,8 @@ export default function Workspace() {
   const tab = grouped.find((group) => group.id === category)!;
   // Officer grouping is for the loan cell's all-branch view; a branch only ever has one officer.
   const activeGroup: GroupMode = activeAdmin ? groupMode : 'date';
-  const sections = now ? groupLoans(tab.all, activeGroup, now) : null;
+  // Grouping applies to new loans only; renewals keep the plain list.
+  const sections = now && category === 'new' ? groupLoans(tab.all, activeGroup, now) : null;
   function chooseGroup(next: GroupMode) {
     setGroupMode(next);
     setExpanded([]);
@@ -633,7 +634,7 @@ export default function Workspace() {
               <span>New loan or renewal</span>
             </div>
           </div>
-          <div className="table-toolbar">
+          <div className={`table-toolbar ${category === 'new' ? 'has-group' : ''}`}>
             <label className="search-field">
               <Search size={21} strokeWidth={1.75} />
               <input
@@ -644,43 +645,47 @@ export default function Workspace() {
               />
             </label>
             <div className="filter-anchor">
-              <button
-                type="button"
-                className="filter-button group-button"
-                onClick={() => {
-                  setFilters(false);
-                  setGroupMenu(!groupMenu);
-                }}
-                aria-label={`Group by, ${groupModes.find((m) => m.id === activeGroup)!.label}`}
-                title="Group by"
-                aria-expanded={groupMenu}
-                aria-haspopup="dialog"
-              >
-                <Layers size={20} strokeWidth={1.9} />
-              </button>
-              {groupMenu ? (
+              {category === 'new' ? (
                 <>
-                  <div className="menu-backdrop" onClick={() => setGroupMenu(false)} />
-                  <div className="filter-panel group-panel" role="dialog" aria-label="Group by">
-                    <fieldset>
-                      <legend>Group by</legend>
-                      {groupModes
-                        .filter((m) => m.id !== 'officer' || activeAdmin)
-                        .map((m) => (
-                          <label key={m.id} className="group-option">
-                            <input
-                              type="radio"
-                              name="group-by"
-                              value={m.id}
-                              checked={activeGroup === m.id}
-                              onChange={() => chooseGroup(m.id)}
-                              onClick={() => setGroupMenu(false)}
-                            />
-                            {m.label}
-                          </label>
-                        ))}
-                    </fieldset>
-                  </div>
+                  <button
+                    type="button"
+                    className="filter-button group-button"
+                    onClick={() => {
+                      setFilters(false);
+                      setGroupMenu(!groupMenu);
+                    }}
+                    aria-label={`Group by, ${groupModes.find((m) => m.id === activeGroup)!.label}`}
+                    title="Group by"
+                    aria-expanded={groupMenu}
+                    aria-haspopup="dialog"
+                  >
+                    <Layers size={20} strokeWidth={1.9} />
+                  </button>
+                  {groupMenu ? (
+                    <>
+                      <div className="menu-backdrop" onClick={() => setGroupMenu(false)} />
+                      <div className="filter-panel group-panel" role="dialog" aria-label="Group by">
+                        <fieldset>
+                          <legend>Group by</legend>
+                          {groupModes
+                            .filter((m) => m.id !== 'officer' || activeAdmin)
+                            .map((m) => (
+                              <label key={m.id} className="group-option">
+                                <input
+                                  type="radio"
+                                  name="group-by"
+                                  value={m.id}
+                                  checked={activeGroup === m.id}
+                                  onChange={() => chooseGroup(m.id)}
+                                  onClick={() => setGroupMenu(false)}
+                                />
+                                {m.label}
+                              </label>
+                            ))}
+                        </fieldset>
+                      </div>
+                    </>
+                  ) : null}
                 </>
               ) : null}
               <button
@@ -802,7 +807,10 @@ export default function Workspace() {
                 aria-selected={category === group.id}
                 aria-controls="loans-panel"
                 className={category === group.id ? 'selected' : ''}
-                onClick={() => setCategory(group.id)}
+                onClick={() => {
+                  setCategory(group.id);
+                  setGroupMenu(false);
+                }}
               >
                 {group.label} <span>{loading ? 0 : group.all.length}</span>
               </button>

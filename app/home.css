@@ -684,11 +684,11 @@ main > .message {
   stroke-width: 1.65;
   pointer-events: none;
 }
-/* Room on the right for the group and filter buttons that sit inside the field. */
+/* Room on the right for the filter button (and the group button on new loans) inside the field. */
 .search-field input {
   width: 100%;
   height: var(--control-md);
-  padding: 0 calc(2 * var(--control-lg) + var(--space-2)) 0 var(--control-md);
+  padding: 0 calc(var(--control-lg) + var(--space-2)) 0 var(--control-md);
   background: #ffffffd9;
   font-size: var(--text-lg);
   line-height: 1.2;
@@ -720,6 +720,9 @@ main > .message {
 }
 .group-button {
   border-radius: 0;
+}
+.has-group .search-field input {
+  padding-right: calc(2 * var(--control-lg) + var(--space-2));
 }
 .filter-button > svg {
   width: 20px;
