@@ -5,12 +5,15 @@ import {
   Bell,
   Building2,
   Calculator,
+  Calendar,
   CheckCheck,
   ChevronDown,
   ChevronRight,
   CircleHelp,
   Layers2,
+  Layers,
   Leaf,
+  ChevronUp,
   LogOut,
   Plus,
   RefreshCw,
@@ -21,7 +24,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import type { Branch, Loan } from '../../lib/types';
-import { request } from '../../lib/types';
+import { lakhs, request } from '../../lib/types';
 import { upsertLoan } from '../../lib/loan-state';
 import { loanInPeriod, periodLabels, type SummaryPeriod } from '../../lib/loan-summary';
 import LoanTable from './LoanTable';
@@ -35,12 +38,14 @@ import HomeLandscape from './HomeLandscape';
 import BranchNotifications from './BranchNotifications';
 import PushAlerts from './PushAlerts';
 import { disablePushAlerts, syncPushAlerts } from '../../lib/push';
+import { groupLoans, groupModes, officerForBranch, type GroupMode } from '../../lib/officers';
 
 const KccCalculator = dynamic(() => import('./KccCalculator'), { ssr: false });
 
 const preferenceKey = 'amcc.branch.v1';
 const adminModeKey = 'amcc.adminMode.v1';
 const branchesKey = 'amcc.branches.v1';
+const groupKey = 'amcc.groupBy.v1';
 const rememberAdminMode = (on: boolean) => {
   try {
     if (on) localStorage.setItem(adminModeKey, '1');
@@ -98,6 +103,9 @@ export default function Workspace() {
   const [menu, setMenu] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState(false);
+  const [groupMenu, setGroupMenu] = useState(false);
+  const [groupMode, setGroupMode] = useState<GroupMode>('none');
+  const [collapsed, setCollapsed] = useState<string[]>([]);
   const [showAll, setShowAll] = useState<Category[]>([]);
   const [installOpen, setInstallOpen] = useState(false);
   const activeAdmin = admin && viewAdmin;
@@ -121,6 +129,10 @@ export default function Workspace() {
     let adminMode = false;
     try {
       adminMode = localStorage.getItem(adminModeKey) === '1';
+    } catch {}
+    try {
+      const savedGroup = localStorage.getItem(groupKey);
+      if (savedGroup === 'officer' || savedGroup === 'date') setGroupMode(savedGroup);
     } catch {}
     let cached: Branch[] = [];
     try {
@@ -279,6 +291,14 @@ export default function Workspace() {
     return () => window.removeEventListener('keydown', close);
   }, [filters]);
   useEffect(() => {
+    if (!groupMenu) return;
+    const close = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setGroupMenu(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [groupMenu]);
+  useEffect(() => {
     if (!menu) return;
     const close = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMenu(false);
@@ -383,6 +403,20 @@ export default function Workspace() {
     };
   });
   const tab = grouped.find((group) => group.id === category)!;
+  // Officer grouping is for the loan cell's all-branch view; a branch only ever has one officer.
+  const activeGroup: GroupMode = groupMode === 'officer' && !activeAdmin ? 'none' : groupMode;
+  const sections = activeGroup === 'none' || !now ? null : groupLoans(tab.all, activeGroup, now);
+  function chooseGroup(next: GroupMode) {
+    setGroupMode(next);
+    setCollapsed([]);
+    setGroupMenu(false);
+    try {
+      if (next === 'none') localStorage.removeItem(groupKey);
+      else localStorage.setItem(groupKey, next);
+    } catch {}
+  }
+  const toggleSection = (key: string) =>
+    setCollapsed((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
   const viewLabel = views.find((v) => v.id === view)!.label.toLowerCase();
   const emptyTitle = filtered
     ? 'No matching loans'
@@ -612,8 +646,49 @@ export default function Workspace() {
             <div className="filter-anchor">
               <button
                 type="button"
+                className={`filter-button group-button ${activeGroup !== 'none' ? 'is-grouped' : ''}`}
+                onClick={() => {
+                  setFilters(false);
+                  setGroupMenu(!groupMenu);
+                }}
+                aria-label={`Group by${activeGroup !== 'none' ? `, ${groupModes.find((m) => m.id === activeGroup)!.label}` : ''}`}
+                title="Group by"
+                aria-expanded={groupMenu}
+                aria-haspopup="dialog"
+              >
+                <Layers size={20} strokeWidth={1.9} />
+              </button>
+              {groupMenu ? (
+                <>
+                  <div className="menu-backdrop" onClick={() => setGroupMenu(false)} />
+                  <div className="filter-panel group-panel" role="dialog" aria-label="Group by">
+                    <fieldset>
+                      <legend>Group by</legend>
+                      {groupModes
+                        .filter((m) => m.id !== 'officer' || activeAdmin)
+                        .map((m) => (
+                          <label key={m.id} className="group-option">
+                            <input
+                              type="radio"
+                              name="group-by"
+                              value={m.id}
+                              checked={activeGroup === m.id}
+                              onChange={() => chooseGroup(m.id)}
+                            />
+                            {m.label}
+                          </label>
+                        ))}
+                    </fieldset>
+                  </div>
+                </>
+              ) : null}
+              <button
+                type="button"
                 className={`filter-button ${activeFilters ? 'has-filters' : ''}`}
-                onClick={() => setFilters(!filters)}
+                onClick={() => {
+                  setGroupMenu(false);
+                  setFilters(!filters);
+                }}
                 aria-label={`Filters${activeFilters ? `, ${activeFilters} active` : ''}`}
                 aria-expanded={filters}
                 aria-haspopup="dialog"
@@ -663,7 +738,7 @@ export default function Workspace() {
                             <option value="">All branches</option>
                             {branches.map((b) => (
                               <option key={b.id} value={b.id}>
-                                {b.name}
+                                {b.name} · {officerForBranch(b.name)}
                               </option>
                             ))}
                           </select>
@@ -738,6 +813,56 @@ export default function Workspace() {
                 <RefreshCw size={23} className="spin" />
                 <p>Loading shared applications…</p>
               </div>
+            ) : sections && sections.length ? (
+              <div className="loan-groups">
+                {sections.map((section) => {
+                  const open = !collapsed.includes(section.key);
+                  return (
+                    <section key={section.key} className={`loan-group ${open ? 'open' : ''}`}>
+                      <button
+                        type="button"
+                        className="loan-group-head"
+                        onClick={() => toggleSection(section.key)}
+                        aria-expanded={open}
+                      >
+                        <span className="loan-group-avatar" aria-hidden="true">
+                          {activeGroup === 'officer' ? (
+                            section.label
+                              .split(/\s+/)
+                              .map((w) => w[0])
+                              .join('')
+                              .slice(0, 2)
+                              .toUpperCase()
+                          ) : (
+                            <Calendar size={16} />
+                          )}
+                        </span>
+                        <strong className="loan-group-title">{section.label}</strong>
+                        <span className="loan-group-meta">
+                          {section.loans.length} · {lakhs(section.amountPaise)}
+                        </span>
+                        {open ? (
+                          <ChevronUp size={18} aria-hidden="true" />
+                        ) : (
+                          <ChevronDown size={18} aria-hidden="true" />
+                        )}
+                      </button>
+                      {open ? (
+                        <LoanTable
+                          loans={section.loans}
+                          admin={activeAdmin}
+                          onEdit={setForm}
+                          onCompliance={complianceUpdate}
+                          busy={busy}
+                          filtered={filtered}
+                          emptyTitle={emptyTitle}
+                          emptyText={emptyText}
+                        />
+                      ) : null}
+                    </section>
+                  );
+                })}
+              </div>
             ) : (
               <LoanTable
                 loans={tab.shown}
@@ -751,7 +876,7 @@ export default function Workspace() {
               />
             )}
           </div>
-          {!loading && tab.all.length > tab.shown.length ? (
+          {!loading && !sections && tab.all.length > tab.shown.length ? (
             <button className="show-more" onClick={() => setShowAll((current) => [...current, tab.id])}>
               Show all {tab.all.length} {view === 'all' ? '' : viewLabel + ' '}
               {tab.label.toLowerCase()}
@@ -892,7 +1017,20 @@ export default function Workspace() {
           key={branchId}
           branchId={branchId}
           refreshKey={refreshKey}
-          blocked={!!(settings || calculator || login || form || help || addChoice || menu || filters || installOpen)}
+          blocked={
+            !!(
+              settings ||
+              calculator ||
+              login ||
+              form ||
+              help ||
+              addChoice ||
+              menu ||
+              filters ||
+              groupMenu ||
+              installOpen
+            )
+          }
         />
       ) : null}
       <InstallPrompt
